@@ -1,0 +1,5 @@
+.vscode
+voices/
+.env*
+*.txt
+*.mp3
