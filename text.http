@@ -1,0 +1,11 @@
+
+@endpoint = https://8fef-2001-f71-1980-6e00-ee44-599b-c6d9-f780.ngrok-free.app
+
+###
+POST {{endpoint}}/api/v1/podcasts
+Content-Type: application/json; charset=UTF-8
+
+{
+  title: "テスト",
+  text: "こんにちは"
+}

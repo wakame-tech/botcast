@@ -1,9 +1,8 @@
 import { Feed, Script, Serif } from "./model.ts";
 import { PodcastRepository, podcastRepository } from "./supabase.ts";
-// import { nanoid } from "https://deno.land/x/nanoid/mod.ts";
 import { FeedRepository, feedRepository } from "./FeedRepository.ts";
-import { getFeedXML } from "./rss.ts";
 import { exec } from "./deps.ts";
+import { Status } from "https://deno.land/x/oak@v12.1.0/deps.ts";
 
 const origin = "http://localhost:50021";
 
@@ -20,7 +19,7 @@ export class VoiceVoxFeedGenerator {
         method: "POST",
       }
     );
-    if (res.status === 422) {
+    if (res.status === Status.UnprocessableEntity) {
       throw await res.json();
     }
 
@@ -33,7 +32,7 @@ export class VoiceVoxFeedGenerator {
       },
       body: JSON.stringify(query),
     });
-    if (res.status === 422) {
+    if (res.status === Status.UnprocessableEntity) {
       throw await res.json();
     }
     const voice = await res.arrayBuffer();
@@ -92,8 +91,11 @@ const splitLines = (text: string): string[] => {
   return lines;
 };
 
-export const upload = async (path: string, title: string): Promise<void> => {
-  const text = await Deno.readTextFile(path);
+export const upload = async (title: string, text: string): Promise<Feed> => {
+  const generator = new VoiceVoxFeedGenerator(
+    podcastRepository,
+    feedRepository
+  );
   const lines = splitLines(text);
   const script = {
     id: crypto.randomUUID(),
@@ -105,11 +107,6 @@ export const upload = async (path: string, title: string): Promise<void> => {
       text: line,
     })),
   } satisfies Script;
-  await generator.generate(script);
+  const feed = await generator.generate(script);
+  return feed;
 };
-
-const generator = new VoiceVoxFeedGenerator(podcastRepository, feedRepository);
-await upload("maou001.txt", "魔王学院の不適合者 1");
-await upload("maou002.txt", "魔王学院の不適合者 2");
-const xml = await getFeedXML(feedRepository);
-console.log(xml);
