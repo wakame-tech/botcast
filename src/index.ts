@@ -1,26 +1,33 @@
 import { FeedRepository } from "./FeedRepository.ts";
 import { Application, Item, Podcast, Router } from "./deps.ts";
-import { Feed } from "./model.ts";
+import { Feed, Script } from "./model.ts";
+import { GenerateScript, processText } from "./script/index.ts";
 import { supabase } from "./supabase.ts";
 import { upload } from "./voicevox.ts";
 
 const app = new Application();
 const router = new Router();
 
-interface CreatePodcastDto {
-  title: string;
-  text: string;
-}
-
 router.post("/api/v1/podcasts", async (ctx) => {
-  console.log(await ctx.request.body({ type: "text" }).value);
-  const body = (await ctx.request.body({
+  const data = await ctx.request.body({
     type: "json",
-  }).value) as CreatePodcastDto;
-  const feed = await upload(body.title, body.text);
+  }).value;
+  const body = Script.parse(data);
+  const feed = await upload(body);
   ctx.response.status = 200;
   ctx.response.headers.set("Content-Type", "application/json");
   ctx.response.body = JSON.stringify(feed);
+});
+
+router.post("/api/v1/scripts", async (ctx) => {
+  const data = await ctx.request.body({
+    type: "json",
+  }).value;
+  const req = GenerateScript.parse(data);
+  const script = processText(req);
+  ctx.response.status = 200;
+  ctx.response.headers.set("Content-Type", "application/json");
+  ctx.response.body = JSON.stringify(script);
 });
 
 const fromFeed = (feed: Feed): Partial<Item> => {

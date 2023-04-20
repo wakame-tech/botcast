@@ -75,38 +75,11 @@ export class VoiceVoxFeedGenerator {
   }
 }
 
-const splitLines = (text: string): string[] => {
-  const lines = [];
-  let buf = "";
-  for (const c of text.split("")) {
-    if (c === "\n") {
-      continue;
-    }
-    buf += c;
-    if (c === "。" || c === "」") {
-      lines.push(buf.trim());
-      buf = "";
-    }
-  }
-  return lines;
-};
-
-export const upload = async (title: string, text: string): Promise<Feed> => {
+export const upload = async (script: Script): Promise<Feed> => {
   const generator = new VoiceVoxFeedGenerator(
     podcastRepository,
     feedRepository
   );
-  const lines = splitLines(text);
-  const script = {
-    id: crypto.randomUUID(),
-    title,
-    scenes: lines.map((line, index) => ({
-      type: "serif",
-      id: `${index}`,
-      speaker: "31",
-      text: line,
-    })),
-  } satisfies Script;
   const feed = await generator.generate(script);
   return feed;
 };

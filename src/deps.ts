@@ -17,3 +17,4 @@ export {
   Router,
   type RouterContext,
 } from "https://deno.land/x/oak@v12.1.0/mod.ts";
+export { z } from "https://deno.land/x/zod/mod.ts";
