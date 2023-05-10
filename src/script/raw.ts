@@ -1,7 +1,5 @@
-import { Scene } from "../model.ts";
-
-export const rawSplitLines = (text: string, speaker: string): Scene[] => {
-  const scenes: Scene[] = [];
+export const raw = (text: string): string[] => {
+  const lines: string[] = [];
   let buf = "";
   for (const c of text.split("")) {
     if (c === "\n") {
@@ -9,14 +7,9 @@ export const rawSplitLines = (text: string, speaker: string): Scene[] => {
     }
     buf += c;
     if (c === "。" || c === "」") {
-      scenes.push({
-        id: `${scenes.length}`,
-        type: "serif",
-        speaker,
-        text: buf.trim(),
-      });
+      lines.push(buf.trim());
       buf = "";
     }
   }
-  return scenes;
+  return lines;
 };

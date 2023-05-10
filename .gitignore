@@ -3,3 +3,4 @@ voices/
 .env*
 *.txt
 *.mp3
+data/

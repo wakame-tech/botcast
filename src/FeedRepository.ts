@@ -1,8 +1,12 @@
 import { SupabaseClient } from "./deps.ts";
 import { Feed } from "./model.ts";
-import { supabase } from "./supabase.ts";
 
-export class FeedRepository {
+export interface IFeedRepository {
+  getAll(): Promise<Feed[]>;
+  create(feed: Feed): Promise<void>;
+}
+
+export class FeedRepository implements IFeedRepository {
   constructor(private supabase: SupabaseClient) {}
 
   async getAll(): Promise<Feed[]> {
@@ -21,4 +25,10 @@ export class FeedRepository {
   }
 }
 
-export const feedRepository = new FeedRepository(supabase);
+export class MockFeedRepository implements IFeedRepository {
+  async getAll(): Promise<Feed[]> {
+    return [];
+  }
+
+  async create(feed: Feed): Promise<void> {}
+}

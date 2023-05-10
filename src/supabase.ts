@@ -5,7 +5,11 @@ const apiKey = Deno.env.get("SUPABASE_API_KEY")!;
 console.log(apiKey);
 export const supabase = createClient(projectUrl, apiKey);
 
-export class PodcastRepository {
+export interface IPodcastRepository {
+  upload(key: string, data: ArrayBuffer): Promise<string>;
+}
+
+export class PodcastRepository implements IPodcastRepository {
   constructor(private supabase: SupabaseClient) {}
 
   async upload(key: string, data: ArrayBuffer): Promise<string> {
@@ -25,3 +29,11 @@ export class PodcastRepository {
 }
 
 export const podcastRepository = new PodcastRepository(supabase);
+
+export class LocalPodcastRepository implements IPodcastRepository {
+  async upload(key: string, data: ArrayBuffer): Promise<string> {
+    const path = `${key}.wav`;
+    await Deno.writeFile(path, new Uint8Array(data));
+    return path;
+  }
+}
