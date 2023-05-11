@@ -2,7 +2,6 @@ import { SupabaseClient, createClient } from "./deps.ts";
 
 const projectUrl = Deno.env.get("SUPABASE_PROJECT_URL")!;
 const apiKey = Deno.env.get("SUPABASE_API_KEY")!;
-console.log(apiKey);
 export const supabase = createClient(projectUrl, apiKey);
 
 export interface IPodcastRepository {

@@ -1,30 +1,43 @@
 import { FeedRepository } from "./FeedRepository.ts";
+import { service } from "./FeedService.ts";
 import { Application, Item, Podcast, Router } from "./deps.ts";
 import { Feed, Script } from "./model.ts";
-import { GenerateScript, processText } from "./script/index.ts";
 import { supabase } from "./supabase.ts";
-import { upload } from "./voicevox.ts";
+import { z } from "./deps.ts";
 
 const app = new Application();
 const router = new Router();
+
+export const CreatePodcast = z.object({
+  title: z.string(),
+  text: z.string(),
+});
+export type CreatePodcast = z.infer<typeof CreatePodcast>;
 
 router.post("/api/v1/podcasts", async (ctx) => {
   const data = await ctx.request.body({
     type: "json",
   }).value;
-  const body = Script.parse(data);
-  const feed = await upload(body);
+  const script = Script.parse(data);
+  const feed = await service.postPodcast(script);
   ctx.response.status = 200;
   ctx.response.headers.set("Content-Type", "application/json");
   ctx.response.body = JSON.stringify(feed);
 });
+
+export const GenerateScript = z.object({
+  title: z.string(),
+  type: z.enum(["raw", "hamern"]),
+  text: z.string(),
+});
+export type GenerateScript = z.infer<typeof GenerateScript>;
 
 router.post("/api/v1/scripts", async (ctx) => {
   const data = await ctx.request.body({
     type: "json",
   }).value;
   const req = GenerateScript.parse(data);
-  const script = processText(req);
+  const script = service.generateScript(req);
   ctx.response.status = 200;
   ctx.response.headers.set("Content-Type", "application/json");
   ctx.response.body = JSON.stringify(script);

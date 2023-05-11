@@ -2,6 +2,9 @@
 run:
   deno run -A --location http://localhost src/index.ts
 
+script:
+  deno run -A --location http://localhost test/script.ts
+
 moviefy mp3:
   ffmpeg \
     -loop 1 \
