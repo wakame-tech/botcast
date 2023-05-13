@@ -1,49 +1,61 @@
 import { Feed, Script } from "./model.ts";
-import { IPodcastRepository, LocalPodcastRepository } from "./supabase.ts";
-import { IFeedRepository, MockFeedRepository } from "./FeedRepository.ts";
-import { ScriptRepository } from "./ScriptRepository.ts";
-import { raw } from "./script/raw.ts";
-import { hamern } from "./script/hamern.ts";
-import { GenerateScript } from "./index.ts";
-import { withSpeaker } from "./script/index.ts";
+import { IPodcastRepository } from "./repo/podcast/index.ts";
+import { IFeedRepository } from "./repo/feed/index.ts";
+import type { Item } from "https://esm.sh/podcast@2.0.1";
+import { Podcast } from "https://esm.sh/podcast@2.0.1";
+import { LocalPodcastRepository } from "./repo/podcast/LocalPodcastStorage.ts";
+import { MockFeedRepository } from "./repo/feed/MockFeedRepository.ts";
+import { SupabasePodcastRepository } from "./repo/podcast/SupabasePodcastStorage.ts";
+import { supabase } from "./lib/supabase.ts";
+import { SupabaseFeedRepository } from "./repo/feed/SupabaseFeedRepository.ts";
+
+const fromFeed = (feed: Feed): Partial<Item> => {
+  return {
+    guid: feed.id,
+    title: feed.title,
+    description: feed.description,
+    url: feed.url,
+    date: feed.date,
+  };
+};
 
 export class FeedService {
   constructor(
     private podcastRepository: IPodcastRepository,
-    private feedRepository: IFeedRepository,
-    private scriptRepository: ScriptRepository
+    private feedRepository: IFeedRepository
   ) {}
 
-  generateScript(req: GenerateScript): Script {
-    const lines: string[] = {
-      raw,
-      hamern,
-    }[req.type](req.text);
-    const scenes = withSpeaker(lines, "31");
-    return {
-      id: crypto.randomUUID(),
-      title: req.title,
-      scenes,
-    };
-  }
-
-  async postPodcast(script: Script): Promise<Feed> {
-    const audio = await this.scriptRepository.generate(script);
-    const url = await this.podcastRepository.upload(script.id, audio.buffer);
+  async post(script: Script, audio: ArrayBuffer): Promise<Feed> {
+    const publicUrl = await this.podcastRepository.upload(script.id, audio);
     const feed = {
       id: script.id,
       title: script.title,
-      description: "desc",
+      description: `URL: ${script.url}`,
       date: new Date(),
-      url,
+      url: publicUrl,
     };
     await this.feedRepository.create(feed).catch((e) => console.log(e));
     return feed;
   }
+
+  async getFeeds(): Promise<string> {
+    const feeds = await this.feedRepository.getAll();
+    const podcast = new Podcast({
+      title: "朗読fm",
+      feedUrl: "",
+      siteUrl: "",
+      author: "w4k4me",
+    });
+    for (const feed of feeds) {
+      podcast.addItem(fromFeed(feed));
+    }
+    return podcast.buildXml();
+  }
 }
 
-export const service = new FeedService(
+export const feedService = new FeedService(
   new LocalPodcastRepository(),
-  new MockFeedRepository(),
-  new ScriptRepository()
+  // new SupabasePodcastRepository(supabase),
+  new MockFeedRepository()
+  // new SupabaseFeedRepository(supabase)
 );

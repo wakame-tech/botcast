@@ -8,37 +8,29 @@ export interface Feed {
   url: string;
 }
 
-export type Scene = Serif;
-// | Sound;
-
-export const Scene = z.object({
+export const Serif = z.object({
   type: z.enum(["serif"]),
   id: z.string(),
   speaker: z.string(),
   text: z.string(),
 });
 
-export interface Serif {
-  type: "serif";
-  id: string;
-  speaker: string;
-  text: string;
-}
+export type Serif = z.infer<typeof Serif>;
 
-export interface Sound {
-  type: "sound";
-  id: string;
-  path: string;
-}
+export const Scene = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string().nullable(),
+  serifs: z.array(Serif),
+});
 
-export interface Script {
-  id: string;
-  title: string;
-  scenes: Scene[];
-}
+export type Scene = z.infer<typeof Scene>;
 
 export const Script = z.object({
   id: z.string(),
+  url: z.string().nullable(),
   title: z.string(),
   scenes: z.array(Scene),
 });
+
+export type Script = z.infer<typeof Script>;

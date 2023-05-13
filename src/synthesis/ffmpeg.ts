@@ -1,14 +1,18 @@
 import { exec } from "../deps.ts";
 
-export const concatWavs = async (
-  wavs: string[],
+export const concatAudios = async (
+  paths: string[],
   outPath: string
 ): Promise<void> => {
-  const inputs = wavs.map((wav) => `file '${wav}'`).join("\n");
-  await Deno.writeTextFile("input.txt", inputs);
-  const cmd = `ffmpeg -y -f concat -i input.txt ${outPath}`;
-  const res = await exec(cmd);
-  console.log(res);
-  // await Deno.remove("input.txt");
-  await Promise.all(wavs.map((wav) => Deno.remove(wav)));
+  const inputTxtPath = `data/_wavs/input.txt`;
+  const inputs = paths
+    .map((path) => `file '${path.split("/").at(-1)}'`)
+    .join("\n");
+  await Deno.writeTextFile(inputTxtPath, inputs);
+  const cmd = `ffmpeg -y -f concat -i ${inputTxtPath} ${outPath}`;
+  console.log(`[ffmpeg] ${cmd}`);
+  await exec(cmd);
+
+  await Deno.remove(inputTxtPath);
+  // await Promise.all(wavs.map((wav) => Deno.remove(wav)));
 };
