@@ -9,7 +9,7 @@ import { SupabasePodcastRepository } from "./repo/podcast/SupabasePodcastStorage
 import { supabase } from "./lib/supabase.ts";
 import { SupabaseFeedRepository } from "./repo/feed/SupabaseFeedRepository.ts";
 
-const fromFeed = (feed: Feed): Partial<Item> => {
+const fromFeed = (feed: Omit<Feed, "script">): Partial<Item> => {
   return {
     guid: feed.id,
     title: feed.title,
@@ -25,20 +25,29 @@ export class FeedService {
     private feedRepository: IFeedRepository
   ) {}
 
+  getFeeds(): Promise<Omit<Feed, "script">[]> {
+    return this.feedRepository.getAll();
+  }
+
+  getFeed(id: string): Promise<Feed> {
+    return this.feedRepository.get(id);
+  }
+
   async post(script: Script, audio: ArrayBuffer): Promise<Feed> {
     const publicUrl = await this.podcastRepository.upload(script.id, audio);
-    const feed = {
+    const feed: Feed = {
       id: script.id,
       title: script.title,
       description: `URL: ${script.url}`,
       date: new Date(),
       url: publicUrl,
+      script: JSON.stringify(script),
     };
     await this.feedRepository.create(feed).catch((e) => console.log(e));
     return feed;
   }
 
-  async getFeeds(): Promise<string> {
+  async getFeedXml(): Promise<string> {
     const feeds = await this.feedRepository.getAll();
     const podcast = new Podcast({
       title: "朗読fm",
@@ -54,8 +63,8 @@ export class FeedService {
 }
 
 export const feedService = new FeedService(
-  new LocalPodcastRepository(),
-  // new SupabasePodcastRepository(supabase),
-  new MockFeedRepository()
-  // new SupabaseFeedRepository(supabase)
+  // new LocalPodcastRepository(),
+  new SupabasePodcastRepository(supabase),
+  // new MockFeedRepository()
+  new SupabaseFeedRepository(supabase)
 );

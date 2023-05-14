@@ -6,6 +6,7 @@ export interface Feed {
   description: string;
   date: Date;
   url: string;
+  script: string;
 }
 
 export const Serif = z.object({
@@ -13,6 +14,7 @@ export const Serif = z.object({
   id: z.string(),
   speaker: z.string(),
   text: z.string(),
+  kana: z.string(),
 });
 
 export type Serif = z.infer<typeof Serif>;

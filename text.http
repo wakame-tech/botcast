@@ -1,11 +1,28 @@
 
-@endpoint = https://8fef-2001-f71-1980-6e00-ee44-599b-c6d9-f780.ngrok-free.app
+@endpoint = http://localhost:8000
+@voicevox = http://127.0.0.1:50021
 
 ###
-POST {{endpoint}}/api/v1/podcasts
+GET {{endpoint}}/api/v1/feeds
+Content-Type: application/json; charset=UTF-8
+
+###
+GET {{endpoint}}/api/v1/feeds/4edd754ca51e5940bb4c61b952feabf0a1848610d07617ff50a3d22ba80439c2
+Content-Type: application/json; charset=UTF-8
+
+###
+POST {{endpoint}}/api/v1/scripts
 Content-Type: application/json; charset=UTF-8
 
 {
-  title: "テスト",
-  text: "こんにちは"
+  "title": "テスト",
+  "sources": [
+    {
+      "title": "テスト",
+      "text": "千反田"
+    }
+  ]
 }
+
+###
+GET {{voicevox}}/user_dict

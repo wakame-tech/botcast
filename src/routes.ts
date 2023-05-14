@@ -29,27 +29,53 @@ const ok = (
 
 export const Source = z.object({
   title: z.string(),
-  url: z.string().nullable(),
+  url: z.string().optional(),
   text: z.string(),
 });
 export type Source = z.infer<typeof Source>;
 
 export const GenerateScript = z.object({
   title: z.string(),
-  url: z.string().nullable(),
+  url: z.string().optional(),
   sources: z.array(Source),
 });
 export type GenerateScript = z.infer<typeof GenerateScript>;
 
 router.post("/api/v1/scripts", async (ctx) => {
-  const req = await validate(ctx.request, GenerateScript.parse);
-  const script = scriptService.generate(req.title, req.url, req.sources);
+  const req = await validate(ctx.request, GenerateScript.parse).catch((e) => {
+    ctx.response.status = 400;
+    ctx.response.body = e;
+  });
+  if (!req) {
+    return;
+  }
+  const script = await scriptService.generate(
+    req.title,
+    req.url ?? null,
+    req.sources
+  );
+  console.log(script);
   const audio = await scriptService.synthesis(script);
   const feed = await feedService.post(script, audio);
   ctx.response = ok(ctx.request, JSON.stringify(feed));
 });
 
+router.get("/api/v1/feeds", async (ctx) => {
+  const feeds = await feedService.getFeeds();
+  console.log(feeds);
+  ctx.response = ok(ctx.request, JSON.stringify(feeds));
+});
+
+router.get("/api/v1/feeds/:id", async (ctx) => {
+  const feed = await feedService.getFeed(ctx.params.id).catch(() => null);
+  if (!feed) {
+    ctx.response.status = 404;
+  } else {
+    ctx.response = ok(ctx.request, JSON.stringify(feed));
+  }
+});
+
 router.get("/feed", async (ctx) => {
-  const xml = await feedService.getFeeds();
+  const xml = await feedService.getFeedXml();
   ctx.response = ok(ctx.request, xml, { "Content-Type": "application/xml" });
 });

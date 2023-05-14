@@ -11,5 +11,6 @@ export const raw = (text: string): string[] => {
       buf = "";
     }
   }
+  lines.push(buf);
   return lines;
 };

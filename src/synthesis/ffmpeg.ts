@@ -14,5 +14,4 @@ export const concatAudios = async (
   await exec(cmd);
 
   await Deno.remove(inputTxtPath);
-  // await Promise.all(wavs.map((wav) => Deno.remove(wav)));
 };
