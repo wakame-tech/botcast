@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "./deps.ts";
 import { z } from "./deps.ts";
 import { feedService } from "./FeedService.ts";
-import { scriptService } from "./ScriptService.ts";
+import { Source } from "./model.ts";
+import { taskService } from "./TaskService.ts";
 
 export const router = new Router();
 
@@ -27,37 +28,22 @@ const ok = (
   return res;
 };
 
-export const Source = z.object({
+export const PostTaskRequest = z.object({
   title: z.string(),
-  url: z.string().optional(),
-  text: z.string(),
-});
-export type Source = z.infer<typeof Source>;
-
-export const GenerateScript = z.object({
-  title: z.string(),
-  url: z.string().optional(),
   sources: z.array(Source),
 });
-export type GenerateScript = z.infer<typeof GenerateScript>;
+export type PostTaskRequest = z.infer<typeof PostTaskRequest>;
 
-router.post("/api/v1/scripts", async (ctx) => {
-  const req = await validate(ctx.request, GenerateScript.parse).catch((e) => {
+router.post("/api/v1/feeds", async (ctx) => {
+  const req = await validate(ctx.request, PostTaskRequest.parse).catch((e) => {
     ctx.response.status = 400;
     ctx.response.body = e;
   });
   if (!req) {
     return;
   }
-  const script = await scriptService.generate(
-    req.title,
-    req.url ?? null,
-    req.sources
-  );
-  console.log(script);
-  const audio = await scriptService.synthesis(script);
-  const feed = await feedService.post(script, audio);
-  ctx.response = ok(ctx.request, JSON.stringify(feed));
+  const task = await taskService.push(req.title, req.sources);
+  ctx.response = ok(ctx.request, JSON.stringify(task));
 });
 
 router.get("/api/v1/feeds", async (ctx) => {

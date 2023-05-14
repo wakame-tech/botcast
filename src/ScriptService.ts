@@ -1,5 +1,4 @@
-import { Scene, Script, Serif } from "./model.ts";
-import { Source } from "./routes.ts";
+import { Scene, Script, Serif, Source } from "./model.ts";
 import { hamern } from "./repo/script/hamern.ts";
 import { concatAudios } from "./synthesis/ffmpeg.ts";
 import { queryVoiceVox, synthesisVoiceVox } from "./synthesis/voicevox.ts";
@@ -24,14 +23,25 @@ export function existsSync(filepath: string): boolean {
   }
 }
 
+const fetchHtml = async (url: string): Promise<string> => {
+  const hash = toHash([url]);
+  const cachePath = `data/_sources/${hash}.html`;
+  if (existsSync(cachePath)) {
+    console.log(`[fetch] using cache ${url}`);
+    return Deno.readTextFile(cachePath);
+  } else {
+    const html = await fetch(url).then((res) => res.text());
+    await Deno.writeTextFile(cachePath, html);
+    console.log(`[fetch] cached ${url}`);
+    return html;
+  }
+};
+
 export class ScriptService {
   constructor() {}
 
-  async generate(
-    title: string,
-    url: string | null,
-    sources: Source[]
-  ): Promise<Script> {
+  async processSource(source: Source): Promise<Scene> {
+    const speaker = "31";
     const processor = (source: Source) => {
       if (!source.url) {
         return raw;
@@ -43,41 +53,39 @@ export class ScriptService {
         return raw;
       }
     };
-
-    const scenes: Scene[] = [];
-    const speaker = "31";
-
-    for await (const source of sources) {
-      const lines = processor(source)(source.text);
-      const serifs: Serif[] = [];
-      for await (const line of lines) {
-        const query = await queryVoiceVox(line, speaker).catch((e) =>
-          console.log(e)
-        );
-        if (!query) {
-          throw "query failed";
-        }
-        const kana = query.kana;
-        const serif: Serif = {
-          type: "serif",
-          id: toHash([speaker, kana]),
-          speaker,
-          text: line,
-          kana,
-        };
-        serifs.push(serif);
+    const html = await fetchHtml(source.url);
+    const lines = processor(source)(html);
+    const serifs: Serif[] = [];
+    for await (const line of lines) {
+      const query = await queryVoiceVox(line, speaker).catch((e) =>
+        console.log(e)
+      );
+      if (!query) {
+        throw "query failed";
       }
-      scenes.push({
-        id: toHash(serifs.map((serif) => serif.id)),
-        url: source.url ?? null,
-        name: source.title,
-        serifs,
-      });
+      const kana = query.kana;
+      const serif: Serif = {
+        type: "serif",
+        id: toHash([speaker, kana]),
+        speaker,
+        text: line,
+        kana,
+      };
+      serifs.push(serif);
     }
+    return {
+      id: toHash(serifs.map((serif) => serif.id)),
+      url: source.url ?? null,
+      name: `scene`,
+      serifs,
+    };
+  }
+
+  async generate(title: string, sources: Source[]): Promise<Script> {
+    const scenes: Scene[] = await Promise.all(sources.map(this.processSource));
     const script: Script = {
       id: toHash(scenes.map((scene) => scene.id)),
       title,
-      url,
       scenes,
     };
     return script;

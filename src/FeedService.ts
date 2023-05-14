@@ -38,7 +38,7 @@ export class FeedService {
     const feed: Feed = {
       id: script.id,
       title: script.title,
-      description: `URL: ${script.url}`,
+      description: "",
       date: new Date(),
       url: publicUrl,
       script: JSON.stringify(script),

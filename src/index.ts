@@ -1,5 +1,8 @@
+import { taskService } from "./TaskService.ts";
 import { Application } from "./deps.ts";
 import { router } from "./routes.ts";
+
+taskService.poll();
 
 const app = new Application();
 await app

@@ -32,9 +32,23 @@ export type Scene = z.infer<typeof Scene>;
 
 export const Script = z.object({
   id: z.string(),
-  url: z.string().nullable(),
   title: z.string(),
   scenes: z.array(Scene),
 });
 
 export type Script = z.infer<typeof Script>;
+
+export const Source = z.object({
+  url: z.string(),
+});
+export type Source = z.infer<typeof Source>;
+
+export const GenerateFeedTask = z.object({
+  id: z.string(),
+  title: z.string(),
+  sources: z.array(Source),
+  status: z.enum(["queued", "processing", "success", "failed"]),
+  date: z.string(),
+});
+
+export type GenerateFeedTask = z.infer<typeof GenerateFeedTask>;
