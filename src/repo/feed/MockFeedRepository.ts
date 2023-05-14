@@ -1,15 +1,15 @@
-import { Feed } from "../../model.ts";
+import { Feed, FeedDigest } from "../../model.ts";
 import { IFeedRepository } from "./index.ts";
 
 export class MockFeedRepository implements IFeedRepository {
-  #feeds: Feed[] = [];
+  #feeds: Record<string, Feed> = {};
 
-  async getAll(): Promise<Omit<Feed, "script">[]> {
-    return this.#feeds;
+  async getAll(): Promise<FeedDigest[]> {
+    return Object.values(this.#feeds);
   }
 
   async get(id: string): Promise<Feed> {
-    const feed = this.#feeds.find((feed) => feed.id === id);
+    const feed = this.#feeds[id];
     if (!feed) {
       throw "not found";
     }
@@ -17,6 +17,10 @@ export class MockFeedRepository implements IFeedRepository {
   }
 
   async create(feed: Feed): Promise<void> {
-    this.#feeds.push(feed);
+    this.#feeds[feed.id] = feed;
+  }
+
+  async delete(id: string): Promise<void> {
+    delete this.#feeds[id];
   }
 }

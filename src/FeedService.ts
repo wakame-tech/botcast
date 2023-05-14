@@ -47,6 +47,11 @@ export class FeedService {
     return feed;
   }
 
+  async delete(id: string): Promise<void> {
+    await this.feedRepository.delete(id);
+    await this.podcastRepository.delete(id);
+  }
+
   async getFeedXml(): Promise<string> {
     const feeds = await this.feedRepository.getAll();
     const podcast = new Podcast({

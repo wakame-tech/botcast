@@ -9,6 +9,8 @@ export interface Feed {
   script: string;
 }
 
+export type FeedDigest = Omit<Feed, "script">;
+
 export const Serif = z.object({
   type: z.enum(["serif"]),
   id: z.string(),

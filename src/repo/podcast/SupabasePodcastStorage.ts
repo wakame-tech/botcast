@@ -4,22 +4,33 @@ import { IPodcastRepository } from "./index.ts";
 export class SupabasePodcastRepository implements IPodcastRepository {
   constructor(private supabase: SupabaseClient) {}
 
-  async upload(key: string, data: ArrayBuffer): Promise<string> {
+  async upload(key: string, audio: ArrayBuffer): Promise<string> {
     const expireSecs = 60 * 60 * 24;
-    const res = await this.supabase.storage.from("podcasts").upload(key, data, {
-      upsert: true,
-      contentType: "audio/mp3",
-    });
-    if (res.error) {
-      console.log(res.error);
-      throw res.error;
+    const { error: uploadErr } = await this.supabase.storage
+      .from("podcasts")
+      .upload(key, audio, {
+        upsert: true,
+        contentType: "audio/mp3",
+      });
+    if (uploadErr) {
+      throw uploadErr;
     }
-    const res2 = await this.supabase.storage
+    const { data, error: createUrlErr } = await this.supabase.storage
       .from("podcasts")
       .createSignedUrl(key, expireSecs);
-    if (res2.error) {
-      throw res2.error;
+    if (createUrlErr) {
+      throw createUrlErr;
     }
-    return res2.signedURL!;
+    return data!.signedURL!;
+  }
+
+  async delete(key: string): Promise<void> {
+    const { error } = await this.supabase.storage
+      .from("podcasts")
+      .remove([key]);
+    if (error) {
+      throw error;
+    }
+    return;
   }
 }

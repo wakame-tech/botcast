@@ -6,4 +6,9 @@ export class LocalPodcastRepository implements IPodcastRepository {
     await Deno.writeFile(path, new Uint8Array(data));
     return path;
   }
+
+  async delete(key: string): Promise<void> {
+    const path = `data/${key}.mp3`;
+    await Deno.remove(path);
+  }
 }

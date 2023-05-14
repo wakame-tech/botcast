@@ -31,9 +31,19 @@ export class SupabaseFeedRepository implements IFeedRepository {
   }
 
   async create(feed: Feed): Promise<void> {
-    const res = await this.supabase.from("feeds").upsert(feed);
-    if (res.error) {
-      throw res.error;
+    const { error } = await this.supabase.from("feeds").upsert(feed);
+    if (error) {
+      throw error;
+    }
+  }
+
+  async delete(id: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("feeds")
+      .delete()
+      .filter("id", "eq", id);
+    if (error) {
+      throw error;
     }
   }
 }

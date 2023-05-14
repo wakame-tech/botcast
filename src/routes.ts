@@ -75,6 +75,10 @@ router.get("/api/v1/feeds/:id", async (ctx) => {
   }
 });
 
+router.delete("/api/v1/feeds/:id", async (ctx) => {
+  await feedService.delete(ctx.params.id);
+});
+
 router.get("/feed", async (ctx) => {
   const xml = await feedService.getFeedXml();
   ctx.response = ok(ctx.request, xml, { "Content-Type": "application/xml" });
