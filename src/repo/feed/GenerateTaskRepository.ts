@@ -29,7 +29,7 @@ export class SupabaseGenerateTaskRepository {
     const { data, error } = await this.supabase
       .from<GenerateFeedTask>("tasks")
       .select("*")
-      .filter("status", "eq", "queued")
+      .or("status.eq.failed,status.eq.queued")
       .order("date", { ascending: true })
       .limit(1);
     if (error) {
@@ -40,5 +40,15 @@ export class SupabaseGenerateTaskRepository {
       return null;
     }
     return GenerateFeedTask.parse(row);
+  }
+
+  async clean(): Promise<void> {
+    const { error } = await this.supabase
+      .from("tasks")
+      .delete()
+      .filter("id", "not.is", null);
+    if (error) {
+      throw error;
+    }
   }
 }

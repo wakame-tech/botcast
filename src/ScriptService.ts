@@ -5,6 +5,7 @@ import { queryVoiceVox, synthesisVoiceVox } from "./synthesis/voicevox.ts";
 import { SHA256 } from "https://denopkg.com/chiefbiiko/sha256@v1.0.0/mod.ts";
 import { raw } from "./repo/script/raw.ts";
 import { narou } from "./repo/script/narou.ts";
+import { podcastsDir, sourcesDir, wavsDir } from "./config.ts";
 
 export const toHash = (texts: string[]): string => {
   const hasher = new SHA256();
@@ -23,16 +24,25 @@ export function existsSync(filepath: string): boolean {
   }
 }
 
+const sequential = async <T>(promises: (() => Promise<T>)[]): Promise<T[]> => {
+  const results: T[] = [];
+  for await (const promiseFn of promises) {
+    results.push(await promiseFn());
+  }
+  return results;
+};
+
 const fetchHtml = async (url: string): Promise<string> => {
   const hash = toHash([url]);
-  const cachePath = `data/_sources/${hash}.html`;
+  const cachePath = `${sourcesDir}/${hash}.html`;
+  console.log(`[fetch] use ${url} cached ${cachePath}`);
   if (existsSync(cachePath)) {
-    console.log(`[fetch] using cache ${url}`);
     return Deno.readTextFile(cachePath);
   } else {
+    console.log(`[fetch] fetch ${url} and cached ${cachePath}`);
     const html = await fetch(url).then((res) => res.text());
+
     await Deno.writeTextFile(cachePath, html);
-    console.log(`[fetch] cached ${url}`);
     return html;
   }
 };
@@ -82,7 +92,9 @@ export class ScriptService {
   }
 
   async generate(title: string, sources: Source[]): Promise<Script> {
-    const scenes: Scene[] = await Promise.all(sources.map(this.processSource));
+    const scenes: Scene[] = await sequential(
+      sources.map((source) => () => this.processSource(source))
+    );
     const script: Script = {
       id: toHash(scenes.map((scene) => scene.id)),
       title,
@@ -92,24 +104,26 @@ export class ScriptService {
   }
 
   async synthesis(script: Script): Promise<ArrayBuffer> {
-    const dir = `data/_wavs`;
-    const serifs = script.scenes.flatMap((scene) => scene.serifs);
-    const outPaths: string[] = [];
-    for await (const serif of serifs) {
-      const outPath = `${dir}/${serif.id}.wav`;
-      const cached = existsSync(outPath);
-      if (!cached) {
-        const query = await queryVoiceVox(serif.text, serif.speaker);
-        await synthesisVoiceVox(query, serif.speaker, outPath);
-      }
-      console.log(
-        `[voicevox] ${cached ? "cached" : "generated"} ${serif.id.slice(0, 6)}`
-      );
-      console.log(serif.text);
-      console.log(serif.kana);
-      outPaths.push(outPath);
-    }
-    const output = `data/_podcasts/${script.id}.mp3`;
+    const outPaths = await sequential(
+      script.scenes.flatMap((scene) =>
+        scene.serifs.map((serif) => async () => {
+          const outPath = `${wavsDir}/${serif.id}.wav`;
+          const cached = existsSync(outPath);
+          if (!cached) {
+            const query = await queryVoiceVox(serif.text, serif.speaker);
+            await synthesisVoiceVox(query, serif.speaker, outPath);
+          }
+          console.log(
+            `[voicevox] ${cached ? "cached" : "generated"} ${serif.id.slice(
+              0,
+              6
+            )} ${outPath}`
+          );
+          return outPath;
+        })
+      )
+    );
+    const output = `${podcastsDir}/${script.id}.mp3`;
     if (!existsSync(output)) {
       await concatAudios(outPaths, output);
     }

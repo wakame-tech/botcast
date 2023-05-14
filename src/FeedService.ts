@@ -3,8 +3,6 @@ import { IPodcastRepository } from "./repo/podcast/index.ts";
 import { IFeedRepository } from "./repo/feed/index.ts";
 import type { Item } from "https://esm.sh/podcast@2.0.1";
 import { Podcast } from "https://esm.sh/podcast@2.0.1";
-import { LocalPodcastRepository } from "./repo/podcast/LocalPodcastStorage.ts";
-import { MockFeedRepository } from "./repo/feed/MockFeedRepository.ts";
 import { SupabasePodcastRepository } from "./repo/podcast/SupabasePodcastStorage.ts";
 import { supabase } from "./lib/supabase.ts";
 import { SupabaseFeedRepository } from "./repo/feed/SupabaseFeedRepository.ts";
@@ -68,8 +66,6 @@ export class FeedService {
 }
 
 export const feedService = new FeedService(
-  // new LocalPodcastRepository(),
   new SupabasePodcastRepository(supabase),
-  // new MockFeedRepository()
   new SupabaseFeedRepository(supabase)
 );

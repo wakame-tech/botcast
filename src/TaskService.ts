@@ -26,10 +26,12 @@ export class TaskService {
   poll() {
     setInterval(async () => {
       const task = await this.taskRepo.pop();
-      console.log(`[tasks] ${task}`);
       if (!task) {
         return;
       }
+      console.log(
+        `[tasks] ${task.id} ${task.title} ${task.sources.length} sources}`
+      );
       try {
         console.log(`${task.id} -> processing`);
         await this.taskRepo.update(task.id, "processing");
@@ -38,11 +40,13 @@ export class TaskService {
           task.title,
           task.sources
         );
-        console.log(script);
         const audio = await this.scriptService.synthesis(script);
         await this.feedService.post(script, audio);
+        console.log(`${task.id} -> success`);
         await this.taskRepo.update(task.id, "success");
       } catch (e) {
+        console.log(e);
+        console.log(`${task.id} -> failed`);
         await this.taskRepo.update(task.id, "failed");
       }
     }, 5 * 1000);

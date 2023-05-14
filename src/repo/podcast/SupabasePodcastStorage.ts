@@ -33,4 +33,14 @@ export class SupabasePodcastRepository implements IPodcastRepository {
     }
     return;
   }
+
+  async clean(): Promise<void> {
+    const { data, error } = await this.supabase.storage.from("podcasts").list();
+    if (error) {
+      throw error;
+    }
+    for await (const file of data!) {
+      await this.supabase.storage.from("podcasts").remove([file.name]);
+    }
+  }
 }

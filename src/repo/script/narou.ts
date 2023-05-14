@@ -3,6 +3,10 @@ import { extractRuby, replaceRubyToRt } from "./ruby.ts";
 
 export const narou = (text: string): string[] => {
   const doc = new DOMParser().parseFromString(text, "text/html")!;
+  const title = doc.querySelector("title")!.textContent;
+  if (title === "エラー") {
+    throw "not found";
+  }
   const el = doc.querySelector("#novel_honbun")!;
   const lines = Array.from(el.children).filter((e) => e.nodeName === "P");
 

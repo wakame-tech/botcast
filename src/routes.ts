@@ -48,7 +48,6 @@ router.post("/api/v1/feeds", async (ctx) => {
 
 router.get("/api/v1/feeds", async (ctx) => {
   const feeds = await feedService.getFeeds();
-  console.log(feeds);
   ctx.response = ok(ctx.request, JSON.stringify(feeds));
 });
 
