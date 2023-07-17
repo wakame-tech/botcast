@@ -12,3 +12,11 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+  db:
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres

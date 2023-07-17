@@ -11,15 +11,14 @@ GET {{endpoint}}/api/v1/feeds/4edd754ca51e5940bb4c61b952feabf0a1848610d07617ff50
 Content-Type: application/json; charset=UTF-8
 
 ###
-POST {{endpoint}}/api/v1/scripts
+POST {{endpoint}}/api/v1/feeds
 Content-Type: application/json; charset=UTF-8
 
 {
-  "title": "テスト",
+  "title": "比翼の鳥",
   "sources": [
     {
-      "title": "テスト",
-      "text": "千反田"
+      "url": "https://gist.githubusercontent.com/wakame-tech/5aa99e1d3e6253dde5405f4e8e662e8d/raw/8d9dd19fcba455afb7f3cffd1979a0f118c7b6ae/hyokass_19669327.txt"
     }
   ]
 }
