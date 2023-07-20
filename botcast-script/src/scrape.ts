@@ -3,10 +3,10 @@ import {
   HTMLDocument,
 } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 import { sha256 } from "https://denopkg.com/chiefbiiko/sha256@v1.0.0/mod.ts";
-import { Series } from "./model.ts";
+import { Episode, Series } from "./model.ts";
 import R from "npm:remeda";
 import { andThen, collectPromises } from "./fpUtils.ts";
-import { Extractor, newEpisode, newSeries } from "./extractor/index.ts";
+import { Extractor, Page } from "./extractor/index.ts";
 
 async function fileExists(filepath: string): Promise<boolean> {
   try {
@@ -36,8 +36,10 @@ export const fetchCached = async (
   }
 };
 
+const pure = <T>(t: T): Promise<T> => Promise.resolve(t);
+
 const parseHtml = (content: string): Promise<HTMLDocument> =>
-  Promise.resolve(new DOMParser().parseFromString(content, "text/html")!);
+  pure(new DOMParser().parseFromString(content, "text/html")!);
 
 const inspect =
   <T>(templateFn: (t: T) => string): ((t: T) => T) =>
@@ -46,33 +48,48 @@ const inspect =
     return t;
   };
 
-const scrape = (url: string): Promise<HTMLDocument> =>
-  R.pipe(url, fetchCached, andThen(parseHtml));
+const scrape = (url: string): Promise<Page> =>
+  R.pipe(
+    url,
+    fetchCached,
+    andThen(parseHtml),
+    andThen((html) => pure({ url, html }))
+  );
+
+export const scrapeEpisode = (
+  extractor: Extractor,
+  episodeUrl: string
+): Promise<Episode> =>
+  R.pipe(
+    scrape(episodeUrl),
+    andThen((page) =>
+      pure({
+        title: extractor.episodeTitle(page),
+        url: episodeUrl,
+        serifs: extractor.body(page),
+      } satisfies Episode)
+    )
+  );
 
 export const scrapeSeries = (
   seriesUrl: string,
   extractor: Extractor
 ): Promise<Series> =>
   R.pipe(
-    seriesUrl,
-    scrape,
-    andThen((episodeHtml) =>
+    scrape(seriesUrl),
+    andThen((page) =>
       R.pipe(
-        extractor.collectEpisodeUrls(seriesUrl, episodeHtml),
+        extractor.collectEpisodeUrls(page),
         inspect((urls) => `${urls.length} episodes found`),
-        // (urls) => urls.slice(0, 3),
-        R.map(
-          (episodeUrl) => () =>
-            R.pipe(
-              scrape(episodeUrl),
-              andThen((episodeHtml) =>
-                newEpisode(extractor, episodeUrl, episodeHtml)
-              )
-            )
-        ),
+        (urls) => urls.slice(0, 1),
+        R.map((episodeUrl) => () => scrapeEpisode(extractor, episodeUrl)),
         collectPromises,
         andThen((episodes) =>
-          newSeries(extractor, seriesUrl, episodeHtml, episodes)
+          pure({
+            title: extractor.seriesTitle(page),
+            url: seriesUrl,
+            episodes,
+          } satisfies Series)
         )
       )
     )

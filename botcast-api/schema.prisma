@@ -16,16 +16,22 @@ model Botcast {
   description String
   date        DateTime
   url         String
+
+  @@map("botcast")
 }
 
 model Script {
   id     String @id @default(uuid())
   script Json
+
+  @@map("script")
 }
 
-model BotcastSynthesisTask {
+model Task {
   id     String   @id @default(uuid())
   status String
   body   String
   date   DateTime
+
+  @@map("task")
 }

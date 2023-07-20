@@ -2,7 +2,7 @@ import {
   Element,
   HTMLDocument,
 } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
-import { Episode, Series, Serif } from "../model.ts";
+import { Serif } from "../model.ts";
 
 export const attrValue = (a: Element, attrName: string): string => {
   return (
@@ -11,36 +11,16 @@ export const attrValue = (a: Element, attrName: string): string => {
   );
 };
 
-export const newEpisode = (
-  extractor: Extractor,
-  url: string,
-  html: HTMLDocument
-): Promise<Episode> => {
-  return Promise.resolve({
-    title: extractor.episodeTitle(html),
-    url,
-    serifs: extractor.body(html),
-  });
-};
-
-export const newSeries = (
-  extractor: Extractor,
-  url: string,
-  html: HTMLDocument,
-  episodes: Episode[]
-): Promise<Series> => {
-  return Promise.resolve({
-    title: extractor.episodeTitle(html),
-    url,
-    episodes,
-  });
-};
+export interface Page {
+  url: string;
+  html: HTMLDocument;
+}
 
 export interface Extractor {
-  collectEpisodeUrls(seriesUrl: string, html: HTMLDocument): string[];
-  seriesTitle(html: HTMLDocument): string;
-  episodeTitle(html: HTMLDocument): string;
-  body(html: HTMLDocument): Serif[];
+  collectEpisodeUrls(series: Page): string[];
+  seriesTitle(series: Page): string;
+  episodeTitle(episode: Page): string;
+  body(episode: Page): Serif[];
 }
 
 export { extractor as narou } from "./narou.ts";
