@@ -6,19 +6,18 @@ import cors from "cors";
 import { getLogger } from "log4js";
 // @ts-ignore
 import audit from "express-requests-logger";
+import { botcastRouter } from "./botcastsRouter";
+import { scriptRouter } from "./scriptRouter";
 
 export const prisma = new PrismaClient();
 
-const t = initTRPC.create();
+export const t = initTRPC.create();
 
 const router = t.router;
-const publicProcedure = t.procedure;
 
 const appRouter = router({
-  users: publicProcedure.query(async () => {
-    const users = await prisma.user.findMany();
-    return users;
-  }),
+  scripts: scriptRouter,
+  botcasts: botcastRouter,
 });
 
 export type AppRouter = typeof appRouter;

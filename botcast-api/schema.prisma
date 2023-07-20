@@ -10,7 +10,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id   String @id @default(uuid())
-  name String
+model Botcast {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  date        DateTime
+  url         String
+}
+
+model Script {
+  id     String @id @default(uuid())
+  script Json
+}
+
+model BotcastSynthesisTask {
+  id     String   @id @default(uuid())
+  status String
+  body   String
+  date   DateTime
 }
