@@ -17,23 +17,26 @@ async function fileExists(filepath: string): Promise<boolean> {
   }
 }
 
-export const fetchCached = async (
-  url: string,
-  cooldown = 1000
+export const cached = async (
+  path: string,
+  getter: () => Promise<string>
 ): Promise<string> => {
+  const exists = await fileExists(path);
+  if (!exists) {
+    const res = await getter();
+    await Deno.writeTextFile(path, res);
+  }
+  return Deno.readTextFile(path);
+};
+
+export const fetchCached = (url: string, cooldown = 3000): Promise<string> => {
   const hash = sha256(url, "utf8", "hex");
   const cachePath = `cache/${hash}.html`;
-  const exists = await fileExists(cachePath);
-  console.log(`${exists} ${url} (${hash})`);
-  if (exists) {
-    return Deno.readTextFile(cachePath);
-  } else {
+  return cached(cachePath, async () => {
     await new Promise((res) => setTimeout(res, cooldown));
-    const res = await fetch(url).then((res) => res.text());
-    await Deno.writeTextFile(cachePath, res);
     console.log(`cached ${url} (${hash})`);
-    return res;
-  }
+    return fetch(url).then((res) => res.text());
+  });
 };
 
 const pure = <T>(t: T): Promise<T> => Promise.resolve(t);
@@ -81,7 +84,7 @@ export const scrapeSeries = (
       R.pipe(
         extractor.collectEpisodeUrls(page),
         inspect((urls) => `${urls.length} episodes found`),
-        (urls) => urls.slice(0, 1),
+        // (urls) => urls.slice(0, 1),
         R.map((episodeUrl) => () => scrapeEpisode(extractor, episodeUrl)),
         collectPromises,
         andThen((episodes) =>

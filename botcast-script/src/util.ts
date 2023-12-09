@@ -13,7 +13,7 @@ const ruby2rt = (e: Element): string => {
   }
 };
 
-const filterEmptyLine = (lines: string[]) =>
+export const filterEmptyLine = (lines: string[]) =>
   lines.filter((l) => l.trim() !== "");
 
 export const extractPContents = (el: Element): string[] => {

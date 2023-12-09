@@ -1,39 +1,44 @@
 import { Task, TaskRepo, TaskStatus } from "./worker.ts";
 import { Client } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
 
-const from = (entity: any): Task<string> => {
+export type BotcastTask = {
+  type: "generate";
+  url: string;
+};
+
+const from = (entity: any): Task<BotcastTask> => {
   return {
     id: entity.id,
-    arg: entity.body,
+    arg: JSON.parse(entity.body) as BotcastTask,
     status: entity.status as TaskStatus,
-    date: entity.date.toISOString(),
+    date: entity.date,
   };
 };
 
-export class BotcastSynthesisTaskRepo implements TaskRepo<string> {
+export class BotcastSynthesisTaskRepo implements TaskRepo<BotcastTask> {
   private table = "Task";
 
   constructor(private client: Client) {}
 
-  async fetchTasks(): Promise<Task<string>[]> {
+  async fetchTasks(): Promise<Task<BotcastTask>[]> {
     const result = await this.client.queryObject(
       `SELECT id,status,body,date from ${this.table}`
     );
     return result.rows.map(from);
   }
-  async save(task: Task<string>): Promise<Task<string>> {
+  async save(task: Task<BotcastTask>): Promise<Task<BotcastTask>> {
     await this.client.queryArray({
       args: {
         id: task.id,
         status: task.status,
-        body: task.arg,
+        body: JSON.stringify(task.arg),
         date: task.date,
       },
       text: `INSERT INTO ${this.table} VALUES ($ID,$STATUS,$BODY,$DATE)`,
     });
     return task;
   }
-  async fetchNextTask(): Promise<Task<string> | null> {
+  async fetchNextTask(): Promise<Task<BotcastTask> | null> {
     const result = await this.client.queryObject(
       `SELECT id,status,body,date FROM ${this.table} WHERE status = 'queued' ORDER BY date DESC LIMIT 1`
     );
