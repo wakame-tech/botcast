@@ -19,7 +19,7 @@ function App() {
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: "http://localhost:1234/trpc",
+          url: "/trpc",
           async headers() {
             return {};
           },
