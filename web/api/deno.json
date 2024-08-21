@@ -2,14 +2,19 @@
     "imports": {
         "@/": "./",
         "zod": "https://deno.land/x/zod@v3.19.1/mod.ts",
-        "opine": "https://deno.land/x/opine@2.3.3/mod.ts",
-        "cors": "https://deno.land/x/cors@v1.2.2/mod.ts",
+        "hono": "jsr:@hono/hono@^4.4.9",
+        "@hono/trpc-server": "https://esm.sh/@hono/trpc-server@0.3.2",
         "@trpc/server": "https://esm.sh/@trpc/server@10.45.2",
         "@trpc/server/": "https://esm.sh/@trpc/server@10.45.2/",
         "@trpc/client": "https://esm.sh/@trpc/client@10.45.2",
         "@prisma/client": "./src/client/deno/edge.ts"
     },
+    "compilerOptions": {
+        "jsx": "precompile",
+        "jsxImportSource": "hono/jsx"
+    },
     "tasks": {
+        "web": "cd ../ && npm run build",
         "build": "deno task generate",
         "migrate": "deno run -A npm:prisma migrate dev",
         "generate": "deno run -A --unstable npm:prisma generate --accelerate"
