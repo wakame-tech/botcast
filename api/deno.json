@@ -10,6 +10,7 @@
         "@prisma/client": "./src/client/deno/edge.ts"
     },
     "tasks": {
+        "build": "deno task generate",
         "migrate": "deno run -A npm:prisma migrate dev",
         "generate": "deno run -A --unstable npm:prisma generate --accelerate"
     }
