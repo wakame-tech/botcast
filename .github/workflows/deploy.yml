@@ -32,7 +32,7 @@ jobs:
         run: "cd web/api && deno task web"
 
       - name: Build step
-        run: "cd web/api && deno task build"
+        run: "cd web/api && deno task build && cd .. && npm install && npm run build"
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
