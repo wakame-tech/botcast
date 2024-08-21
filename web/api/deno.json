@@ -14,8 +14,7 @@
         "jsxImportSource": "hono/jsx"
     },
     "tasks": {
-        "web": "cd ../ && npm run build",
-        "build": "deno task generate",
+        "build": "deno task generate && cd .. && npm run build",
         "migrate": "deno run -A npm:prisma migrate dev",
         "generate": "deno run -A --unstable npm:prisma generate --accelerate"
     }
