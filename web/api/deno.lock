@@ -2,7 +2,13 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "jsr:@hono/hono@^4.4.9": "jsr:@hono/hono@4.5.7",
       "npm:prisma": "npm:prisma@5.18.0"
+    },
+    "jsr": {
+      "@hono/hono@4.5.7": {
+        "integrity": "c569220a4c13575b7bc98cb62742d0fd97d89fb80a3a4a29929ff1ea190765c4"
+      }
     },
     "npm": {
       "@prisma/debug@5.18.0": {
@@ -399,12 +405,14 @@
     "https://deno.land/x/zod@v3.19.1/types.ts": "ab062fe1640d2172f49ca593fb325a22f8927145201f29b02b62353c79db2501",
     "https://esm.sh/*@trpc/server@10.0.0-proxy-beta.26": "093d066d456ae7e1e3c7c4114068553662707d36a75e959ee85d129eb2221984",
     "https://esm.sh/*@trpc/server@10.0.0-proxy-beta.26/adapters/express": "f8a7025a8fcf140446703ee0ae9237c0857ec9b5c06689df44ba7d20d7d6c451",
+    "https://esm.sh/@hono/trpc-server@0.3.2": "0c4f37df9ff10ce09b8b1ea29667aa3fab46ff36086a3835335624534d128338",
     "https://esm.sh/@trpc/client@10.45.2": "fea217471e6429ee4fc4f4281ff470eeaa97825121c8c3318ece493b0c8cb399",
     "https://esm.sh/@trpc/client@10.9.0": "dda2d9a0a0dc57534c95d6ed23950e5486c01609e6c6a876ad43652145dda758",
     "https://esm.sh/@trpc/server@10.0.0-proxy-beta.26": "093d066d456ae7e1e3c7c4114068553662707d36a75e959ee85d129eb2221984",
     "https://esm.sh/@trpc/server@10.0.0-proxy-beta.26/adapters/express": "f8a7025a8fcf140446703ee0ae9237c0857ec9b5c06689df44ba7d20d7d6c451",
     "https://esm.sh/@trpc/server@10.45.2": "99bdfbd9f9c7fd29e9bc56def3386cca16b68e3bd770ad8b34dcec345d8741bd",
     "https://esm.sh/@trpc/server@10.45.2/adapters/express": "a04433ed9fd9c784d44ba4cbcf826bd4251f7d6ae82adba5f9180568c200d088",
+    "https://esm.sh/v135/@hono/trpc-server@0.3.2/denonext/trpc-server.mjs": "0f4989f6a9091c2f76cfb00d5545c8ff2adf15414f7c8888ea0f512e2230544c",
     "https://esm.sh/v135/@trpc/client@10.45.2/denonext/client.mjs": "6421de23c03074a3e8cb20fa26d59b969d05f06a2a7770dc06cadd2500eca0dc",
     "https://esm.sh/v135/@trpc/client@10.45.2/denonext/links/httpLink.js": "abab16d4a725d36d7aa6dda4e46eabecdb712065f28f5109043cbed433b47c0f",
     "https://esm.sh/v135/@trpc/client@10.45.2/denonext/links/loggerLink.js": "fab2139054d27422331633061d7c907a5f0ed0bc2959b5b925b8a06f07395767",
@@ -417,6 +425,7 @@
     "https://esm.sh/v135/@trpc/server@10.0.0-proxy-beta.26/denonext/adapters/express.js": "b172d4661430fc7c474380c9cd50e201c2174ab6c8439e83ec8250758877b139",
     "https://esm.sh/v135/@trpc/server@10.0.0-proxy-beta.26/denonext/server.mjs": "a9384300f6511e1dc4c27a1f35edd99382c6775b277300ac0b0fa1e570b78f21",
     "https://esm.sh/v135/@trpc/server@10.45.2/denonext/adapters/express.js": "5d4bc663f511415e063314e645c5e31a3cf12687c472e3ec4ee57db305d77cd5",
+    "https://esm.sh/v135/@trpc/server@10.45.2/denonext/adapters/fetch.js": "32e123abc205c421645c1916c010746ddb49e4e0ef2178b7081f4ec156a74e8b",
     "https://esm.sh/v135/@trpc/server@10.45.2/denonext/adapters/node-http/content-type/json.js": "853f8625b7cef19d3b20d2d2be2eb1a9e46494217b8f3d3df4867d0189adbe8e",
     "https://esm.sh/v135/@trpc/server@10.45.2/denonext/observable.js": "95c689826352aafa5061db821c6af013ad5995d721fa40e83278c08673de639f",
     "https://esm.sh/v135/@trpc/server@10.45.2/denonext/server.mjs": "85de0552a7811d474f7cd09d0f448174f10d5f846827a18b62972f8d959db096",
@@ -424,5 +433,10 @@
     "https://esm.sh/v135/@trpc/server@10.9.0/denonext/observable.js": "c91ef22b2e9dfdf628ca94870a34510f56daa6d7a48827e1ded0dfab9ad5e930",
     "https://esm.sh/v135/@trpc/server@10.9.0/denonext/shared.js": "6deec3a2d736eb6e39c187aad2c0d118692ed4cd44b98ed9c854283a75f3b00c",
     "https://raw.githubusercontent.com/jshttp/mime-db/v1.52.0/db.json": "85c8e1ba609079947c8df83c092900ab0226e1d7b60e5e7105fb7dd701833263"
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@hono/hono@^4.4.9"
+    ]
   }
 }
