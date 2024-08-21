@@ -6,6 +6,12 @@
         "cors": "https://deno.land/x/cors@v1.2.2/mod.ts",
         "@trpc/server": "https://esm.sh/@trpc/server@10.45.2",
         "@trpc/server/": "https://esm.sh/@trpc/server@10.45.2/",
-        "@trpc/client": "https://esm.sh/@trpc/client@10.45.2"
+        "@trpc/client": "https://esm.sh/@trpc/client@10.45.2",
+        "@prisma/client": "./src/client/deno/edge.ts"
+    },
+    "tasks": {
+        "build": "deno task generate",
+        "migrate": "deno run -A npm:prisma migrate dev",
+        "generate": "deno run -A --unstable npm:prisma generate --accelerate"
     }
 }
