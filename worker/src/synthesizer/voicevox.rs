@@ -49,7 +49,7 @@ impl VoiceVox {
         Ok(res)
     }
 
-    async fn synthesis(
+    async fn synthesis_(
         &self,
         query: Value,
         speaker: &impl Speaker,
@@ -85,7 +85,7 @@ impl Synthesizer for VoiceVox {
         out: &PathBuf,
     ) -> anyhow::Result<()> {
         let query = self.query(text, speaker).await?;
-        self.synthesis(query, speaker, out).await
+        self.synthesis_(query, speaker, out).await
     }
 }
 
@@ -101,7 +101,7 @@ mod tests {
         let speaker = VoiceVoxSpeaker::ZundaNormal;
         let query = voicevox.query("こんにちは", &speaker).await?;
         let out = PathBuf::from("test.wav");
-        voicevox.synthesis(query, &speaker, &out).await?;
+        voicevox.synthesis_(query, &speaker, &out).await?;
         fs::remove_file(out).await?;
         Ok(())
     }

@@ -19,6 +19,7 @@ pub(crate) struct Episode {
     title: String,
     pub(crate) serifs: Vec<Serif>,
 }
+
 impl Episode {
     pub(crate) fn new(title: String, serifs: Vec<Serif>) -> Self {
         Self {

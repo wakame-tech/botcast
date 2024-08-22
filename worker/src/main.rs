@@ -5,12 +5,12 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use std::{sync::LazyLock, time::Duration};
+use std::sync::LazyLock;
 use surrealdb::{
     engine::local::{Db, Mem},
     Surreal,
 };
-use task::Task;
+use task::{watch_tasks, Task};
 
 mod scrape;
 mod script;
@@ -27,26 +27,18 @@ async fn list_task(State(db): State<Ctx>) -> Json<Vec<Task>> {
     return Json(tasks);
 }
 
-async fn create_task(State(db): State<Ctx>) -> impl IntoResponse {
-    let task = Task::new();
+#[derive(Debug, serde::Deserialize)]
+struct CreateTaskBody {
+    url: String,
+}
+
+async fn create_task(State(db): State<Ctx>, Json(body): Json<CreateTaskBody>) -> impl IntoResponse {
+    let task = Task::new(body.url);
     db.0.create::<Vec<Task>>("tasks")
         .content(task)
         .await
         .unwrap();
     StatusCode::CREATED
-}
-
-async fn watch_tasks() -> anyhow::Result<()> {
-    let db = DB.clone();
-    loop {
-        println!("Watching tasks...");
-        let tasks: Vec<Task> = db.select("tasks").await?;
-        if let Some(task) = tasks.first() {
-            let res: Option<Task> = db.delete(&task.id).await?;
-            println!("Deleted: {:?}", res);
-        }
-        tokio::time::sleep(Duration::from_secs(5)).await;
-    }
 }
 
 #[tokio::main]

@@ -8,7 +8,7 @@ use scraper::{Html, Selector};
 pub(crate) struct Narou;
 
 impl EpisodeScraper for Narou {
-    fn scrape(&self, html: &Html) -> anyhow::Result<Episode> {
+    fn scrape(&self, html: Html) -> anyhow::Result<Episode> {
         Ok(Episode::new(
             get_title(&html)?,
             get_body(&html)?
@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn scrape_episode() -> anyhow::Result<()> {
         let html = read_html("narou.html")?;
-        let episode = Narou.scrape(&html)?;
+        let episode = Narou.scrape(html)?;
         dbg!(episode);
         Ok(())
     }
