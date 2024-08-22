@@ -8,27 +8,16 @@ use axum::{
 use std::{sync::LazyLock, time::Duration};
 use surrealdb::{
     engine::local::{Db, Mem},
-    opt::RecordId,
     Surreal,
 };
+
+mod task;
+mod voicevox;
 
 #[derive(Debug, Clone)]
 struct Ctx(Surreal<Db>);
 
 static DB: LazyLock<Surreal<Db>> = LazyLock::new(|| Surreal::init());
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct Task {
-    id: RecordId,
-}
-
-impl Task {
-    fn new(id: usize) -> Self {
-        Self {
-            id: RecordId::from(("task".to_string(), format!("{}", id))),
-        }
-    }
-}
 
 async fn list_task(State(db): State<Ctx>) -> Json<Vec<Task>> {
     let tasks: Vec<Task> = db.0.select("tasks").await.unwrap();

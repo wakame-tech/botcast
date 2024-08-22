@@ -1,4 +1,3 @@
-version: "3"
 services:
   voicevox_engine:
     image: voicevox/voicevox_engine:nvidia-ubuntu20.04-latest
@@ -9,6 +8,4 @@ services:
       resources:
         reservations:
           devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+            - capabilities: [gpu]
