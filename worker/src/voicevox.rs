@@ -4,7 +4,8 @@ use tokio::{fs, io::AsyncWriteExt};
 
 static ORIGIN: &str = "http://localhost:50021";
 
-enum Speaker {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum Speaker {
     ZundaNormal,
 }
 

@@ -1,14 +1,15 @@
 use surrealdb::opt::RecordId;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct Task {
-    id: RecordId,
+pub(crate) struct Task {
+    pub(crate) id: RecordId,
 }
 
 impl Task {
-    fn new(id: usize) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            id: RecordId::from(("task".to_string(), format!("{}", id))),
+            id: RecordId::from(("task".to_string(), Uuid::new_v4().to_string())),
         }
     }
 }

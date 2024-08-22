@@ -10,7 +10,10 @@ use surrealdb::{
     engine::local::{Db, Mem},
     Surreal,
 };
+use task::Task;
 
+mod scrape;
+mod script;
 mod task;
 mod voicevox;
 
@@ -25,8 +28,7 @@ async fn list_task(State(db): State<Ctx>) -> Json<Vec<Task>> {
 }
 
 async fn create_task(State(db): State<Ctx>) -> impl IntoResponse {
-    let len = db.0.select::<Vec<Task>>("tasks").await.unwrap().len();
-    let task = Task::new(len);
+    let task = Task::new();
     db.0.create::<Vec<Task>>("tasks")
         .content(task)
         .await
