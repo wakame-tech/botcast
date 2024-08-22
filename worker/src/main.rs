@@ -14,8 +14,8 @@ use task::Task;
 
 mod scrape;
 mod script;
+mod synthesizer;
 mod task;
-mod voicevox;
 
 #[derive(Debug, Clone)]
 struct Ctx(Surreal<Db>);

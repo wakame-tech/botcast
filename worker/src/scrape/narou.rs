@@ -1,11 +1,11 @@
 use super::EpisodeScraper;
 use crate::{
     script::{Episode, Serif},
-    voicevox::Speaker,
+    synthesizer::{voicevox::VoiceVoxSpeaker, Speaker},
 };
 use scraper::{Html, Selector};
 
-struct Narou;
+pub(crate) struct Narou;
 
 impl EpisodeScraper for Narou {
     fn scrape(&self, html: &Html) -> anyhow::Result<Episode> {
@@ -13,7 +13,12 @@ impl EpisodeScraper for Narou {
             get_title(&html)?,
             get_body(&html)?
                 .split("。")
-                .map(|s| Serif::new(format!("{}。", s), Speaker::ZundaNormal))
+                .map(|s| {
+                    Serif::new(
+                        format!("{}。", s),
+                        VoiceVoxSpeaker::ZundaNormal.id().to_string(),
+                    )
+                })
                 .collect(),
         ))
     }
@@ -48,17 +53,7 @@ fn get_body(html: &Html) -> anyhow::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::{get_body, Narou};
-    use crate::scrape::{narou::get_title, EpisodeScraper};
-    use scraper::Html;
-    use std::{fs::File, io::Read, path::PathBuf};
-
-    fn read_html(path: &str) -> anyhow::Result<Html> {
-        let mut f = File::open(PathBuf::from(path))?;
-        let mut html = String::new();
-        f.read_to_string(&mut html)?;
-        let html = Html::parse_document(&html);
-        Ok(html)
-    }
+    use crate::scrape::{narou::get_title, tests::read_html, EpisodeScraper};
 
     #[test]
     fn scrape_title() -> anyhow::Result<()> {

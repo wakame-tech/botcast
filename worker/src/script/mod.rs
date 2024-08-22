@@ -1,24 +1,23 @@
-use crate::voicevox::Speaker;
 use surrealdb::opt::RecordId;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct Serif {
-    text: String,
-    speaker: Speaker,
+    pub(crate) text: String,
+    speaker_id: String,
 }
 
 impl Serif {
-    pub(crate) fn new(text: String, speaker: Speaker) -> Self {
-        Self { text, speaker }
+    pub(crate) fn new(text: String, speaker_id: String) -> Self {
+        Self { text, speaker_id }
     }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct Episode {
-    id: RecordId,
+    pub(crate) id: RecordId,
     title: String,
-    serifs: Vec<Serif>,
+    pub(crate) serifs: Vec<Serif>,
 }
 impl Episode {
     pub(crate) fn new(title: String, serifs: Vec<Serif>) -> Self {
