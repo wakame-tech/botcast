@@ -1430,6 +1430,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "html2text"
+version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c66ee488a63a92237d5b48875b7e05bb293be8fb2894641c8118b60c08ab5ef"
+dependencies = [
+ "html5ever",
+ "markup5ever",
+ "tendril",
+ "thiserror",
+ "unicode-width",
+]
+
+[[package]]
 name = "html5ever"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4994,12 +5007,16 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "html2text",
+ "log",
  "reqwest 0.12.7",
  "scraper",
  "serde",
  "serde_json",
  "surrealdb",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "urlencoding",
  "uuid",
 ]
