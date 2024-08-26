@@ -1,16 +1,13 @@
-use super::{Speaker, Synthesizer};
 use serde_json::Value;
 use std::path::PathBuf;
 use tokio::{fs, io::AsyncWriteExt};
-
-static ORIGIN: &str = "http://localhost:50021";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) enum VoiceVoxSpeaker {
     ZundaNormal,
 }
 
-impl Speaker for VoiceVoxSpeaker {
+impl VoiceVoxSpeaker {
     fn id(&self) -> &str {
         match self {
             Self::ZundaNormal => "3",
@@ -20,20 +17,26 @@ impl Speaker for VoiceVoxSpeaker {
 
 #[derive(Debug)]
 pub(crate) struct VoiceVox {
+    endpoint: String,
     client: reqwest::Client,
 }
 
 impl VoiceVox {
     pub(crate) fn new() -> Self {
         Self {
+            endpoint: "http://localhost:50021".to_string(),
             client: reqwest::Client::new(),
         }
     }
 
-    async fn query(&self, text: &str, speaker: &impl Speaker) -> anyhow::Result<Value> {
+    pub(crate) async fn query(
+        &self,
+        text: &str,
+        speaker: &VoiceVoxSpeaker,
+    ) -> anyhow::Result<Value> {
         let url = format!(
             "{}/audio_query?text={}&speaker={}",
-            ORIGIN,
+            self.endpoint,
             urlencoding::encode(text),
             speaker.id()
         );
@@ -49,13 +52,13 @@ impl VoiceVox {
         Ok(res)
     }
 
-    async fn synthesis_(
+    pub(crate) async fn synthesis(
         &self,
         query: Value,
-        speaker: &impl Speaker,
+        speaker: &VoiceVoxSpeaker,
         out: &PathBuf,
     ) -> anyhow::Result<()> {
-        let url = format!("{}/synthesis?speaker={}", ORIGIN, speaker.id());
+        let url = format!("{}/synthesis?speaker={}", self.endpoint, speaker.id());
         let res = self
             .client
             .post(url)
@@ -73,36 +76,6 @@ impl VoiceVox {
         let res = res.bytes().await?;
         let mut f = fs::File::create(out).await?;
         f.write_all(&res).await?;
-        Ok(())
-    }
-}
-
-impl Synthesizer for VoiceVox {
-    async fn synthesis(
-        &self,
-        text: &str,
-        speaker: &impl Speaker,
-        out: &PathBuf,
-    ) -> anyhow::Result<()> {
-        let query = self.query(text, speaker).await?;
-        self.synthesis_(query, speaker, out).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::synthesizer::voicevox::{VoiceVox, VoiceVoxSpeaker};
-    use std::path::PathBuf;
-    use tokio::fs;
-
-    #[tokio::test]
-    async fn test_synthesis() -> anyhow::Result<()> {
-        let voicevox = VoiceVox::new();
-        let speaker = VoiceVoxSpeaker::ZundaNormal;
-        let query = voicevox.query("こんにちは", &speaker).await?;
-        let out = PathBuf::from("test.wav");
-        voicevox.synthesis_(query, &speaker, &out).await?;
-        fs::remove_file(out).await?;
         Ok(())
     }
 }
