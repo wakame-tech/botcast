@@ -1,6 +1,7 @@
 use crate::{
     task::{RunTask, Task},
-    voicevox_client::{VoiceVox, VoiceVoxSpeaker},
+    voicevox_client::VoiceVoxSpeaker,
+    Ctx,
 };
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
 use surrealdb::opt::RecordId;
@@ -21,8 +22,7 @@ impl RunTask for Synthesis {
         &self.id
     }
 
-    async fn run(&mut self) -> anyhow::Result<Option<Task>> {
-        let voice_vox = VoiceVox::new();
+    async fn run(&mut self, ctx: &Ctx) -> anyhow::Result<Option<Task>> {
         let sentences = self.text.split('。').collect::<Vec<_>>();
         let dir = PathBuf::from("temp");
         if !dir.exists() {
@@ -33,14 +33,14 @@ impl RunTask for Synthesis {
         for (i, sentence) in sentences.iter().enumerate() {
             log::info!("[{}] {}", i, sentence);
             let out = dir.join(format!("{}_{}.wav", self.id.id.to_raw().to_string(), i));
-            let query = match voice_vox.query(sentence, &self.speaker).await {
+            let query = match ctx.voicevox.query(sentence, &self.speaker).await {
                 Ok(query) => query,
                 Err(e) => {
                     log::error!("Failed to query: {}", e);
                     continue;
                 }
             };
-            match voice_vox.synthesis(query, &self.speaker, &out).await {
+            match ctx.voicevox.synthesis(query, &self.speaker, &out).await {
                 Ok(_) => {}
                 Err(e) => {
                     log::error!("Failed to synthesis: {}", e);
@@ -108,7 +108,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_synthesis() -> anyhow::Result<()> {
-        let voice_vox = VoiceVox::new();
+        let voice_vox = VoiceVox::default();
         let speaker = VoiceVoxSpeaker::ZundaNormal;
         let query = voice_vox.query("こんにちは", &speaker).await?;
         let out = PathBuf::from("test.wav");

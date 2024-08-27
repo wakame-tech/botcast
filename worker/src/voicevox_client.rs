@@ -15,18 +15,31 @@ impl VoiceVoxSpeaker {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct VoiceVox {
     endpoint: String,
     client: reqwest::Client,
 }
 
+impl Default for VoiceVox {
+    fn default() -> Self {
+        Self::new("http://localhost:50021".to_string())
+    }
+}
+
 impl VoiceVox {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(endpoint: String) -> Self {
         Self {
-            endpoint: "http://localhost:50021".to_string(),
+            endpoint,
             client: reqwest::Client::new(),
         }
+    }
+
+    pub(crate) async fn version(&self) -> anyhow::Result<String> {
+        let url = format!("{}/version", self.endpoint);
+        let res = self.client.get(url).send().await?;
+        let version = res.text().await?;
+        Ok(version)
     }
 
     pub(crate) async fn query(

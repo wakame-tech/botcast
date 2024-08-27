@@ -2,6 +2,7 @@ use crate::{
     synthesis::Synthesis,
     task::{RunTask, Task, TaskRepo},
     voicevox_client::VoiceVoxSpeaker,
+    Ctx,
 };
 use scraper::{Html, Selector};
 use std::path::PathBuf;
@@ -83,7 +84,7 @@ impl RunTask for ScrapeEpisode {
         &self.id
     }
 
-    async fn run(&mut self) -> anyhow::Result<Option<Task>> {
+    async fn run(&mut self, _ctx: &Ctx) -> anyhow::Result<Option<Task>> {
         let _span = tracing::debug_span!("run", id = self.id.id.to_string());
         let dir = PathBuf::from("temp");
         let scraper = EpisodeConverter::new();

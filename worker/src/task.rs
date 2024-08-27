@@ -1,4 +1,4 @@
-use crate::{scrape::ScrapeEpisode, synthesis::Synthesis};
+use crate::{scrape::ScrapeEpisode, synthesis::Synthesis, Ctx};
 use std::fmt::Debug;
 use surrealdb::{engine::local::Db, opt::RecordId, Surreal};
 use uuid::Uuid;
@@ -9,7 +9,7 @@ where
 {
     fn id(&self) -> &RecordId;
 
-    async fn run(&mut self) -> anyhow::Result<Option<Task>>;
+    async fn run(&mut self, ctx: &Ctx) -> anyhow::Result<Option<Task>>;
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -27,10 +27,10 @@ impl RunTask for Task {
         }
     }
 
-    async fn run(&mut self) -> anyhow::Result<Option<Task>> {
+    async fn run(&mut self, ctx: &Ctx) -> anyhow::Result<Option<Task>> {
         match self {
-            Self::Scrape(task) => task.run().await,
-            Self::Synthesis(task) => task.run().await,
+            Self::Scrape(task) => task.run(ctx).await,
+            Self::Synthesis(task) => task.run(ctx).await,
         }
     }
 }
@@ -69,14 +69,14 @@ impl TaskRepo {
             .ok_or_else(|| anyhow::anyhow!("Task not found"))
     }
 
-    pub(crate) async fn watch(&self) -> anyhow::Result<()> {
+    pub(crate) async fn watch(&self, ctx: &Ctx) -> anyhow::Result<()> {
         let mut tasks = self.list().await?;
         if tasks.is_empty() {
             return Ok(());
         }
         log::info!("worker | {} tasks", tasks.len());
         for task in tasks.iter_mut() {
-            match task.run().await {
+            match task.run(&ctx).await {
                 Ok(Some(task)) => {
                     self.create(task).await?;
                 }
