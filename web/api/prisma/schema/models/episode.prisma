@@ -1,0 +1,6 @@
+model Episode {
+    id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    title     String
+    content   String
+    audio_url String?
+}
