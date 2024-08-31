@@ -3,12 +3,12 @@ import { useState } from "react";
 import { trpc } from "./trpc.ts";
 import { httpBatchLink } from "@trpc/client";
 
-function Users() {
-  const userQuery = trpc.users.useQuery();
+function Episodes() {
+  const episodeQuery = trpc.episodes.useQuery();
 
   return (
     <div>
-      {JSON.stringify(userQuery.data?.users)}
+      {JSON.stringify(episodeQuery.data?.episodes)}
     </div>
   );
 }
@@ -32,7 +32,7 @@ function App() {
     <>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <Users />
+          <Episodes />
         </QueryClientProvider>
       </trpc.Provider>
     </>

@@ -1,0 +1,16 @@
+model Task {
+    id     String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    status TaskStatus
+    args   Json
+
+    @@map("tasks")
+}
+
+enum TaskStatus {
+    PENDING
+    RUNNING
+    COMPLETED
+    FAILED
+
+    @@map("task_status")
+}

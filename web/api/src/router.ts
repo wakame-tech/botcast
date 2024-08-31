@@ -5,9 +5,9 @@ export const prisma = new PrismaClient();
 
 const t = initTRPC.create();
 export const appRouter = t.router({
-    users: t.procedure.query(async () => {
-        const users = await prisma.user.findMany();
-        return { users };
+    episodes: t.procedure.query(async () => {
+        const episodes = await prisma.episode.findMany();
+        return { episodes };
     }),
 });
 export type AppRouter = typeof appRouter;
