@@ -1,0 +1,7 @@
+set dotenv-filename := ".env"
+
+default:
+     ~/.deno/bin/deno task build && ~/.deno/bin/deno run -A src/index.ts
+
+check:
+     ~/.deno/bin/deno check src/index.ts

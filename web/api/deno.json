@@ -16,6 +16,7 @@
     "tasks": {
         "build": "deno task generate && cd .. && npm run build",
         "migrate": "deno run -A npm:prisma migrate dev",
+        "push": "deno run -A npm:prisma db push",
         "generate": "deno run -A --unstable npm:prisma generate --accelerate"
     }
 }

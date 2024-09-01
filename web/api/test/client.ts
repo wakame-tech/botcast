@@ -1,4 +1,4 @@
-import { AppRouter } from "../src/index.ts";
+import { AppRouter } from "../src/router.ts";
 import { createTRPCProxyClient, httpLink } from "@trpc/client";
 
 const url = "http://localhost:1234/trpc";
@@ -12,5 +12,11 @@ const client = createTRPCProxyClient<AppRouter>({
     ],
 });
 
-const users = await client.users.query();
-console.log(JSON.stringify(users));
+// const tasks = await client.tasks.query();
+// console.log(JSON.stringify(tasks));
+
+const res = await client.newEpisode.mutate({
+    title: "test2",
+    url: "https://zenn.dev/koko_u/scraps/1d8c7d1b5e3c6f",
+});
+console.log(JSON.stringify(res));
