@@ -13,6 +13,16 @@ function Episodes() {
   );
 }
 
+function Tasks() {
+  const taskQuery = trpc.tasks.useQuery();
+
+  return (
+    <div>
+      {JSON.stringify(taskQuery.data?.tasks)}
+    </div>
+  );
+}
+
 function App() {
   const [queryClient] = useState(() => new QueryClient());
   const [trpcClient] = useState(() =>
@@ -33,6 +43,7 @@ function App() {
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <Episodes />
+          <Tasks />
         </QueryClientProvider>
       </trpc.Provider>
     </>
