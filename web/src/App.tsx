@@ -29,7 +29,7 @@ function App() {
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: "/trpc",
+          url: `${import.meta.env.VITE_API_URL}/trpc`,
           async headers() {
             return {};
           },
