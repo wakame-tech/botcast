@@ -25,7 +25,7 @@ export const Route = createRootRoute({
             trpc.createClient({
                 links: [
                     httpBatchLink({
-                        url: `${import.meta.env.VITE_API_URL}/trpc`,
+                        url: `${import.meta.env.DEV ? import.meta.env.VITE_API_URL : ''}/trpc`,
                         async headers() {
                             return {};
                         },
