@@ -9,6 +9,7 @@ export function EpisodeDetail({ episode }: EpisodeDetailProps) {
         <>
             <h3>{episode.title}</h3>
             {episode.audio_url && <audio src={episode.audio_url} controls />}
+            {episode.content && <p className="whitespace-pre-wrap">{episode.content}</p>}
         </>
     )
 }

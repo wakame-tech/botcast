@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { trpc } from "../../trpc.ts";
-import { EpisodeDetail } from '../../components/episode/Detail.tsx';
+import { EpisodeDetail } from '../../components/episode/EpisodeDetail.tsx';
 
 export const Route = createLazyFileRoute('/episodes/$episodeId')({
   component: Episode,
