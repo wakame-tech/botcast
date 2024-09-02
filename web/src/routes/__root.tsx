@@ -12,6 +12,12 @@ const Header = () => {
                 <Link to="/" className="[&.active]:font-bold">
                     Home
                 </Link>{' '}
+                <Link to="/episodes" className="[&.active]:font-bold">
+                    Episodes
+                </Link>
+                <Link to="/tasks" className="[&.active]:font-bold">
+                    Tasks
+                </Link>
             </div>
             <hr />
         </>
@@ -40,7 +46,7 @@ export const Route = createRootRoute({
                     <QueryClientProvider client={queryClient}>
                         <Header />
                         <Outlet />
-                        <TanStackRouterDevtools />
+                        {import.meta.env.DEV && <TanStackRouterDevtools />}
                     </QueryClientProvider>
                 </trpc.Provider>
             </>
