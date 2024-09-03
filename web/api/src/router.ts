@@ -12,7 +12,12 @@ interface ScrapeTaskInput {
     url: string;
 }
 
-const t = initTRPC.create();
+interface Context {
+    userId: string | null;
+}
+
+const t = initTRPC.context<Context>().create();
+
 export const appRouter = t.router({
     tasks: t.procedure.query(async () => {
         const tasks = await prisma.task.findMany();
@@ -27,7 +32,8 @@ export const appRouter = t.router({
         }
         return { task };
     }),
-    episodes: t.procedure.query(async () => {
+    episodes: t.procedure.query(async ({ ctx }) => {
+        console.log(ctx.userId);
         const episodes = await prisma.episode.findMany();
         return { episodes };
     }),
