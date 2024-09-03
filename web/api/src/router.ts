@@ -12,8 +12,16 @@ interface ScrapeTaskInput {
     url: string;
 }
 
-const t = initTRPC.create();
+interface Context {
+    userId: string | null;
+}
+
+const t = initTRPC.context<Context>().create();
+
 export const appRouter = t.router({
+    testGetUserId: t.procedure.query(({ ctx }) => {
+        return { userId: ctx.userId };
+    }),
     tasks: t.procedure.query(async () => {
         const tasks = await prisma.task.findMany();
         return { tasks };
