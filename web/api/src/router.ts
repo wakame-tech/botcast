@@ -19,6 +19,9 @@ interface Context {
 const t = initTRPC.context<Context>().create();
 
 export const appRouter = t.router({
+    testGetUserId: t.procedure.query(({ ctx }) => {
+        return { userId: ctx.userId };
+    }),
     tasks: t.procedure.query(async () => {
         const tasks = await prisma.task.findMany();
         return { tasks };
@@ -32,8 +35,7 @@ export const appRouter = t.router({
         }
         return { task };
     }),
-    episodes: t.procedure.query(async ({ ctx }) => {
-        console.log(ctx.userId);
+    episodes: t.procedure.query(async () => {
         const episodes = await prisma.episode.findMany();
         return { episodes };
     }),
