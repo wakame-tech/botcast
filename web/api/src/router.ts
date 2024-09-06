@@ -1,6 +1,8 @@
-import { initTRPC } from "@trpc/server";
-import { PrismaClient } from "@prisma/client";
+import { initTRPC, TRPCError } from "@trpc/server";
+import { PrismaClient, User } from "@prisma/client";
 import { z } from "zod";
+// @ts-ignore
+import { supabase } from "@/src/index.ts";
 
 export const prisma = new PrismaClient();
 
@@ -10,50 +12,113 @@ interface Args {
 }
 
 interface Context {
-    userId: string | null;
+    accessToken: string | null;
+    user: User;
 }
 
 const t = initTRPC.context<Context>().create();
 
+const authProcedure = t.procedure.use(
+    async ({ ctx: { accessToken }, next }) => {
+        if (!accessToken) {
+            throw new Error("Unauthorized");
+        }
+        const { data: { user: authUser } } = await supabase.auth.getUser(
+            accessToken,
+        );
+        if (!authUser) {
+            throw new Error("Invalid access token");
+        }
+        const user = await prisma.user.findUnique({
+            where: {
+                auth_id: authUser.id,
+            },
+        });
+        if (!user) {
+            throw unauthorized;
+        }
+        return next({
+            ctx: {
+                user,
+            },
+        });
+    },
+);
+
+const unauthorized = new TRPCError({
+    code: "UNAUTHORIZED",
+    message: "Unauthorized",
+});
+
 export const appRouter = t.router({
-    testGetUserId: t.procedure.query(({ ctx }) => {
-        return { userId: ctx.userId };
+    signIn: t.procedure.input(z.object({
+        email: z.string(),
+        password: z.string(),
+    })).query(async ({ input }) => {
+        const res = await supabase.auth.signInWithPassword({
+            email: input.email,
+            password: input.password,
+        });
+        if (res.error) {
+            throw res.error;
+        }
+        const { data: { session } } = res;
+        return session.access_token;
     }),
-    tasks: t.procedure.query(async () => {
-        const tasks = await prisma.task.findMany();
+    me: authProcedure.query(({ ctx: { user } }) => {
+        return { user };
+    }),
+    tasks: authProcedure.query(async ({ ctx: { user } }) => {
+        const tasks = await prisma.task.findMany({
+            where: {
+                user,
+            },
+        });
         return { tasks };
     }),
-    task: t.procedure.input(z.object({
+    task: authProcedure.input(z.object({
         id: z.string(),
     })).query(async ({ input: { id } }) => {
-        const task = await prisma.task.findUnique({ where: { id } });
+        const task = await prisma.task.findUnique({
+            where: { id },
+        });
         if (!task) {
             throw new Error("Task not found");
         }
         return { task };
     }),
-    episodes: t.procedure.query(async () => {
-        const episodes = await prisma.episode.findMany();
+    episodes: authProcedure.query(async ({ ctx: { user } }) => {
+        const episodes = await prisma.episode.findMany({
+            where: {
+                user,
+            },
+        });
         return { episodes };
     }),
-    episode: t.procedure.input(z.object({
+    episode: authProcedure.input(z.object({
         id: z.string(),
     })).query(async ({ input: { id } }) => {
-        const episode = await prisma.episode.findUnique({ where: { id } });
+        const episode = await prisma.episode.findUnique({
+            where: { id },
+            include: {
+                user: true,
+            },
+        });
         if (!episode) {
             throw new Error("Episode not found");
         }
         return { episode };
     }),
-    newEpisode: t.procedure.input(z.object({
+    newEpisode: authProcedure.input(z.object({
         title: z.string(),
         url: z.string(),
-    })).mutation(async ({ input: { title, url } }) => {
+    })).mutation(async ({ ctx: { user }, input: { title, url } }) => {
         const episode = await prisma.episode.create({
-            data: { title },
+            data: { title, user_id: user.id },
         });
-        const _task = await prisma.task.create({
+        await prisma.task.create({
             data: {
+                user_id: user.id,
                 status: "PENDING",
                 args: {
                     episode_id: episode.id,
@@ -63,7 +128,7 @@ export const appRouter = t.router({
         });
         return { episode };
     }),
-    updateEpisode: t.procedure.input(z.object({
+    updateEpisode: authProcedure.input(z.object({
         id: z.string(),
         title: z.string(),
     })).mutation(async ({ input: { id, title } }) => {
@@ -73,7 +138,7 @@ export const appRouter = t.router({
         });
         return { episode };
     }),
-    deleteEpisode: t.procedure.input(z.object({
+    deleteEpisode: authProcedure.input(z.object({
         id: z.string(),
     })).mutation(async ({ input: { id } }) => {
         await prisma.episode.delete({ where: { id } });
