@@ -15,7 +15,6 @@ function Signin() {
 
   useEffect(() => {
     if (session) {
-      console.log("session", session);
       navigate({ to: "/" });
     }
   }, [session]);

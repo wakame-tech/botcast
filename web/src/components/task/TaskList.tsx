@@ -13,7 +13,6 @@ export function TaskList(props: TaskListProps) {
                 <thead>
                     <tr>
                         <th className={textStyles}>ID</th>
-                        <th className={textStyles}>Type</th>
                         <th className={textStyles}>Status</th>
                     </tr>
                 </thead>
@@ -21,7 +20,6 @@ export function TaskList(props: TaskListProps) {
                     {props.tasks.map((task) => (
                         <tr key={task.id}>
                             <td className={textStyles}>{task.id}</td>
-                            <td className={textStyles}>{(task.args as { type: string })['type']}</td>
                             <td className={textStyles}>{task.status}</td>
                         </tr>
                     ))}

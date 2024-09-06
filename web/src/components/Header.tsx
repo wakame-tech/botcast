@@ -1,9 +1,13 @@
 import { Link } from "@tanstack/react-router"
-import { useSession } from "../hooks/useSession"
+import { supabase } from "../supabase";
+import { Session } from "@supabase/supabase-js";
 
-export function Header() {
-    const { session, signOut } = useSession()
+export function Header({ session }: { session: Session | null }) {
     const buttonStyle = `hover:bg-orange-500 border border-1 p-2 font-bold rounded-lg`
+
+    const signOut = async () => {
+        await supabase.auth.signOut();
+    };
 
     return (
         <>
@@ -11,12 +15,16 @@ export function Header() {
                 <Link to="/" className="font-bold text-teal-700 text-3xl no-underline">
                     Botcast
                 </Link>{' '}
-                <Link to="/episodes" className="[&.active]:font-bold text-xl no-underline">
-                    エピソード
-                </Link>
-                <Link to="/tasks" className="[&.active]:font-bold text-xl no-underline">
-                    タスク
-                </Link>
+                {session && (
+                    <>
+                        <Link to="/episodes" className="[&.active]:font-bold text-xl no-underline">
+                            エピソード
+                        </Link>
+                        <Link to="/tasks" className="[&.active]:font-bold text-xl no-underline">
+                            タスク
+                        </Link>
+                    </>
+                )}
 
                 <div className="flex-grow" />
                 <>

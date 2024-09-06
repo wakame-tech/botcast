@@ -16,8 +16,8 @@ function Episode() {
   }
 
   return (
-    <div>
-      <EpisodeDetail episode={episode} />
+    <div className='p-2'>
+      <EpisodeDetail episode={episode} user={episode.user} />
     </div>
   )
 }
