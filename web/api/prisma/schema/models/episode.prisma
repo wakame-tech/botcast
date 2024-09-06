@@ -1,8 +1,10 @@
 model Episode {
-    id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    title     String
-    content   String?
-    audio_url String?
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title     String
+  content   String?
+  audio_url String?
+  user      User?   @relation(fields: [user_id], references: [id])
+  user_id   String? @db.Uuid
 
-    @@map("episodes")
+  @@map("episodes")
 }
