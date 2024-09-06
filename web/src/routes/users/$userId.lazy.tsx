@@ -1,15 +1,24 @@
 import { createLazyFileRoute } from '@tanstack/react-router'
+import { trpc } from '../../trpc';
 
 export const Route = createLazyFileRoute('/users/$userId')({
   component: User,
 })
 
 function User() {
-  const { userId } = Route.useParams()
+  const meQuery = trpc.me.useQuery();
+  if (meQuery.error) {
+    return <div>Error: {meQuery.error.message}</div>
+  }
+  if (meQuery.isLoading || !meQuery.data) {
+    return <div>Loading...</div>
+  }
+  const user = meQuery.data.user
 
   return (
     <div>
-      <h1>{userId}</h1>
+      <p>name: {user.name}</p>
+      <p>email: {user.email}</p>
     </div>
   );
 }
