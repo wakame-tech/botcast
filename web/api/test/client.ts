@@ -16,7 +16,7 @@ const client = createTRPCProxyClient<AppRouter>({
 // console.log(JSON.stringify(tasks));
 
 const res = await client.newEpisode.mutate({
-    title: "test2",
+    title: "test",
     url: "https://zenn.dev/koko_u/scraps/1d8c7d1b5e3c6f",
 });
 console.log(JSON.stringify(res));

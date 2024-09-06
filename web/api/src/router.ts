@@ -4,10 +4,7 @@ import { z } from "zod";
 
 export const prisma = new PrismaClient();
 
-const WORKER_URL = Deno.env.get("WORKER_URL");
-
-interface ScrapeTaskInput {
-    type: "Scrape";
+interface Args {
     episode_id: string;
     url: string;
 }
@@ -55,22 +52,15 @@ export const appRouter = t.router({
         const episode = await prisma.episode.create({
             data: { title },
         });
-        const res = await fetch(`${WORKER_URL}/tasks`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(
-                {
-                    type: "Scrape",
+        const _task = await prisma.task.create({
+            data: {
+                status: "PENDING",
+                args: {
                     episode_id: episode.id,
                     url,
-                } satisfies ScrapeTaskInput,
-            ),
+                } satisfies Args,
+            },
         });
-        if (!res.ok) {
-            throw new Error("Failed to create task");
-        }
         return { episode };
     }),
     updateEpisode: t.procedure.input(z.object({
