@@ -30,10 +30,10 @@ jobs:
           node-version: lts/*
 
       - name: Install step
-        run: "cd web && npm install"
+        run: "npm install"
       
       - name: Build step
-        run: "cd web/api && deno task generate && cd .. && npm run build"
+        run: "cd api && deno task generate && cd .. && npm run build"
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -43,4 +43,4 @@ jobs:
         with:
           project: "botcast"
           entrypoint: "src/index.ts"
-          root: "web/api"
+          root: "api"

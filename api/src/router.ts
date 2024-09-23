@@ -1,8 +1,8 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { PrismaClient, User } from "@prisma/client";
+import { PrismaClient, User } from "./client/deno/edge.ts";
 import { z } from "zod";
 // @ts-ignore
-import { supabase } from "@/src/index.ts";
+import { supabase } from "./index.ts";
 
 export const prisma = new PrismaClient();
 
