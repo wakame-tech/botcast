@@ -4,6 +4,7 @@ import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
 import { useEffect, useState } from "react";
 import { usePlayer } from "../../hooks/usePlayer";
+import { UserIcon } from "../../components/user/UserIcon.tsx";
 
 export const Route = createLazyFileRoute("/episodes/$episodeId")({
 	component: Episode,
@@ -45,29 +46,28 @@ function Episode() {
 		seek(line.startSeconds);
 	};
 
-	if (!episode) {
+	if (!episode || !episode.user) {
 		return <div>not found</div>;
 	}
 
 	return (
-		<div>
-			<p className="text-xl">
-				{episode.title}
-				<span className="text-gray text-sm">
-					{episode.user ? `@${episode.user.name}` : ""}
-				</span>
-			</p>
+		<>
+			<h1 className="text-2xl font-bold">{episode.title}</h1>
 
-			{lines.map((line) => (
-				<div
-					key={`t${line.startSeconds}`}
-					className={`${line.startSeconds <= seconds && seconds < line.endSeconds ? "bg-yellow-100" : ""} hover:bg-gray-100`}
-					onClick={() => handleSeek(line)}
-					onKeyDown={() => handleSeek(line)}
-				>
-					<p className="text-lg py-2">{line.text}</p>
-				</div>
-			))}
+			<UserIcon user={episode.user} />
+
+			<article className="pt-2">
+				{lines.map((line) => (
+					<div
+						key={`t${line.startSeconds}`}
+						className={`${line.startSeconds <= seconds && seconds < line.endSeconds ? "bg-yellow-100" : ""} hover:bg-gray-100`}
+						onClick={() => handleSeek(line)}
+						onKeyDown={() => handleSeek(line)}
+					>
+						<p className="p-0 m-0 text-lg py-2">{line.text}</p>
+					</div>
+				))}
+			</article>
 
 			<button type="button" onClick={handleDelete}>
 				Delete
@@ -83,6 +83,6 @@ function Episode() {
 					{render(episode.audio_url)}
 				</div>
 			)}
-		</div>
+		</>
 	);
 }

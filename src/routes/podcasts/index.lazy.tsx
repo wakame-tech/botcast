@@ -10,7 +10,7 @@ function Podcasts() {
 	const podcasts = getPodcasts.data?.podcasts ?? [];
 
 	return (
-		<div>
+		<>
 			<Link to="/podcasts/new">New Podcast</Link>
 			<h1>Podcasts</h1>
 			{podcasts.map((podcast) => (
@@ -20,6 +20,6 @@ function Podcasts() {
 					</Link>
 				</div>
 			))}
-		</div>
+		</>
 	);
 }

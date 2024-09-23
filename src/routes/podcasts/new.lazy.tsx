@@ -1,4 +1,4 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { trpc } from "../../trpc.ts";
 import { useState } from "react";
 
@@ -9,14 +9,16 @@ export const Route = createLazyFileRoute("/podcasts/new")({
 export function NewPodcast() {
 	const newPodcast = trpc.newPodcast.useMutation();
 	const [title, setTitle] = useState("");
+	const navigate = useNavigate();
 
 	const handleSubmit = async () => {
-		await newPodcast.mutateAsync({ title });
+		const { podcast } = await newPodcast.mutateAsync({ title, icon: "🎧" });
 		setTitle("");
+		navigate({ to: "/podcasts/$podcastId", params: { podcastId: podcast.id } });
 	};
 
 	return (
-		<div>
+		<>
 			<h1>New Podcast</h1>
 			<input
 				type="text"
@@ -27,6 +29,6 @@ export function NewPodcast() {
 			<button type="button" onClick={handleSubmit}>
 				Create
 			</button>
-		</div>
+		</>
 	);
 }
