@@ -1,5 +1,4 @@
-import { Outlet, useNavigate } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { Outlet } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { trpc } from "./trpc.ts";
@@ -11,7 +10,6 @@ import { useSession } from "./hooks/useSession.ts";
 let token = "";
 
 export function App() {
-	const navigate = useNavigate();
 	const { session, setSession } = useSession();
 	const [queryClient] = useState(() => new QueryClient());
 	const [trpcClient] = useState(() =>
@@ -49,7 +47,6 @@ export function App() {
 				<QueryClientProvider client={queryClient}>
 					<Header session={session} />
 					<Outlet />
-					{/* {import.meta.env.DEV && <TanStackRouterDevtools />} */}
 				</QueryClientProvider>
 			</trpc.Provider>
 		</>
