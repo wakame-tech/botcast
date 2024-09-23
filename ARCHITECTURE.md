@@ -124,4 +124,4 @@ sequenceDiagram
 ### Sprint 2024-09-18
 
 - PRをレビューしてくれるBotを作って導入した #32
-- ARCHITECTURE.md を作った #37
+- ARCHITECTURE.md を書いた #37
