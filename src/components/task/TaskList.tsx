@@ -5,26 +5,20 @@ interface TaskListProps {
 }
 
 export function TaskList(props: TaskListProps) {
-	const textStyles = "px-4 py-2 font-medium text-gray-900";
-
 	return (
 		<>
-			<table className="overflow-x-auto divide-y-2 divide-gray-200">
-				<thead>
-					<tr>
-						<th className={textStyles}>ID</th>
-						<th className={textStyles}>Status</th>
-					</tr>
-				</thead>
-				<tbody className="divide-y-2 divide-gray-200">
-					{props.tasks.map((task) => (
-						<tr key={task.id}>
-							<td className={textStyles}>{task.id}</td>
-							<td className={textStyles}>{task.status}</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
+			{props.tasks.map((task) => (
+				<div key={task.id} className="p-2 grid grid-cols-2">
+					<span className="pr-2">{task.id}</span>
+					<span className="font-bold">{task.status}</span>
+				</div>
+			))}
 		</>
 	);
 }
+
+const components = {
+	List: TaskList,
+};
+
+export default components;

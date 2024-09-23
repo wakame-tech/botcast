@@ -1,5 +1,6 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { trpc } from "../../trpc";
+import Podcast from "../../components/podcast/PodcastList";
 
 export const Route = createLazyFileRoute("/users/$userId")({
 	component: User,
@@ -7,18 +8,24 @@ export const Route = createLazyFileRoute("/users/$userId")({
 
 function User() {
 	const getMe = trpc.me.useQuery();
-	if (getMe.error) {
-		return <div>Error: {getMe.error.message}</div>;
+	const getPodcasts = trpc.podcasts.useQuery();
+	const podcasts = getPodcasts.data?.podcasts ?? [];
+
+	if (!getMe.data) {
+		return <div>loading...</div>;
 	}
-	if (getMe.isLoading || !getMe.data) {
-		return <div>Loading...</div>;
-	}
+
 	const user = getMe.data.user;
 
 	return (
-		<div>
-			<p>name: {user.name}</p>
-			<p>email: {user.email}</p>
-		</div>
+		<>
+			<h1>{user.name}</h1>
+			<h2>Podcasts</h2>
+			<Link to="/podcasts/new">New Podcast</Link>
+			<Podcast.List podcasts={podcasts} />
+
+			<h2>Tasks</h2>
+			<Link to="/tasks">Tasks</Link>
+		</>
 	);
 }

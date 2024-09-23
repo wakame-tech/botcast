@@ -5,6 +5,7 @@ import type { Line } from "srt-parser-2";
 import { useEffect, useState } from "react";
 import { usePlayer } from "../../hooks/usePlayer";
 import { UserIcon } from "../../components/user/UserIcon.tsx";
+import { ScriptLines } from "../../components/episode/ScriptLines.tsx";
 
 export const Route = createLazyFileRoute("/episodes/$episodeId")({
 	component: Episode,
@@ -42,10 +43,6 @@ function Episode() {
 		await deleteEpisode.mutateAsync({ id: episodeId });
 	};
 
-	const handleSeek = (line: Line) => {
-		seek(line.startSeconds);
-	};
-
 	if (!episode || !episode.user) {
 		return <div>not found</div>;
 	}
@@ -57,16 +54,13 @@ function Episode() {
 			<UserIcon user={episode.user} />
 
 			<article className="pt-2">
-				{lines.map((line) => (
-					<div
-						key={`t${line.startSeconds}`}
-						className={`${line.startSeconds <= seconds && seconds < line.endSeconds ? "bg-yellow-100" : ""} hover:bg-gray-100`}
-						onClick={() => handleSeek(line)}
-						onKeyDown={() => handleSeek(line)}
-					>
-						<p className="p-0 m-0 text-lg py-2">{line.text}</p>
-					</div>
-				))}
+				<ScriptLines
+					lines={lines}
+					toBeHighlight={(line) =>
+						line.startSeconds <= seconds && seconds < line.endSeconds
+					}
+					onClick={(line) => seek(line.startSeconds)}
+				/>
 			</article>
 
 			<button type="button" onClick={handleDelete}>

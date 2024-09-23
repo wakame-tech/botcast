@@ -19,7 +19,6 @@ import { Route as rootRoute } from './routes/__root'
 const TasksLazyImport = createFileRoute('/tasks')()
 const SigninLazyImport = createFileRoute('/signin')()
 const IndexLazyImport = createFileRoute('/')()
-const PodcastsIndexLazyImport = createFileRoute('/podcasts/')()
 const UsersUserIdLazyImport = createFileRoute('/users/$userId')()
 const PodcastsNewLazyImport = createFileRoute('/podcasts/new')()
 const PodcastsPodcastIdLazyImport = createFileRoute('/podcasts/$podcastId')()
@@ -44,13 +43,6 @@ const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
-
-const PodcastsIndexLazyRoute = PodcastsIndexLazyImport.update({
-  path: '/podcasts/',
-  getParentRoute: () => rootRoute,
-} as any).lazy(() =>
-  import('./routes/podcasts/index.lazy').then((d) => d.Route),
-)
 
 const UsersUserIdLazyRoute = UsersUserIdLazyImport.update({
   path: '/users/$userId',
@@ -136,13 +128,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersUserIdLazyImport
       parentRoute: typeof rootRoute
     }
-    '/podcasts/': {
-      id: '/podcasts/'
-      path: '/podcasts'
-      fullPath: '/podcasts'
-      preLoaderRoute: typeof PodcastsIndexLazyImport
-      parentRoute: typeof rootRoute
-    }
     '/podcasts/$podcastId/new': {
       id: '/podcasts/$podcastId/new'
       path: '/podcasts/$podcastId/new'
@@ -163,7 +148,6 @@ export const routeTree = rootRoute.addChildren({
   PodcastsPodcastIdLazyRoute,
   PodcastsNewLazyRoute,
   UsersUserIdLazyRoute,
-  PodcastsIndexLazyRoute,
   PodcastsPodcastIdNewLazyRoute,
 })
 
@@ -182,7 +166,6 @@ export const routeTree = rootRoute.addChildren({
         "/podcasts/$podcastId",
         "/podcasts/new",
         "/users/$userId",
-        "/podcasts/",
         "/podcasts/$podcastId/new"
       ]
     },
@@ -206,9 +189,6 @@ export const routeTree = rootRoute.addChildren({
     },
     "/users/$userId": {
       "filePath": "users/$userId.lazy.tsx"
-    },
-    "/podcasts/": {
-      "filePath": "podcasts/index.lazy.tsx"
     },
     "/podcasts/$podcastId/new": {
       "filePath": "podcasts/$podcastId_/new.lazy.tsx"

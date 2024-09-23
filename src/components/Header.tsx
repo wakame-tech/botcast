@@ -16,22 +16,6 @@ export function Header({ session }: { session: Session | null }) {
 				<Link to="/" className="font-bold text-teal-700 text-3xl no-underline">
 					Botcast
 				</Link>{" "}
-				{session && (
-					<>
-						<Link
-							to="/podcasts"
-							className="[&.active]:font-bold text-xl no-underline"
-						>
-							ポッドキャスト
-						</Link>
-						<Link
-							to="/tasks"
-							className="[&.active]:font-bold text-xl no-underline"
-						>
-							タスク
-						</Link>
-					</>
-				)}
 				<div className="flex-grow" />
 				<>
 					{session && (
