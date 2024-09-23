@@ -117,9 +117,10 @@ export const appRouter = t.router({
     }),
     newPodcast: authProcedure.input(z.object({
         title: z.string(),
-    })).mutation(async ({ ctx: { user }, input: { title } }) => {
+        icon: z.string().regex(/\p{Emoji_Presentation}/gu),
+    })).mutation(async ({ ctx: { user }, input: { title, icon } }) => {
         const podcast = await prisma.podcast.create({
-            data: { title, user_id: user.id },
+            data: { title, icon, user_id: user.id },
         });
         return { podcast };
     }),
