@@ -5,7 +5,7 @@ model Podcast {
   episodes Episode[]
   user     User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id  String?    @db.Uuid
-  created_at DateTime @default(now())
+  created_at String
 
   @@map("podcasts")
 }

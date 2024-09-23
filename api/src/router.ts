@@ -120,7 +120,12 @@ export const appRouter = t.router({
         icon: z.string().regex(/\p{Emoji_Presentation}/gu),
     })).mutation(async ({ ctx: { user }, input: { title, icon } }) => {
         const podcast = await prisma.podcast.create({
-            data: { title, icon, user_id: user.id },
+            data: {
+                title,
+                icon,
+                user_id: user.id,
+                created_at: new Date().toISOString(),
+            },
         });
         return { podcast };
     }),
@@ -157,7 +162,12 @@ export const appRouter = t.router({
                 throw new Error("Podcast not found");
             }
             const episode = await prisma.episode.create({
-                data: { podcast_id: podcastId, title, user_id: user.id },
+                data: {
+                    podcast_id: podcastId,
+                    title,
+                    user_id: user.id,
+                    created_at: new Date().toISOString(),
+                },
             });
             await prisma.task.create({
                 data: {
