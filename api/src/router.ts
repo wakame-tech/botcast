@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { PrismaClient, User } from "@prisma/client";
+import { PrismaClient, User } from "./client/deno/edge.ts";
 import { z } from "zod";
 // @ts-ignore
 import { createClient } from "jsr:@supabase/supabase-js@2";
