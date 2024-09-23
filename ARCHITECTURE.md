@@ -106,12 +106,14 @@ sequenceDiagram
 ### Sprint 2024-08-28
 
 - Cloudflare R2 をセットアップして音声をアップロードできるようにした
+  - [s3](https://crates.io/crates/rust-s3) crateで
 - compose-cd でワーカーのCDを作った
 - Task APIを実装した
 
 ### Sprint 2024-09-04
 
-- ユーザー認証とAPI認証を実装した #17
+- supabase でユーザー認証とAPI認証を実装した #17
+  - [@supabase/auth-ui-react](https://www.npmjs.com/package/@supabase/auth-ui-react) で
 
 ### Sprint 2024-09-11
 
@@ -122,4 +124,4 @@ sequenceDiagram
 ### Sprint 2024-09-18
 
 - PRをレビューしてくれるBotを作って導入した #32
-- ARCHITECTURE.md を書いた
+- ARCHITECTURE.md を作った #37
