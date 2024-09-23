@@ -1,9 +1,9 @@
 model Podcast {
-  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title      String
-  episodes  Episode[]
-  user       User?   @relation(fields: [user_id], references: [id])
-  user_id    String? @db.Uuid
+  id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title    String
+  episodes Episode[]
+  user     User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id  String?   @db.Uuid
 
   @@map("podcasts")
 }

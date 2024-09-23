@@ -3,9 +3,9 @@ model Episode {
   title      String
   audio_url  String?
   script_url String?
-  podcast    Podcast @relation(fields: [podcast_id], references: [id])
+  podcast    Podcast @relation(fields: [podcast_id], references: [id], onDelete: Cascade)
   podcast_id String  @db.Uuid
-  user       User?   @relation(fields: [user_id], references: [id])
+  user       User?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id    String? @db.Uuid
 
   @@map("episodes")
