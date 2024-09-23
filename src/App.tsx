@@ -49,7 +49,7 @@ export function App() {
                 <QueryClientProvider client={queryClient}>
                     <Header session={session} />
                     <Outlet />
-                    {import.meta.env.DEV && <TanStackRouterDevtools />}
+                    {/* {import.meta.env.DEV && <TanStackRouterDevtools />} */}
                 </QueryClientProvider>
             </trpc.Provider>
         </>
