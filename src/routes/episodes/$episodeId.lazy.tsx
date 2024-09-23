@@ -1,11 +1,11 @@
+import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
+import { UserIcon } from "@/components/user/UserIcon.tsx";
+import { usePlayer } from "@/hooks/usePlayer";
+import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { trpc } from "../../trpc.ts";
+import { useEffect, useState } from "react";
 import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
-import { useEffect, useState } from "react";
-import { usePlayer } from "../../hooks/usePlayer";
-import { UserIcon } from "../../components/user/UserIcon.tsx";
-import { ScriptLines } from "../../components/episode/ScriptLines.tsx";
 
 export const Route = createLazyFileRoute("/episodes/$episodeId")({
 	component: Episode,

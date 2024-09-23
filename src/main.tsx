@@ -1,6 +1,6 @@
+import { RouterProvider, createRouter } from "@tanstack/react-router";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { RouterProvider, createRouter } from "@tanstack/react-router";
 import "virtual:uno.css";
 
 import { routeTree } from "./routeTree.gen";

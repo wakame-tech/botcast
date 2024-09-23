@@ -1,11 +1,11 @@
-import { Outlet } from "@tanstack/react-router";
+import { Header } from "@/components/Header.tsx";
+import { useSession } from "@/hooks/useSession.ts";
+import { supabase } from "@/supabase.ts";
+import { trpc } from "@/trpc.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { trpc } from "./trpc.ts";
+import { Outlet } from "@tanstack/react-router";
 import { httpBatchLink } from "@trpc/client";
-import { Header } from "./components/Header.tsx";
-import { supabase } from "./supabase.ts";
-import { useSession } from "./hooks/useSession.ts";
+import { useEffect, useState } from "react";
 
 let token = "";
 

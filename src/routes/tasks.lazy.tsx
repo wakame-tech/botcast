@@ -1,6 +1,6 @@
+import { TaskList } from "@/components/task/TaskList.tsx";
+import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { trpc } from "../trpc.ts";
-import { TaskList } from "../components/task/TaskList.tsx";
 import { useEffect } from "react";
 
 export const Route = createLazyFileRoute("/tasks")({

@@ -1,7 +1,7 @@
+import Episode from "@/components/episode/EpisodeList.tsx";
+import { UserIcon } from "@/components/user/UserIcon.tsx";
+import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { trpc } from "../../trpc.ts";
-import { UserIcon } from "../../components/user/UserIcon.tsx";
-import Episode from "../../components/episode/EpisodeList.tsx";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId")({
 	component: Podcast,

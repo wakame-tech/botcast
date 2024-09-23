@@ -8,7 +8,7 @@
     "check": "npm run lint && npm run format && npm run build",
     "build": "tsc && vite build",
     "lint": "npx @biomejs/biome lint --write src",
-    "format": "npx @biomejs/biome format --write src",
+    "format": "npx @biomejs/biome format --write src && npx @biomejs/biome check --write src",
     "preview": "vite preview"
   },
   "dependencies": {

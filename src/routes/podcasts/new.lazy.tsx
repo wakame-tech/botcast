@@ -1,5 +1,5 @@
+import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
-import { trpc } from "../../trpc.ts";
 import { useState } from "react";
 
 export const Route = createLazyFileRoute("/podcasts/new")({

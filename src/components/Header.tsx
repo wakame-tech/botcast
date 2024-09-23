@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
-import { supabase } from "../supabase";
+import { supabase } from "@/supabase";
 import type { Session } from "@supabase/supabase-js";
+import { Link } from "@tanstack/react-router";
 
 export function Header({ session }: { session: Session | null }) {
 	const buttonStyle =
