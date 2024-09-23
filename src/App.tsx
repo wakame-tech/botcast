@@ -37,14 +37,11 @@ export function App() {
                     setSession(session);
                     token = session.access_token;
                 }
-                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-                    navigate({ to: '/' })
-                }
             },
         );
 
         return () => subscription.unsubscribe();
-    }, [navigate, setSession]);
+    }, [setSession]);
 
     return (
         <>

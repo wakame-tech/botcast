@@ -1,20 +1,28 @@
-import type { Episode, User } from "@prisma/client"
+import type { User } from "@prisma/client"
+import type { Line } from 'srt-parser-2'
 
 interface EpisodeDetailProps {
-    episode: Episode
+    title: string
+    audioUrl: string | null
+    lines: Line[]
     user: User | null
 }
 
-export function EpisodeDetail({ episode, user }: EpisodeDetailProps) {
+export function EpisodeDetail({ title, audioUrl, lines, user }: EpisodeDetailProps) {
     return (
         <>
-            <p className="text-xl">{episode.title}<span className="text-gray text-sm">{user ? `@${user.name}` : ''}</span></p>
+            <p className="text-xl">{title}<span className="text-gray text-sm">{user ? `@${user.name}` : ''}</span></p>
 
             {
                 // biome-ignore lint:
-                episode.audio_url && <audio src={episode.audio_url} controls />
+                audioUrl && <audio src={audioUrl} controls />
             }
-            {episode.content && <p className="whitespace-pre-wrap">{episode.content}</p>}
+            {lines.map(line => <div className="hover:bg-gray-200" key={`t${line.startSeconds}`}>
+                <p className="text-lg py-2">
+                    {line.text}
+                </p>
+            </div>)
+            }
         </>
     )
 }
