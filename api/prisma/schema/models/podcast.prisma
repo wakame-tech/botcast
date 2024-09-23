@@ -1,0 +1,11 @@
+model Podcast {
+  id       String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title    String
+  icon     String     @db.VarChar(1)
+  episodes Episode[]
+  user     User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id  String?    @db.Uuid
+  created_at String
+
+  @@map("podcasts")
+}

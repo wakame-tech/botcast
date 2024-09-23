@@ -1,9 +1,11 @@
+import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
+import { UserIcon } from "@/components/user/UserIcon.tsx";
+import { usePlayer } from "@/hooks/usePlayer";
+import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { trpc } from "../../trpc.ts";
+import { useEffect, useState } from "react";
 import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
-import { useEffect, useState } from "react";
-import { usePlayer } from "../../hooks/usePlayer";
 
 export const Route = createLazyFileRoute("/episodes/$episodeId")({
 	component: Episode,
@@ -21,8 +23,9 @@ const fetchSrt = async (url: string): Promise<Line[]> => {
 
 function Episode() {
 	const { episodeId } = Route.useParams();
-	const episodeQuery = trpc.episode.useQuery({ id: episodeId });
-	const episode = episodeQuery.data?.episode;
+	const getEpisode = trpc.episode.useQuery({ id: episodeId });
+	const deleteEpisode = trpc.deleteEpisode.useMutation();
+	const episode = getEpisode.data?.episode;
 	const [lines, setLines] = useState<Line[]>([]);
 	const { isPlaying, play, seconds, seek, render } = usePlayer();
 
@@ -36,33 +39,33 @@ function Episode() {
 		})();
 	}, [episode]);
 
-	const handleSeek = (line: Line) => {
-		seek(line.startSeconds);
+	const handleDelete = async () => {
+		await deleteEpisode.mutateAsync({ id: episodeId });
 	};
 
-	if (!episode) {
+	if (!episode || !episode.user) {
 		return <div>not found</div>;
 	}
 
 	return (
-		<div>
-			<p className="text-xl">
-				{episode.title}
-				<span className="text-gray text-sm">
-					{episode.user ? `@${episode.user.name}` : ""}
-				</span>
-			</p>
+		<>
+			<h1 className="text-2xl font-bold">{episode.title}</h1>
 
-			{lines.map((line) => (
-				<div
-					key={`t${line.startSeconds}`}
-					className={`${line.startSeconds <= seconds && seconds < line.endSeconds ? "bg-yellow-100" : ""} hover:bg-gray-100`}
-					onClick={() => handleSeek(line)}
-					onKeyDown={() => handleSeek(line)}
-				>
-					<p className="text-lg py-2">{line.text}</p>
-				</div>
-			))}
+			<UserIcon user={episode.user} />
+
+			<article className="pt-2">
+				<ScriptLines
+					lines={lines}
+					toBeHighlight={(line) =>
+						line.startSeconds <= seconds && seconds < line.endSeconds
+					}
+					onClick={(line) => seek(line.startSeconds)}
+				/>
+			</article>
+
+			<button type="button" onClick={handleDelete}>
+				Delete
+			</button>
 
 			{episode.audio_url && (
 				<div className="absolute sticky bottom-0 w-full h-15 bg-teal-100">
@@ -74,6 +77,6 @@ function Episode() {
 					{render(episode.audio_url)}
 				</div>
 			)}
-		</div>
+		</>
 	);
 }

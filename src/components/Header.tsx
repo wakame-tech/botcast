@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
-import { supabase } from "../supabase";
+import { supabase } from "@/supabase";
 import type { Session } from "@supabase/supabase-js";
+import { Link } from "@tanstack/react-router";
 
 export function Header({ session }: { session: Session | null }) {
 	const buttonStyle =
@@ -16,22 +16,6 @@ export function Header({ session }: { session: Session | null }) {
 				<Link to="/" className="font-bold text-teal-700 text-3xl no-underline">
 					Botcast
 				</Link>{" "}
-				{session && (
-					<>
-						<Link
-							to="/episodes"
-							className="[&.active]:font-bold text-xl no-underline"
-						>
-							エピソード
-						</Link>
-						<Link
-							to="/tasks"
-							className="[&.active]:font-bold text-xl no-underline"
-						>
-							タスク
-						</Link>
-					</>
-				)}
 				<div className="flex-grow" />
 				<>
 					{session && (

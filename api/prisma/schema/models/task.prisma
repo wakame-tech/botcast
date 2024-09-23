@@ -2,7 +2,7 @@ model Task {
   id      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   status  TaskStatus
   args    Json
-  user    User?      @relation(fields: [user_id], references: [id])
+  user    User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id String?    @db.Uuid
 
   @@map("tasks")
