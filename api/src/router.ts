@@ -2,7 +2,12 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "./client/deno/edge.ts";
 import { z } from "zod";
 // @ts-ignore
-import { supabase } from "./index.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+);
 
 export const prisma = new PrismaClient();
 

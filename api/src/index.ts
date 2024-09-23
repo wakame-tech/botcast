@@ -3,14 +3,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { trpcServer } from "@hono/trpc-server";
 import { serveStatic } from "hono/deno";
-import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const app = new Hono();
-
-export const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-);
 
 app.use(cors());
 app.use(
