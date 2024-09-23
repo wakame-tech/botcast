@@ -17,7 +17,7 @@ function Signin() {
     if (session) {
       navigate({ to: "/" });
     }
-  }, [session]);
+  }, [session, navigate]);
 
   return (
     <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />

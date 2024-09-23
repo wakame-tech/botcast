@@ -1,7 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { PrismaClient, User } from "./client/deno/edge.ts";
+import { PrismaClient, User } from "@prisma/client";
 import { z } from "zod";
-// @ts-ignore
+// @ts-ignore: cannot resolve deps from npm package
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const supabase = createClient(

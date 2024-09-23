@@ -4,7 +4,7 @@
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "paths": {
-      "@prisma/client": ["./api/src/client"]
+      "@prisma/client": ["./api/prisma/client"]
     },
     "module": "ESNext",
     "skipLibCheck": true,

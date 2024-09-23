@@ -18,7 +18,7 @@ function Tasks() {
       taskQuery.refetch();
     }, 3000);
     return () => clearInterval(id);
-  }, [])
+  }, [taskQuery])
 
   const onClickCreate = () => {
     newEpisodeMutation.mutate({ title, url })
@@ -30,13 +30,13 @@ function Tasks() {
   return (
     <div>
       <div>
-        <label>title</label>
-        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <label htmlFor='title'>title</label>
+        <input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
 
-        <label>url</label>
-        <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <label htmlFor='url'>url</label>
+        <input id="url" type="text" value={url} onChange={(e) => setUrl(e.target.value)} />
       </div>
-      <button onClick={onClickCreate}>Create Task</button>
+      <button type='button' onClick={onClickCreate}>Create Task</button>
       { /* @ts-ignore: TS2589 */}
       <TaskList tasks={taskQuery.data?.tasks ?? []} />
     </div>

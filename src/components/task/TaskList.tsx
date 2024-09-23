@@ -1,11 +1,11 @@
-import { Task } from "@prisma/client"
+import type { Task } from "@prisma/client"
 
 interface TaskListProps {
     tasks: Task[]
 }
 
 export function TaskList(props: TaskListProps) {
-    const textStyles = `px-4 py-2 font-medium text-gray-900`
+    const textStyles = "px-4 py-2 font-medium text-gray-900"
 
     return (
         <>

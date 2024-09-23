@@ -8,7 +8,7 @@ import { Header } from './components/Header.tsx';
 import { supabase } from './supabase.ts';
 import { useSession } from './hooks/useSession.ts';
 
-let token: string = '';
+let token = '';
 
 export function App() {
     const navigate = useNavigate();
@@ -44,7 +44,7 @@ export function App() {
         );
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [navigate, setSession]);
 
     return (
         <>

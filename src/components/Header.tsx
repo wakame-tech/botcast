@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router"
 import { supabase } from "../supabase";
-import { Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 
 export function Header({ session }: { session: Session | null }) {
-    const buttonStyle = `hover:bg-orange-500 border border-1 p-2 font-bold rounded-lg`
+    const buttonStyle = "hover:bg-orange-500 border border-1 p-2 font-bold rounded-lg"
 
     const signOut = async () => {
         await supabase.auth.signOut();
@@ -33,14 +33,14 @@ export function Header({ session }: { session: Session | null }) {
                             <Link to="/users/$userId" params={{ userId: session.user.id }} className="no-underline">
                                 プロフィール
                             </Link>
-                            <button onClick={() => signOut()} className={buttonStyle}>
+                            <button type="button" onClick={() => signOut()} className={buttonStyle}>
                                 サインアウト
                             </button>
                         </>
                     )}
                     {!session &&
                         <Link to="/signin">
-                            <button className={buttonStyle}>
+                            <button type="button" className={buttonStyle}>
                                 サインイン
                             </button>
                         </Link>
