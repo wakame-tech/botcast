@@ -6,14 +6,14 @@ export const Route = createLazyFileRoute("/users/$userId")({
 });
 
 function User() {
-	const meQuery = trpc.me.useQuery();
-	if (meQuery.error) {
-		return <div>Error: {meQuery.error.message}</div>;
+	const getMe = trpc.me.useQuery();
+	if (getMe.error) {
+		return <div>Error: {getMe.error.message}</div>;
 	}
-	if (meQuery.isLoading || !meQuery.data) {
+	if (getMe.isLoading || !getMe.data) {
 		return <div>Loading...</div>;
 	}
-	const user = meQuery.data.user;
+	const user = getMe.data.user;
 
 	return (
 		<div>

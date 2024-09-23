@@ -19,10 +19,10 @@ export function Header({ session }: { session: Session | null }) {
 				{session && (
 					<>
 						<Link
-							to="/episodes"
+							to="/podcasts"
 							className="[&.active]:font-bold text-xl no-underline"
 						>
-							エピソード
+							ポッドキャスト
 						</Link>
 						<Link
 							to="/tasks"

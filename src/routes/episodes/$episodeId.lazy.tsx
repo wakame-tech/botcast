@@ -21,8 +21,9 @@ const fetchSrt = async (url: string): Promise<Line[]> => {
 
 function Episode() {
 	const { episodeId } = Route.useParams();
-	const episodeQuery = trpc.episode.useQuery({ id: episodeId });
-	const episode = episodeQuery.data?.episode;
+	const getEpisode = trpc.episode.useQuery({ id: episodeId });
+	const deleteEpisode = trpc.deleteEpisode.useMutation();
+	const episode = getEpisode.data?.episode;
 	const [lines, setLines] = useState<Line[]>([]);
 	const { isPlaying, play, seconds, seek, render } = usePlayer();
 
@@ -35,6 +36,10 @@ function Episode() {
 			setLines(lines);
 		})();
 	}, [episode]);
+
+	const handleDelete = async () => {
+		await deleteEpisode.mutateAsync({ id: episodeId });
+	};
 
 	const handleSeek = (line: Line) => {
 		seek(line.startSeconds);
@@ -63,6 +68,10 @@ function Episode() {
 					<p className="text-lg py-2">{line.text}</p>
 				</div>
 			))}
+
+			<button type="button" onClick={handleDelete}>
+				Delete
+			</button>
 
 			{episode.audio_url && (
 				<div className="absolute sticky bottom-0 w-full h-15 bg-teal-100">

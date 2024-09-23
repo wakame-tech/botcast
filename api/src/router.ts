@@ -92,13 +92,42 @@ export const appRouter = t.router({
         }
         return { task };
     }),
-    episodes: authProcedure.query(async ({ ctx: { user } }) => {
-        const episodes = await prisma.episode.findMany({
+    podcasts: authProcedure.query(async ({ ctx: { user } }) => {
+        const podcasts = await prisma.podcast.findMany({
             where: {
                 user,
             },
         });
-        return { episodes };
+        return { podcasts };
+    }),
+    podcast: authProcedure.input(z.object({
+        id: z.string(),
+    })).query(async ({ input: { id } }) => {
+        const podcast = await prisma.podcast.findUnique({
+            where: { id },
+            include: {
+                user: true,
+                episodes: true,
+            },
+        });
+        if (!podcast) {
+            throw new Error("Episode not found");
+        }
+        return { podcast };
+    }),
+    newPodcast: authProcedure.input(z.object({
+        title: z.string(),
+    })).mutation(async ({ ctx: { user }, input: { title } }) => {
+        const podcast = await prisma.podcast.create({
+            data: { title, user_id: user.id },
+        });
+        return { podcast };
+    }),
+    deletePodcast: authProcedure.input(z.object({
+        id: z.string(),
+    })).mutation(async ({ input: { id } }) => {
+        await prisma.podcast.delete({ where: { id } });
+        return;
     }),
     episode: authProcedure.input(z.object({
         id: z.string(),
@@ -115,24 +144,33 @@ export const appRouter = t.router({
         return { episode };
     }),
     newEpisode: authProcedure.input(z.object({
+        podcastId: z.string(),
         title: z.string(),
         url: z.string(),
-    })).mutation(async ({ ctx: { user }, input: { title, url } }) => {
-        const episode = await prisma.episode.create({
-            data: { title, user_id: user.id },
-        });
-        await prisma.task.create({
-            data: {
-                user_id: user.id,
-                status: "PENDING",
-                args: {
-                    episode_id: episode.id,
-                    url,
-                } satisfies Args,
-            },
-        });
-        return { episode };
-    }),
+    })).mutation(
+        async ({ ctx: { user }, input: { podcastId, title, url } }) => {
+            const podcast = await prisma.podcast.findUnique({
+                where: { id: podcastId },
+            });
+            if (!podcast) {
+                throw new Error("Podcast not found");
+            }
+            const episode = await prisma.episode.create({
+                data: { podcast_id: podcastId, title, user_id: user.id },
+            });
+            await prisma.task.create({
+                data: {
+                    user_id: user.id,
+                    status: "PENDING",
+                    args: {
+                        episode_id: episode.id,
+                        url,
+                    } satisfies Args,
+                },
+            });
+            return { episode };
+        },
+    ),
     updateEpisode: authProcedure.input(z.object({
         id: z.string(),
         title: z.string(),
