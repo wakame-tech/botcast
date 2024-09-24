@@ -1,6 +1,7 @@
 import type { Episode } from "@prisma/client";
 import { Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
+import { Button } from "../ui/button";
 
 interface EpisodeListProps {
 	podcastId: string;
@@ -11,24 +12,25 @@ interface EpisodeListProps {
 function EpisodeList(props: EpisodeListProps) {
 	return (
 		<>
-			<div className="pb-2 flex justify-end">
+			<div className="flex items-center">
+				<p className="text-xl font-bold">エピソード</p>
+				<div className="flex-grow" />
 				<Link
 					to="/podcasts/$podcastId/new"
 					params={{ podcastId: props.podcastId }}
-					className="p-2 no-underline rounded-md bg-teal-500 text-white"
+					className="pr-2"
 				>
-					新規作成
+					<Button>新規作成</Button>
 				</Link>
+				<Button className="bg-red-400" onClick={props.onClickDelete}>
+					削除
+				</Button>
 			</div>
-
 			{props.episodes.map((episode) => (
-				<div key={episode.id} className="p-2 bg-teal-100">
+				<div key={episode.id} className="p-2 bg-teal-50">
 					<EpisodeListItem episode={episode} />
 				</div>
 			))}
-			<button type="button" onClick={props.onClickDelete}>
-				Delete
-			</button>
 		</>
 	);
 }

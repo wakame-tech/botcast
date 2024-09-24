@@ -1,5 +1,6 @@
 import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
-import { UserIcon } from "@/components/user/UserIcon";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
 import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute } from "@tanstack/react-router";
@@ -49,32 +50,41 @@ function Episode() {
 
 	return (
 		<>
-			<h1 className="text-2xl font-bold">{episode.title}</h1>
+			<Card>
+				<CardHeader>
+					<CardTitle>{episode.title}</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="pb-2 flex items-center">
+						<div className="flex-grow" />
+						<Button className="bg-red-400" onClick={handleDelete}>
+							削除
+						</Button>
+					</div>
 
-			<UserIcon userId={episode.user.auth_id} label={episode.user.name ?? undefined} />
-
-			<article className="pt-2">
-				<ScriptLines
-					lines={lines}
-					toBeHighlight={(line) =>
-						line.startSeconds <= seconds && seconds < line.endSeconds
-					}
-					onClick={(line) => seek(line.startSeconds)}
-				/>
-			</article>
-
-			<button type="button" onClick={handleDelete}>
-				Delete
-			</button>
+					<ScriptLines
+						lines={lines}
+						toBeHighlight={(line) =>
+							line.startSeconds <= seconds && seconds < line.endSeconds
+						}
+						onClick={(line) => seek(line.startSeconds)}
+					/>
+				</CardContent>
+			</Card>
 
 			{episode.audio_url && (
-				<div className="absolute sticky bottom-0 w-full h-15 bg-teal-100">
-					<div className="p-2 flex justify-items-center">
-						<button className="m-auto" type="button" onClick={() => play()}>
-							{isPlaying ? "pause" : "play"}
-						</button>
-					</div>
-					{render(episode.audio_url)}
+				<div className="sticky bottom-0 float-right p-2">
+					<Button
+						className="w-16 h-16 m-auto rounded-full"
+						onClick={() => play()}
+					>
+						{isPlaying ? (
+							<div className="i-solar:pause-outline w-2em h-2em" />
+						) : (
+							<div className="i-solar:play-outline w-2em h-2em" />
+						)}
+						<span>{render(episode.audio_url)}</span>
+					</Button>
 				</div>
 			)}
 		</>

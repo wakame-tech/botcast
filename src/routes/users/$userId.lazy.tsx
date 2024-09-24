@@ -1,4 +1,5 @@
 import Podcast from "@/components/podcast/PodcastList";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/trpc";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 
@@ -7,25 +8,28 @@ export const Route = createLazyFileRoute("/users/$userId")({
 });
 
 function User() {
-	const getMe = trpc.me.useQuery();
 	const getPodcasts = trpc.podcasts.useQuery();
 	const podcasts = getPodcasts.data?.podcasts ?? [];
 
-	if (!getMe.data) {
-		return <div>loading...</div>;
-	}
-
-	const user = getMe.data.user;
-
 	return (
 		<>
-			<h1>{user.name}</h1>
-			<h2>Podcasts</h2>
-			<Link to="/podcasts/new">New Podcast</Link>
-			<Podcast.List podcasts={podcasts} />
+			<Card>
+				<CardHeader>
+					<CardTitle>ポッドキャスト</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<Podcast.List podcasts={podcasts} />
+				</CardContent>
+			</Card>
 
-			<h2>Tasks</h2>
-			<Link to="/tasks">Tasks</Link>
+			<Card>
+				<CardHeader>
+					<CardTitle>タスク</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<Link to="/tasks">Tasks</Link>
+				</CardContent>
+			</Card>
 		</>
 	);
 }
