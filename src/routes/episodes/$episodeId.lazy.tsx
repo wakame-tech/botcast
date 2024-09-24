@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
 import { trpc } from "@/trpc.ts";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
@@ -23,6 +23,7 @@ const fetchSrt = async (url: string): Promise<Line[]> => {
 };
 
 function Episode() {
+	const navigate = useNavigate();
 	const { episodeId } = Route.useParams();
 	const getEpisode = trpc.episode.useQuery({ id: episodeId });
 	const deleteEpisode = trpc.deleteEpisode.useMutation();
@@ -40,13 +41,17 @@ function Episode() {
 		})();
 	}, [episode]);
 
-	const handleDelete = async () => {
-		await deleteEpisode.mutateAsync({ id: episodeId });
-	};
-
 	if (!episode || !episode.user) {
 		return <div>not found</div>;
 	}
+
+	const handleDelete = async () => {
+		await deleteEpisode.mutateAsync({ id: episodeId });
+		navigate({
+			to: "/podcasts/$podcastId",
+			params: { podcastId: episode.podcast_id },
+		});
+	};
 
 	return (
 		<>

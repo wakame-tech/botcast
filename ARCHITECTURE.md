@@ -125,3 +125,7 @@ sequenceDiagram
 
 - PRをレビューしてくれるBotを作って導入した #32
 - ARCHITECTURE.md を作った #37
+- SRTファイルを生成するようにした #30
+- `shadcn/ui` を使ってUIを作り直した #41
+
+### Sprint 2024-09-25
