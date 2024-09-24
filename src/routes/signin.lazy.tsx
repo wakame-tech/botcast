@@ -1,23 +1,18 @@
-import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/supabase";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/signin")({
 	component: Signin,
 });
 
 function Signin() {
-	const { session } = useSession();
-	const navigate = useNavigate();
-
-	useEffect(() => {
-		if (session) {
-			navigate({ to: "/" });
-		}
-	}, [session, navigate]);
-
-	return <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />;
+	return (
+		<Auth
+			supabaseClient={supabase}
+			appearance={{ theme: ThemeSupa }}
+			providers={[]}
+		/>
+	);
 }
