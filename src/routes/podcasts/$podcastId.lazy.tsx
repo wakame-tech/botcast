@@ -1,5 +1,6 @@
 import Episode from "@/components/episode/EpisodeList.tsx";
-import { UserIcon } from "@/components/user/UserIcon.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserIcon } from "@/components/user/UserIcon";
 import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
@@ -23,18 +24,25 @@ export function Podcast() {
 
 	return (
 		<>
-			<div>
-				<span className="text-2xl font-bold pr-2">
-					{podcast.icon} {podcast.title}
-				</span>
-				<UserIcon user={podcast.user} />
-			</div>
-
-			<Episode.List
-				podcastId={podcastId}
-				episodes={podcast.episodes}
-				onClickDelete={handleDelete}
-			/>
+			<Card>
+				<CardHeader>
+					<CardTitle>
+						{podcast.icon} {podcast.title}
+					</CardTitle>
+					<UserIcon
+						userId={podcast.user.auth_id}
+						size="2rem"
+						label={podcast.user.name ?? undefined}
+					/>
+				</CardHeader>
+				<CardContent>
+					<Episode.List
+						podcastId={podcastId}
+						episodes={podcast.episodes}
+						onClickDelete={handleDelete}
+					/>
+				</CardContent>
+			</Card>
 		</>
 	);
 }
