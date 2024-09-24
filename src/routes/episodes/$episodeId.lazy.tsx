@@ -1,5 +1,5 @@
 import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
-import { UserIcon } from "@/components/user/UserIcon.tsx";
+import { UserIcon } from "@/components/user/UserIcon";
 import { usePlayer } from "@/hooks/usePlayer";
 import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute } from "@tanstack/react-router";
@@ -51,7 +51,7 @@ function Episode() {
 		<>
 			<h1 className="text-2xl font-bold">{episode.title}</h1>
 
-			<UserIcon user={episode.user} />
+			<UserIcon userId={episode.user.auth_id} label={episode.user.name ?? undefined} />
 
 			<article className="pt-2">
 				<ScriptLines

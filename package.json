@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
@@ -21,6 +22,7 @@
     "@trpc/client": "^11.0.0-rc.482",
     "@trpc/react-query": "^11.0.0-rc.482",
     "@trpc/server": "^11.0.0-rc.482",
+    "boring-avatars": "^1.11.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",

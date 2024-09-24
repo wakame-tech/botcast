@@ -1,5 +1,5 @@
 import Episode from "@/components/episode/EpisodeList.tsx";
-import { UserIcon } from "@/components/user/UserIcon.tsx";
+import { UserIcon } from "@/components/user/UserIcon";
 import { trpc } from "@/trpc.ts";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
@@ -23,12 +23,10 @@ export function Podcast() {
 
 	return (
 		<>
-			<div>
-				<span className="text-2xl font-bold pr-2">
-					{podcast.icon} {podcast.title}
-				</span>
-				<UserIcon user={podcast.user} />
-			</div>
+			<span className="text-2xl font-bold pr-2">
+				{podcast.icon} {podcast.title}
+			</span>
+			<UserIcon userId={podcast.user.auth_id} label={podcast.user.name ?? undefined} />
 
 			<Episode.List
 				podcastId={podcastId}
