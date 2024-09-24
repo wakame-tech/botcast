@@ -21,6 +21,14 @@ app.use(
         },
     }),
 );
-app.use("/*", serveStatic({ root: "./dist/" }));
+app
+    .use("/assets/*", serveStatic({ root: "./dist/" }))
+    .use(
+        "/*",
+        serveStatic({
+            root: "./dist/",
+            path: "index.html",
+        }),
+    );
 
 Deno.serve({ port: 1234 }, app.fetch);
