@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.1.0",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.45.3",
@@ -20,11 +21,14 @@
     "@trpc/client": "^11.0.0-rc.482",
     "@trpc/react-query": "^11.0.0-rc.482",
     "@trpc/server": "^11.0.0-rc.482",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-player": "^2.16.0",
     "srt-parser-2": "^1.2.3",
+    "tailwind-merge": "^2.5.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -36,6 +40,7 @@
     "@vitejs/plugin-react": "^4.0.1",
     "typescript": "^5.0.2",
     "unocss": "^0.62.3",
+    "unocss-preset-shadcn": "^0.3.1",
     "vite": "^5.4.2",
     "vite-tsconfig-paths": "^5.0.1"
   }
