@@ -30,6 +30,7 @@ Botcast の機能メモとか設計メモとか
 - エピソード原稿を作成できる
   - Webページから: HTMLを取得して原稿に変換
   - アップロードする: Markdownをアップロード
+- エピソード原稿をLLMで要約できる
 
 ### 画面
 
@@ -47,33 +48,69 @@ Botcast の機能メモとか設計メモとか
     - 指定した行から再生できる
   - 音声プレイヤー
 
-### 音声生成
+### エピソード作成/取得
 
 ```mermaid
 sequenceDiagram
     participant web as フロントエンド
     participant api as API
-    participant db as DB
-    participant worker as ワーカー
     participant storage as ストレージ
-
-    note over web, storage: エピソード作成
+    
+    note over web, db: エピソード作成
 
     web ->> api: POST /episodes (podcast_id,url)
     api ->> db: insert Episode(title)
     api ->> db: insert Task(episode_id, url, status=pending)
     api -->> web: ok
+ 
+    note over web, db: エピソード取得
+
+    web ->> api: GET /episodes/:id
+    api ->> db: select Episode
+    web ->> storage: GET mp3
+    api -->> web: ok
+
+```
+
+### 要約タスク
+
+```mermaid
+sequenceDiagram
+    participant db as DB
+    participant worker as ワーカー
+    participant llm as OpenAI API
 
     loop
       worker ->> db: ポーリングで新規タスクを確認
       rect azure
         note over worker: スクレイピング
         worker ->> worker: HTML取得
+        
+        note over worker: 要約
+        worker ->> llm: POST (並列)
+        llm ->> worker: 要約結果
+        worker ->> db: update Episode(content)
+        worker ->> db: update Task(status=complete)
       end
-      
+    end
+```
+
+### 音声生成タスク
+
+```mermaid
+sequenceDiagram
+    participant db as DB
+    participant worker as ワーカー
+    participant voicevox as VoiceVox API
+    participant storage as ストレージ
+ 
+    loop
+      worker ->> db: ポーリングで新規タスクを確認
       rect azure
         note over worker: 音声合成
-        worker ->> worker: POST VoiceVox API
+        worker ->> db: select Episode
+        worker ->> voicevox: POST VoiceVox API (1並列)
+        voicevox ->> worker: wav
         worker ->> worker: SRT生成
         worker ->> worker: wavを結合してmp3に
         worker ->> storage: POST mp3, srt
@@ -83,13 +120,6 @@ sequenceDiagram
       worker ->> db: update Task(status=complete)
     end
     
-    note over web, storage: エピソード取得
-
-    web ->> api: GET /episodes/:id
-    api ->> db: select Episode
-    web ->> storage: GET mp3
-    api -->> web: ok
-
 ```
 
 ## 日記
@@ -129,3 +159,13 @@ sequenceDiagram
 - `shadcn/ui` を使ってUIを作り直した #41
 
 ### Sprint 2024-09-25
+
+- 進捗ないです...
+
+### Sprint 2024-10-02
+
+- head, styleタグを除外するように修正
+- 今後のためにスクレイピングタスクと音声合成タスクを分離中 #15
+- LLMで原稿を変換したい: とりあえず要約
+
+### Sprint 2024-10-09
