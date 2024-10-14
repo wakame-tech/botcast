@@ -15,6 +15,7 @@
     },
     "tasks": {
         "migrate": "deno run -A npm:prisma migrate dev",
+        "format": "deno run -A npm:prisma format",
         "push": "deno run -A npm:prisma db push",
         "pull": "deno run -A npm:prisma db pull",
         "generate": "deno run -A --unstable npm:prisma generate --accelerate"

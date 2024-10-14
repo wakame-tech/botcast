@@ -33,10 +33,10 @@ function Episode() {
 
 	useEffect(() => {
 		(async () => {
-			if (!episode || !episode?.script_url) {
+			if (!episode || !episode?.srt_url) {
 				return;
 			}
-			const lines = await fetchSrt(episode.script_url);
+			const lines = await fetchSrt(episode.srt_url);
 			setLines(lines);
 		})();
 	}, [episode]);
