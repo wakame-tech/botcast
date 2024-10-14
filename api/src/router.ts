@@ -11,10 +11,16 @@ const supabase = createClient(
 
 export const prisma = new PrismaClient();
 
-interface Args {
-    episode_id: string;
-    url: string;
-}
+const taskArgsSchema = z.union([
+    z.object({
+        type: z.literal("generateAudio"),
+        episodeId: z.string(),
+    }),
+    z.object({
+        type: z.literal("evaluateScript"),
+        episodeId: z.string(),
+    }),
+]);
 
 interface Context {
     accessToken: string | null;
@@ -55,6 +61,17 @@ const unauthorized = new TRPCError({
     message: "Unauthorized",
 });
 
+type Section = {
+    type: "Serif";
+    speaker: string;
+    text: string;
+};
+
+interface Manuscript {
+    title: string;
+    sections: Section[];
+}
+
 export const appRouter = t.router({
     signIn: t.procedure.input(z.object({
         email: z.string(),
@@ -88,10 +105,25 @@ export const appRouter = t.router({
             where: { id },
         });
         if (!task) {
-            throw new Error("Task not found");
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Task not found",
+            });
         }
         return { task };
     }),
+    addTask: authProcedure.input(taskArgsSchema).mutation(
+        async ({ ctx: { user }, input: args }) => {
+            const task = await prisma.task.create({
+                data: {
+                    user_id: user.id,
+                    status: "PENDING",
+                    args,
+                },
+            });
+            return { task };
+        },
+    ),
     podcasts: authProcedure.query(async ({ ctx: { user } }) => {
         const podcasts = await prisma.podcast.findMany({
             where: {
@@ -142,6 +174,7 @@ export const appRouter = t.router({
             where: { id },
             include: {
                 user: true,
+                script: true,
             },
         });
         if (!episode) {
@@ -151,32 +184,40 @@ export const appRouter = t.router({
     }),
     newEpisode: authProcedure.input(z.object({
         podcastId: z.string(),
-        title: z.string(),
-        url: z.string(),
     })).mutation(
-        async ({ ctx: { user }, input: { podcastId, title, url } }) => {
+        async ({ ctx: { user }, input: { podcastId } }) => {
             const podcast = await prisma.podcast.findUnique({
                 where: { id: podcastId },
             });
             if (!podcast) {
                 throw new Error("Podcast not found");
             }
-            const episode = await prisma.episode.create({
+            const template = {
+                title: "title",
+                sections: [
+                    {
+                        type: "Serif",
+                        speaker: "urn:voicevox:zunda_normal",
+                        text: "こんにちは",
+                    },
+                ],
+            } satisfies Manuscript;
+            const script = await prisma.script.create({
                 data: {
-                    podcast_id: podcastId,
-                    title,
+                    template,
                     user_id: user.id,
-                    created_at: new Date().toISOString(),
                 },
             });
-            await prisma.task.create({
+            const episode = await prisma.episode.create({
+                include: {
+                    script: true,
+                },
                 data: {
+                    script_id: script.id,
+                    podcast_id: podcastId,
+                    title: "new episode",
                     user_id: user.id,
-                    status: "PENDING",
-                    args: {
-                        episode_id: episode.id,
-                        url,
-                    } satisfies Args,
+                    created_at: new Date().toISOString(),
                 },
             });
             return { episode };
@@ -191,6 +232,17 @@ export const appRouter = t.router({
             data: { title },
         });
         return { episode };
+    }),
+    updateScript: authProcedure.input(z.object({
+        id: z.string(),
+        template: z.string(),
+    })).mutation(async ({ input: { id, template } }) => {
+        const templateJson = JSON.parse(template);
+        await prisma.script.update({
+            where: { id },
+            data: { template: templateJson },
+        });
+        return;
     }),
     deleteEpisode: authProcedure.input(z.object({
         id: z.string(),
