@@ -18,7 +18,7 @@ export function UserIcon(props: UserIconProps) {
 				>
 					<Avatar
 						name={props.userId}
-						colors={["#009688", "#ffffff"]}
+						colors={["#009688", "#b2dfdb"]}
 						variant="beam"
 						size={props.size ?? "2.5rem"}
 					/>

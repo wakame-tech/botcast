@@ -2,7 +2,7 @@ import { EpisodeForm } from "@/components/episode/EpisodeForm";
 import type { EpisodeEditFormValues } from "@/components/episode/EpisodeForm";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/trpc.ts";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 export const Route = createLazyFileRoute("/episodes/$episodeId/edit")({
@@ -69,7 +69,9 @@ function ManuscriptComponent({ manuscript }: { manuscript: Manuscript }) {
 
 export function EditEpisode() {
 	const { episodeId } = Route.useParams();
+	const navigate = useNavigate();
 	const getEpisode = trpc.episode.useQuery({ id: episodeId });
+	const deleteEpisode = trpc.deleteEpisode.useMutation();
 	const updateScript = trpc.updateScript.useMutation();
 	const addTask = trpc.addTask.useMutation();
 	const { taskId, setTaskId } = useTask();
@@ -79,6 +81,14 @@ export function EditEpisode() {
 			getEpisode.refetch();
 		}
 	}, [getEpisode, taskId]);
+
+	const handleDelete = async () => {
+		await deleteEpisode.mutateAsync({ id: episodeId });
+		navigate({
+			to: "/podcasts/$podcastId",
+			params: { podcastId: episode.podcast_id },
+		});
+	};
 
 	const handleSubmit = async (values: EpisodeEditFormValues) => {
 		if (!getEpisode.data) {
@@ -117,6 +127,13 @@ export function EditEpisode() {
 	return (
 		<>
 			<h1>Edit Episode</h1>
+			<div className="pb-2 flex items-center">
+				<div className="flex-grow" />
+				<Button className="bg-red-400" onClick={handleDelete}>
+					削除
+				</Button>
+			</div>
+
 			<EpisodeForm
 				disabled={taskId !== null}
 				episodeId={episodeId}
