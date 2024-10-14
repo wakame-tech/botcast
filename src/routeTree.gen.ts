@@ -23,8 +23,8 @@ const UsersUserIdLazyImport = createFileRoute('/users/$userId')()
 const PodcastsNewLazyImport = createFileRoute('/podcasts/new')()
 const PodcastsPodcastIdLazyImport = createFileRoute('/podcasts/$podcastId')()
 const EpisodesEpisodeIdLazyImport = createFileRoute('/episodes/$episodeId')()
-const PodcastsPodcastIdNewLazyImport = createFileRoute(
-  '/podcasts/$podcastId/new',
+const EpisodesEpisodeIdEditLazyImport = createFileRoute(
+  '/episodes/$episodeId/edit',
 )()
 
 // Create/Update Routes
@@ -68,11 +68,11 @@ const EpisodesEpisodeIdLazyRoute = EpisodesEpisodeIdLazyImport.update({
   import('./routes/episodes/$episodeId.lazy').then((d) => d.Route),
 )
 
-const PodcastsPodcastIdNewLazyRoute = PodcastsPodcastIdNewLazyImport.update({
-  path: '/podcasts/$podcastId/new',
+const EpisodesEpisodeIdEditLazyRoute = EpisodesEpisodeIdEditLazyImport.update({
+  path: '/episodes/$episodeId/edit',
   getParentRoute: () => rootRoute,
 } as any).lazy(() =>
-  import('./routes/podcasts/$podcastId_/new.lazy').then((d) => d.Route),
+  import('./routes/episodes/$episodeId_/edit.lazy').then((d) => d.Route),
 )
 
 // Populate the FileRoutesByPath interface
@@ -128,11 +128,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersUserIdLazyImport
       parentRoute: typeof rootRoute
     }
-    '/podcasts/$podcastId/new': {
-      id: '/podcasts/$podcastId/new'
-      path: '/podcasts/$podcastId/new'
-      fullPath: '/podcasts/$podcastId/new'
-      preLoaderRoute: typeof PodcastsPodcastIdNewLazyImport
+    '/episodes/$episodeId/edit': {
+      id: '/episodes/$episodeId/edit'
+      path: '/episodes/$episodeId/edit'
+      fullPath: '/episodes/$episodeId/edit'
+      preLoaderRoute: typeof EpisodesEpisodeIdEditLazyImport
       parentRoute: typeof rootRoute
     }
   }
@@ -148,7 +148,7 @@ export const routeTree = rootRoute.addChildren({
   PodcastsPodcastIdLazyRoute,
   PodcastsNewLazyRoute,
   UsersUserIdLazyRoute,
-  PodcastsPodcastIdNewLazyRoute,
+  EpisodesEpisodeIdEditLazyRoute,
 })
 
 /* prettier-ignore-end */
@@ -166,7 +166,7 @@ export const routeTree = rootRoute.addChildren({
         "/podcasts/$podcastId",
         "/podcasts/new",
         "/users/$userId",
-        "/podcasts/$podcastId/new"
+        "/episodes/$episodeId/edit"
       ]
     },
     "/": {
@@ -190,8 +190,8 @@ export const routeTree = rootRoute.addChildren({
     "/users/$userId": {
       "filePath": "users/$userId.lazy.tsx"
     },
-    "/podcasts/$podcastId/new": {
-      "filePath": "podcasts/$podcastId_/new.lazy.tsx"
+    "/episodes/$episodeId/edit": {
+      "filePath": "episodes/$episodeId_/edit.lazy.tsx"
     }
   }
 }

@@ -1,5 +1,6 @@
+import { trpc } from "@/trpc.ts";
 import type { Episode } from "@prisma/client";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import { Button } from "../ui/button";
 
@@ -10,18 +11,28 @@ interface EpisodeListProps {
 }
 
 function EpisodeList(props: EpisodeListProps) {
+	const navigate = useNavigate();
+	const newEpisode = trpc.newEpisode.useMutation();
+
+	const handleNewEpisode = async () => {
+		// @ts-ignore: TS2589
+		const { episode } = await newEpisode.mutateAsync({
+			podcastId: props.podcastId,
+		});
+		navigate({
+			to: "/episodes/$episodeId/edit",
+			params: { episodeId: episode.id },
+		});
+	};
+
 	return (
 		<>
 			<div className="flex items-center">
 				<p className="text-xl font-bold">エピソード</p>
 				<div className="flex-grow" />
-				<Link
-					to="/podcasts/$podcastId/new"
-					params={{ podcastId: props.podcastId }}
-					className="pr-2"
-				>
-					<Button>新規作成</Button>
-				</Link>
+				<div className="pr-2">
+					<Button onClick={handleNewEpisode}>新規作成</Button>
+				</div>
 				<Button className="bg-red-400" onClick={props.onClickDelete}>
 					削除
 				</Button>

@@ -6,70 +6,50 @@ import {
 	FormItem,
 	FormLabel,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { trpc } from "@/trpc.ts";
+import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { Episode } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 interface EpisodeFormProps {
-	podcastId: string;
-	onCreate: (episode: Episode) => void;
+	disabled?: boolean;
+	episodeId: string;
+	template: string;
+	onSubmit: (values: EpisodeEditFormValues) => void;
 }
 
-const formSchema = z.object({
-	title: z.string(),
-	url: z.string(),
+const episodeEditFormSchema = z.object({
+	template: z.string(),
 });
 
-export function EpisodeForm(props: EpisodeFormProps) {
-	const newEpisode = trpc.newEpisode.useMutation();
+export type EpisodeEditFormValues = z.infer<typeof episodeEditFormSchema>;
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+export function EpisodeForm(props: EpisodeFormProps) {
+	const form = useForm<z.infer<typeof episodeEditFormSchema>>({
+		resolver: zodResolver(episodeEditFormSchema),
 		defaultValues: {
-			title: "",
-			url: "",
+			template: props.template,
 		},
 	});
 
-	const onSubmit = async (values: z.infer<typeof formSchema>) => {
-		const { episode } = await newEpisode.mutateAsync({
-			...values,
-			podcastId: props.podcastId,
-		});
-		props.onCreate(episode);
-	};
-
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+			<form onSubmit={form.handleSubmit(props.onSubmit)} className="space-y-8">
 				<FormField
 					control={form.control}
-					name="title"
+					name="template"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>タイトル</FormLabel>
+							<FormLabel>スクリプト</FormLabel>
 							<FormControl>
-								<Input placeholder="title" {...field} />
+								<Textarea placeholder="template" {...field} />
 							</FormControl>
 						</FormItem>
 					)}
 				/>
-				<FormField
-					control={form.control}
-					name="url"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>URL</FormLabel>
-							<FormControl>
-								<Input placeholder="URL" {...field} />
-							</FormControl>
-						</FormItem>
-					)}
-				/>
-				<Button type="submit">作成</Button>
+				<Button disabled={props.disabled} type="submit">
+					実行
+				</Button>
 			</form>
 		</Form>
 	);
