@@ -151,10 +151,28 @@ export const appRouter = t.router({
         title: z.string(),
         icon: z.string().regex(/\p{Emoji_Presentation}/gu),
     })).mutation(async ({ ctx: { user }, input: { title, icon } }) => {
+        const template = {
+            title: "title",
+            sections: [
+                {
+                    type: "Serif",
+                    speaker: "urn:voicevox:zunda_normal",
+                    text: "こんにちは",
+                },
+            ],
+        } satisfies Manuscript;
+        const script = await prisma.script.create({
+            data: {
+                title: `${title} script`,
+                template,
+                user_id: user.id,
+            },
+        });
         const podcast = await prisma.podcast.create({
             data: {
                 title,
                 icon,
+                script_id: script.id,
                 user_id: user.id,
                 created_at: new Date().toISOString(),
             },
@@ -197,28 +215,12 @@ export const appRouter = t.router({
             if (!podcast) {
                 throw new Error("Podcast not found");
             }
-            const template = {
-                title: "title",
-                sections: [
-                    {
-                        type: "Serif",
-                        speaker: "urn:voicevox:zunda_normal",
-                        text: "こんにちは",
-                    },
-                ],
-            } satisfies Manuscript;
-            const script = await prisma.script.create({
-                data: {
-                    template,
-                    user_id: user.id,
-                },
-            });
             const episode = await prisma.episode.create({
                 include: {
                     script: true,
                 },
                 data: {
-                    script_id: script.id,
+                    script_id: podcast.script_id,
                     podcast_id: podcastId,
                     title: "new episode",
                     user_id: user.id,
