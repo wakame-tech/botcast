@@ -51,17 +51,15 @@ function Episode() {
 		await newComment.mutateAsync({
 			episodeId,
 			content: values.content,
-		})
+		});
 		await getEpisode.refetch();
-	}
+	};
 
 	return (
 		<>
 			<Card>
 				<CardHeader>
-					<CardTitle>
-						{episode.title}
-					</CardTitle>
+					<CardTitle>{episode.title}</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<div className="flex justify-end">
@@ -93,9 +91,11 @@ function Episode() {
 						<span>{render(episode.audio_url)}</span>
 					</Button>
 				</div>
-			) : <div className="flex items-center justify-center">
-				<p className="text-gray-400 text-xl">音声ファイルがありません</p>
-			</div>}
+			) : (
+				<div className="flex items-center justify-center">
+					<p className="text-gray-400 text-xl">音声ファイルがありません</p>
+				</div>
+			)}
 
 			{episode.comments.map((comment) => (
 				<div key={comment.id}>

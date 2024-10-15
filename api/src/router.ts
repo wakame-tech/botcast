@@ -240,6 +240,39 @@ export const appRouter = t.router({
         });
         return { episode };
     }),
+    scripts: authProcedure.query(async ({ ctx: { user } }) => {
+        const scripts = await prisma.script.findMany({
+            where: {
+                user,
+            },
+        });
+        return { scripts };
+    }),
+    script: authProcedure.input(z.object({
+        id: z.string(),
+    })).query(async ({ input: { id } }) => {
+        const script = await prisma.script.findUnique({
+            where: { id },
+        });
+        if (!script) {
+            throw new Error("Script not found");
+        }
+        return { script };
+    }),
+    newScript: authProcedure.input(z.object({
+        title: z.string(),
+        template: z.string(),
+    })).mutation(async ({ ctx: { user }, input: { title, template } }) => {
+        const templateJson = JSON.parse(template);
+        const script = await prisma.script.create({
+            data: {
+                title,
+                template: templateJson,
+                user_id: user.id,
+            },
+        });
+        return { script };
+    }),
     updateScript: authProcedure.input(z.object({
         id: z.string(),
         template: z.string(),

@@ -30,6 +30,8 @@ function User() {
 					<Link to="/tasks">Tasks</Link>
 				</CardContent>
 			</Card>
+
+			<Link to="/scripts">scripts</Link>
 		</>
 	);
 }
