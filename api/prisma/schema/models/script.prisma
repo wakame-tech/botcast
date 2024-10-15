@@ -1,9 +1,11 @@
 model Script {
   id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title    String
   template Json
-  Episode  Episode[]
   user     User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id  String    @db.Uuid
+  episodes Episode[]
+  podcasts Podcast[]
 
   @@map("scripts")
 }
