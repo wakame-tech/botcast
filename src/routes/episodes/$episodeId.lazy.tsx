@@ -1,9 +1,12 @@
+import type { CommentEditFormValues } from "@/components/comment/CommentForm";
+import { CommentForm } from "@/components/comment/CommentForm";
+import { CommentListItem } from "@/components/comment/CommentListItem";
 import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
 import { trpc } from "@/trpc.ts";
-import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
@@ -23,13 +26,12 @@ const fetchSrt = async (url: string): Promise<Line[]> => {
 };
 
 function Episode() {
-	const navigate = useNavigate();
 	const { episodeId } = Route.useParams();
 	const getEpisode = trpc.episode.useQuery({ id: episodeId });
-	const deleteEpisode = trpc.deleteEpisode.useMutation();
 	const episode = getEpisode.data?.episode;
 	const [lines, setLines] = useState<Line[]>([]);
 	const { isPlaying, play, seconds, seek, render } = usePlayer();
+	const newComment = trpc.newComment.useMutation();
 
 	useEffect(() => {
 		(async () => {
@@ -45,28 +47,28 @@ function Episode() {
 		return <div>not found</div>;
 	}
 
-	const handleDelete = async () => {
-		await deleteEpisode.mutateAsync({ id: episodeId });
-		navigate({
-			to: "/podcasts/$podcastId",
-			params: { podcastId: episode.podcast_id },
-		});
-	};
+	const handleOnSubmitComment = async (values: CommentEditFormValues) => {
+		await newComment.mutateAsync({
+			episodeId,
+			content: values.content,
+		})
+		await getEpisode.refetch();
+	}
 
 	return (
 		<>
 			<Card>
 				<CardHeader>
-					<CardTitle>{episode.title}</CardTitle>
+					<CardTitle>
+						{episode.title}
+					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="pb-2 flex items-center">
-						<div className="flex-grow" />
-						<Button className="bg-red-400" onClick={handleDelete}>
-							削除
-						</Button>
+					<div className="flex justify-end">
+						<Link to="/episodes/$episodeId/edit" params={{ episodeId }}>
+							<div className="i-solar:gallery-edit-outline w-1.5em h-1.5em" />
+						</Link>
 					</div>
-
 					<ScriptLines
 						lines={lines}
 						toBeHighlight={(line) =>
@@ -77,7 +79,7 @@ function Episode() {
 				</CardContent>
 			</Card>
 
-			{episode.audio_url && (
+			{episode.audio_url ? (
 				<div className="sticky bottom-0 float-right p-2">
 					<Button
 						className="w-16 h-16 m-auto rounded-full"
@@ -91,7 +93,19 @@ function Episode() {
 						<span>{render(episode.audio_url)}</span>
 					</Button>
 				</div>
-			)}
+			) : <div className="flex items-center justify-center">
+				<p className="text-gray-400 text-xl">音声ファイルがありません</p>
+			</div>}
+
+			{episode.comments.map((comment) => (
+				<div key={comment.id}>
+					<CommentListItem user={comment.user} comment={comment} />
+				</div>
+			))}
+
+			<div className="p-2">
+				<CommentForm onSubmit={handleOnSubmitComment} />
+			</div>
 		</>
 	);
 }
