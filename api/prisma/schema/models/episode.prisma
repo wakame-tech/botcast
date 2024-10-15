@@ -4,7 +4,6 @@ model Episode {
   audio_url  String?
   script_id  String    @db.Uuid
   script     Script    @relation(fields: [script_id], references: [id])
-  manuscript Json?
   srt_url    String?
   podcast    Podcast   @relation(fields: [podcast_id], references: [id], onDelete: Cascade)
   podcast_id String    @db.Uuid

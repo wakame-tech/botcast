@@ -18,7 +18,7 @@ const taskArgsSchema = z.union([
     }),
     z.object({
         type: z.literal("evaluateScript"),
-        episodeId: z.string(),
+        scriptId: z.string(),
     }),
 ]);
 
@@ -60,17 +60,6 @@ const unauthorized = new TRPCError({
     code: "UNAUTHORIZED",
     message: "Unauthorized",
 });
-
-type Section = {
-    type: "Serif";
-    speaker: string;
-    text: string;
-};
-
-interface Manuscript {
-    title: string;
-    sections: Section[];
-}
 
 export const appRouter = t.router({
     signIn: t.procedure.input(z.object({
@@ -140,6 +129,7 @@ export const appRouter = t.router({
             include: {
                 user: true,
                 episodes: true,
+                script: true,
             },
         });
         if (!podcast) {
@@ -149,36 +139,29 @@ export const appRouter = t.router({
     }),
     newPodcast: authProcedure.input(z.object({
         title: z.string(),
+        template: z.string(),
         icon: z.string().regex(/\p{Emoji_Presentation}/gu),
-    })).mutation(async ({ ctx: { user }, input: { title, icon } }) => {
-        const template = {
-            title: "title",
-            sections: [
-                {
-                    type: "Serif",
-                    speaker: "urn:voicevox:zunda_normal",
-                    text: "こんにちは",
+    })).mutation(
+        async ({ ctx: { user }, input: { title, template, icon } }) => {
+            const script = await prisma.script.create({
+                data: {
+                    title: `${title} script`,
+                    template,
+                    user_id: user.id,
                 },
-            ],
-        } satisfies Manuscript;
-        const script = await prisma.script.create({
-            data: {
-                title: `${title} script`,
-                template,
-                user_id: user.id,
-            },
-        });
-        const podcast = await prisma.podcast.create({
-            data: {
-                title,
-                icon,
-                script_id: script.id,
-                user_id: user.id,
-                created_at: new Date().toISOString(),
-            },
-        });
-        return { podcast };
-    }),
+            });
+            const podcast = await prisma.podcast.create({
+                data: {
+                    title,
+                    icon,
+                    script_id: script.id,
+                    user_id: user.id,
+                    created_at: new Date().toISOString(),
+                },
+            });
+            return { podcast };
+        },
+    ),
     deletePodcast: authProcedure.input(z.object({
         id: z.string(),
     })).mutation(async ({ input: { id } }) => {
@@ -275,12 +258,13 @@ export const appRouter = t.router({
     }),
     updateScript: authProcedure.input(z.object({
         id: z.string(),
+        title: z.string(),
         template: z.string(),
-    })).mutation(async ({ input: { id, template } }) => {
+    })).mutation(async ({ input: { id, title, template } }) => {
         const templateJson = JSON.parse(template);
         await prisma.script.update({
             where: { id },
-            data: { template: templateJson },
+            data: { title, template: templateJson },
         });
         return;
     }),
