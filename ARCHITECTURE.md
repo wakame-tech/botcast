@@ -30,7 +30,7 @@ Botcast の機能メモとか設計メモとか
 - エピソード原稿を作成できる
   - Webページから: HTMLを取得して原稿に変換
   - アップロードする: Markdownをアップロード
-- エピソード原稿をLLMで要約できる
+- エピソード原稿をスクリプトで作成できる
 
 ### 画面
 
@@ -48,51 +48,52 @@ Botcast の機能メモとか設計メモとか
     - 指定した行から再生できる
   - 音声プレイヤー
 
-### エピソード作成/取得
+
+## ワーカー
+
+- DBにキューイングされたタスクを順次実行する
+
+### crate依存関係
+
+```mermaid
+graph TD;
+  worker --> script_runtime;
+  worker --> repos;
+  worker --> readable_text;
+  script_runtime --> script_http_client;
+  script_runtime --> script_llm;
+  script_runtime --> repos;
+```
+
+### スクリプト評価
+
+- TODO: ワーカーがAPIを公開していないのでDBを介したポーリングになってしまっていて微妙
 
 ```mermaid
 sequenceDiagram
     participant web as フロントエンド
     participant api as API
-    participant storage as ストレージ
-    
-    note over web, db: エピソード作成
-
-    web ->> api: POST /episodes (podcast_id,url)
-    api ->> db: insert Episode(title)
-    api ->> db: insert Task(episode_id, url, status=pending)
-    api -->> web: ok
- 
-    note over web, db: エピソード取得
-
-    web ->> api: GET /episodes/:id
-    api ->> db: select Episode
-    web ->> storage: GET mp3
-    api -->> web: ok
-
-```
-
-### 要約タスク
-
-```mermaid
-sequenceDiagram
     participant db as DB
     participant worker as ワーカー
-    participant llm as OpenAI API
+
+    web ->> api: addTask
+    api ->> db: insert Task
 
     loop
       worker ->> db: ポーリングで新規タスクを確認
       rect azure
-        note over worker: スクレイピング
-        worker ->> worker: HTML取得
-        
-        note over worker: 要約
-        worker ->> llm: POST (並列)
-        llm ->> worker: 要約結果
-        worker ->> db: update Episode(content)
+        note over worker: スクリプト実行
+        worker ->> worker: スクリプトを評価して原稿に
+        worker ->> db: update Episode(manuscript)
         worker ->> db: update Task(status=complete)
       end
     end
+
+    loop
+      web ->> api: ポーリングでタスクの更新を確認
+    end
+    
+    web ->> api: getEpisode
 ```
 
 ### 音声生成タスク
@@ -118,8 +119,31 @@ sequenceDiagram
       end
 
       worker ->> db: update Task(status=complete)
-    end
-    
+    end 
+```
+
+### スクリプト機能
+
+- 外部のURLやAPI呼び出し等のみならずサービス内のデータもURNによって参照できる
+  - お便り機能や他番組への言及・コラボ(どうやって?)等
+  - TODO: 認可
+- [JSON-eのフォーク](https://github.com/wakame-tech/json-e/tree/fix-pub-context) で非同期で実行される
+  - TODO: タイムアウトをつける
+
+#### 原稿
+
+```typescript
+type Section =
+  {
+    type: 'Serif',
+    speaker: string,
+    text: string,
+  }
+
+interface Manuscript {
+  title: string;
+  sections: Section[];
+}
 ```
 
 ## 日記
@@ -169,3 +193,8 @@ sequenceDiagram
 - LLMで原稿を変換したい: とりあえず要約
 
 ### Sprint 2024-10-09
+
+- スクリプト実行機能
+  - HTML取得やLLM利用はスクリプトで表現する
+  - 原稿生成と音声生成を分離した
+- コメント機能
