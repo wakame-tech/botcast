@@ -1,5 +1,6 @@
 import { PodcastForm } from "@/components/podcast/PodcastForm";
-import type { Podcast } from "@prisma/client";
+import type { PodcastEditFormValues } from "@/components/podcast/PodcastForm";
+import { trpc } from "@/trpc.ts";
 import { useNavigate } from "@tanstack/react-router";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
@@ -9,15 +10,21 @@ export const Route = createLazyFileRoute("/podcasts/new")({
 
 export function NewPodcast() {
 	const navigate = useNavigate();
+	const newPodcast = trpc.newPodcast.useMutation();
 
-	const onCreate = (podcast: Podcast) => {
+	const handleSubmit = async (values: PodcastEditFormValues) => {
+		const { podcast } = await newPodcast.mutateAsync({
+			title: values.title,
+			template: values.template,
+			icon: "🎧",
+		});
 		navigate({ to: "/podcasts/$podcastId", params: { podcastId: podcast.id } });
 	};
 
 	return (
 		<>
 			<h1>新しいポッドキャスト</h1>
-			<PodcastForm onCreate={onCreate} />
+			<PodcastForm onSubmit={handleSubmit} />
 		</>
 	);
 }

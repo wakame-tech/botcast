@@ -2,7 +2,7 @@ import Episode from "@/components/episode/EpisodeList.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserIcon } from "@/components/user/UserIcon";
 import { trpc } from "@/trpc.ts";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { Link, createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId")({
 	component: Podcast,
@@ -36,6 +36,13 @@ export function Podcast() {
 					/>
 				</CardHeader>
 				<CardContent>
+					<Link
+						to="/scripts/$scriptId/edit"
+						params={{ scriptId: podcast.script_id }}
+					>
+						edit
+					</Link>
+					{/* @ts-ignore */}
 					<Episode.List
 						podcastId={podcastId}
 						episodes={podcast.episodes}

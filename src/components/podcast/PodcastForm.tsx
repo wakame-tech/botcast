@@ -7,33 +7,36 @@ import {
 	FormLabel,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { trpc } from "@/trpc.ts";
+import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { Podcast } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { MANUSCRIPT_TEMPLATE } from "../script/ScriptForm";
 
 interface PodcastFormProps {
-	onCreate: (podcast: Podcast) => void;
+	values?: PodcastEditFormValues;
+	onSubmit: (values: PodcastEditFormValues) => void;
 }
 
-const formSchema = z.object({
+const podcastEditFormSchema = z.object({
 	title: z.string(),
+	template: z.string(),
 });
 
-export function PodcastForm(props: PodcastFormProps) {
-	const newPodcast = trpc.newPodcast.useMutation();
+export type PodcastEditFormValues = z.infer<typeof podcastEditFormSchema>;
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
-		defaultValues: {
-			title: "",
+export function PodcastForm(props: PodcastFormProps) {
+	const form = useForm<z.infer<typeof podcastEditFormSchema>>({
+		resolver: zodResolver(podcastEditFormSchema),
+		defaultValues: props.values ?? {
+			title: "新しいポッドキャスト",
+			template: JSON.stringify(MANUSCRIPT_TEMPLATE, null, 4),
 		},
 	});
 
-	const onSubmit = async (values: z.infer<typeof formSchema>) => {
-		const { podcast } = await newPodcast.mutateAsync({ ...values, icon: "🎧" });
-		props.onCreate(podcast);
+	const onSubmit = async (values: PodcastEditFormValues) => {
+		form.reset();
+		props.onSubmit(values);
 	};
 
 	return (
@@ -51,6 +54,19 @@ export function PodcastForm(props: PodcastFormProps) {
 						</FormItem>
 					)}
 				/>
+				<FormField
+					control={form.control}
+					name="template"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>スクリプト</FormLabel>
+							<FormControl>
+								<Textarea rows={10} placeholder="template" {...field} />
+							</FormControl>
+						</FormItem>
+					)}
+				/>
+
 				<Button type="submit">作成</Button>
 			</form>
 		</Form>
