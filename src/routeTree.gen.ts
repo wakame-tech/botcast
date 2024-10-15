@@ -26,8 +26,8 @@ const ScriptsScriptIdLazyImport = createFileRoute('/scripts/$scriptId')()
 const PodcastsNewLazyImport = createFileRoute('/podcasts/new')()
 const PodcastsPodcastIdLazyImport = createFileRoute('/podcasts/$podcastId')()
 const EpisodesEpisodeIdLazyImport = createFileRoute('/episodes/$episodeId')()
-const EpisodesEpisodeIdEditLazyImport = createFileRoute(
-  '/episodes/$episodeId/edit',
+const ScriptsScriptIdEditLazyImport = createFileRoute(
+  '/scripts/$scriptId/edit',
 )()
 
 // Create/Update Routes
@@ -88,11 +88,11 @@ const EpisodesEpisodeIdLazyRoute = EpisodesEpisodeIdLazyImport.update({
   import('./routes/episodes/$episodeId.lazy').then((d) => d.Route),
 )
 
-const EpisodesEpisodeIdEditLazyRoute = EpisodesEpisodeIdEditLazyImport.update({
-  path: '/episodes/$episodeId/edit',
+const ScriptsScriptIdEditLazyRoute = ScriptsScriptIdEditLazyImport.update({
+  path: '/scripts/$scriptId/edit',
   getParentRoute: () => rootRoute,
 } as any).lazy(() =>
-  import('./routes/episodes/$episodeId_/edit.lazy').then((d) => d.Route),
+  import('./routes/scripts/$scriptId_/edit.lazy').then((d) => d.Route),
 )
 
 // Populate the FileRoutesByPath interface
@@ -169,11 +169,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScriptsIndexImport
       parentRoute: typeof rootRoute
     }
-    '/episodes/$episodeId/edit': {
-      id: '/episodes/$episodeId/edit'
-      path: '/episodes/$episodeId/edit'
-      fullPath: '/episodes/$episodeId/edit'
-      preLoaderRoute: typeof EpisodesEpisodeIdEditLazyImport
+    '/scripts/$scriptId/edit': {
+      id: '/scripts/$scriptId/edit'
+      path: '/scripts/$scriptId/edit'
+      fullPath: '/scripts/$scriptId/edit'
+      preLoaderRoute: typeof ScriptsScriptIdEditLazyImport
       parentRoute: typeof rootRoute
     }
   }
@@ -192,7 +192,7 @@ export const routeTree = rootRoute.addChildren({
   ScriptsNewLazyRoute,
   UsersUserIdLazyRoute,
   ScriptsIndexRoute,
-  EpisodesEpisodeIdEditLazyRoute,
+  ScriptsScriptIdEditLazyRoute,
 })
 
 /* prettier-ignore-end */
@@ -213,7 +213,7 @@ export const routeTree = rootRoute.addChildren({
         "/scripts/new",
         "/users/$userId",
         "/scripts/",
-        "/episodes/$episodeId/edit"
+        "/scripts/$scriptId/edit"
       ]
     },
     "/": {
@@ -246,8 +246,8 @@ export const routeTree = rootRoute.addChildren({
     "/scripts/": {
       "filePath": "scripts/index.tsx"
     },
-    "/episodes/$episodeId/edit": {
-      "filePath": "episodes/$episodeId_/edit.lazy.tsx"
+    "/scripts/$scriptId/edit": {
+      "filePath": "scripts/$scriptId_/edit.lazy.tsx"
     }
   }
 }

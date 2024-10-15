@@ -23,15 +23,12 @@ function User() {
 			</Card>
 
 			<Card>
-				<CardHeader>
-					<CardTitle>タスク</CardTitle>
-				</CardHeader>
+				<CardTitle>デバッグ</CardTitle>
 				<CardContent>
-					<Link to="/tasks">Tasks</Link>
+					<Link to="/tasks">タスク</Link>
+					<Link to="/scripts">スクリプト</Link>
 				</CardContent>
 			</Card>
-
-			<Link to="/scripts">scripts</Link>
 		</>
 	);
 }

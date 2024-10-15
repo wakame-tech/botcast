@@ -1,6 +1,7 @@
 import type { CommentEditFormValues } from "@/components/comment/CommentForm";
 import { CommentForm } from "@/components/comment/CommentForm";
 import { CommentListItem } from "@/components/comment/CommentListItem";
+import { ManuscriptPreview } from "@/components/episode/ManuScriptPreview";
 import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,11 +63,12 @@ function Episode() {
 					<CardTitle>{episode.title}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="flex justify-end">
-						<Link to="/episodes/$episodeId/edit" params={{ episodeId }}>
-							<div className="i-solar:gallery-edit-outline w-1.5em h-1.5em" />
-						</Link>
-					</div>
+					<Link to="/scripts/$scriptId/edit" params={{ scriptId: episode.script_id }}>
+						edit script
+					</Link>
+					<h2>原稿</h2>
+					{/* @ts-ignore */}
+					{episode.script.result && <ManuscriptPreview manuscript={episode.script.result} />}
 					<ScriptLines
 						lines={lines}
 						toBeHighlight={(line) =>
@@ -74,37 +76,40 @@ function Episode() {
 						}
 						onClick={(line) => seek(line.startSeconds)}
 					/>
+
+					<h2>音声</h2>
+					{episode.audio_url ? (
+						<div className="sticky bottom-0 float-right p-2">
+							<Button
+								className="w-16 h-16 m-auto rounded-full"
+								onClick={() => play()}
+							>
+								{isPlaying ? (
+									<div className="i-solar:pause-outline w-2em h-2em" />
+								) : (
+									<div className="i-solar:play-outline w-2em h-2em" />
+								)}
+								<span>{render(episode.audio_url)}</span>
+							</Button>
+						</div>
+					) : (
+						<div className="flex items-center justify-center">
+							<p className="text-gray-400 text-xl">音声ファイルがありません</p>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 
-			{episode.audio_url ? (
-				<div className="sticky bottom-0 float-right p-2">
-					<Button
-						className="w-16 h-16 m-auto rounded-full"
-						onClick={() => play()}
-					>
-						{isPlaying ? (
-							<div className="i-solar:pause-outline w-2em h-2em" />
-						) : (
-							<div className="i-solar:play-outline w-2em h-2em" />
-						)}
-						<span>{render(episode.audio_url)}</span>
-					</Button>
-				</div>
-			) : (
-				<div className="flex items-center justify-center">
-					<p className="text-gray-400 text-xl">音声ファイルがありません</p>
-				</div>
-			)}
-
-			{episode.comments.map((comment) => (
-				<div key={comment.id}>
-					<CommentListItem user={comment.user} comment={comment} />
-				</div>
-			))}
-
 			<div className="p-2">
-				<CommentForm onSubmit={handleOnSubmitComment} />
+				{episode.comments.map((comment) => (
+					<div key={comment.id}>
+						<CommentListItem user={comment.user} comment={comment} />
+					</div>
+				))}
+
+				<div className="p-2">
+					<CommentForm onSubmit={handleOnSubmitComment} />
+				</div>
 			</div>
 		</>
 	);
