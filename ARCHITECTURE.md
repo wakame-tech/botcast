@@ -101,6 +101,24 @@ interface Manuscript {
 }
 ```
 
+#### 話数からタイトルをつける
+
+- `self` でポッドキャスト自身のURNを取得できる
+
+```json
+{
+  "$let": {
+    "num": {
+      "$eval": "str(len(get(self).episodes) + 1)"
+    }
+  },
+  "in": {
+    "title": "第${num}話",
+    "sections": []
+  }
+}
+```
+
 ## 画面
 
 - エピソード一覧画面
@@ -246,3 +264,9 @@ sequenceDiagram
 - コメント機能 #47
 
 ### Sprint 2024-10-16
+
+- ローカルでスクリプト作成・実行するためのCLIを作成
+- worker側の猛烈なリファクタリング
+- エピソード作成定期実行機能 [#21](https://github.com/wakame-tech/botcast-worker/issues/21)
+  - 実行予定時刻とcronを持つ
+  - 実行予定時刻を過ぎたらタスクを実行する, cronがあれば次回の実行予定時刻でタスクを作成
