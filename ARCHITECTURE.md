@@ -135,6 +135,10 @@ interface Manuscript {
     - 指定した行から再生できる
   - 音声プレイヤー
 
+## ER図
+
+![ER図](./api/prisma/schema/ERD.md)
+
 ## ワーカー
 
 - DBにキューイングされたタスクを順次実行する
