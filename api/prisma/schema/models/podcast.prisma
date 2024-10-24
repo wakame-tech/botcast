@@ -4,11 +4,10 @@ model Podcast {
   icon       String    @db.VarChar(1)
   script_id  String    @db.Uuid
   script     Script    @relation(fields: [script_id], references: [id])
-  cron       String?
   episodes   Episode[]
   user       User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id    String?   @db.Uuid
-  created_at DateTime  @default(now()) @db.Timestamptz(3)
+  created_at String
 
   @@map("podcasts")
 }
