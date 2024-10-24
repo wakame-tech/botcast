@@ -1,9 +1,11 @@
 model Task {
-  id      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status  TaskStatus
-  args    Json
-  user    User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  user_id String?    @db.Uuid
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status        TaskStatus
+  args          Json
+  user          User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id       String?    @db.Uuid
+  executed_at   DateTime?  @db.Timestamptz(3)
+  execute_after DateTime   @default(now()) @db.Timestamptz(3)
 
   @@map("tasks")
 }

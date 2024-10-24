@@ -1,23 +1,27 @@
 {
-    "imports": {
-        "@/": "./",
-        "zod": "https://deno.land/x/zod@v3.19.1/mod.ts",
-        "hono": "jsr:@hono/hono@^4.4.9",
-        "@hono/trpc-server": "https://esm.sh/@hono/trpc-server@0.3.2",
-        "@trpc/server": "https://esm.sh/@trpc/server@10.45.2",
-        "@trpc/server/": "https://esm.sh/@trpc/server@10.45.2/",
-        "@trpc/client": "https://esm.sh/@trpc/client@10.45.2",
-        "@prisma/client": "./prisma/client/deno/edge.ts"
-    },
-    "compilerOptions": {
-        "jsx": "precompile",
-        "jsxImportSource": "hono/jsx"
-    },
-    "tasks": {
-        "migrate": "deno run -A npm:prisma migrate dev",
-        "format": "deno run -A npm:prisma format",
-        "push": "deno run -A npm:prisma db push",
-        "pull": "deno run -A npm:prisma db pull",
-        "generate": "deno run -A --unstable npm:prisma generate --accelerate"
-    }
+  "imports": {
+    "@/": "./",
+    "@hono/trpc-server": "https://esm.sh/@hono/trpc-server@0.3.2",
+    "@mermaid-js/mermaid-cli": "npm:@mermaid-js/mermaid-cli@^11.2.1",
+    "@prisma/client": "./prisma/client/deno/edge.ts",
+    "@prisma/generator-helper": "npm:@prisma/generator-helper@^5.21.1",
+    "@std/io": "jsr:@std/io@^0.225.0",
+    "@trpc/client": "https://esm.sh/@trpc/client@10.45.2",
+    "@trpc/server": "https://esm.sh/@trpc/server@10.45.2",
+    "@trpc/server/": "https://esm.sh/@trpc/server@10.45.2/",
+    "hono": "jsr:@hono/hono@^4.4.9",
+    "prisma-erd-generator": "npm:prisma-erd-generator@^1.11.2",
+    "zod": "https://deno.land/x/zod@v3.19.1/mod.ts"
+  },
+  "compilerOptions": {
+    "jsx": "precompile",
+    "jsxImportSource": "hono/jsx"
+  },
+  "tasks": {
+    "migrate": "deno run -A npm:prisma migrate dev",
+    "format": "deno run -A npm:prisma format",
+    "push": "deno run -A npm:prisma db push",
+    "pull": "deno run -A npm:prisma db pull",
+    "generate": "deno run -A --unstable npm:prisma generate --accelerate"
+  }
 }
