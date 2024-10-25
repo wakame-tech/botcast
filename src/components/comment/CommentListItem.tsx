@@ -1,9 +1,10 @@
+import type { MappedString } from "@/lib/utils";
 import type { Comment, User } from "@prisma/client";
 import { UserIcon } from "../user/UserIcon";
 
 interface CommentListItemProps {
 	user: User;
-	comment: Comment;
+	comment: MappedString<Comment, "created_at">;
 }
 
 export function CommentListItem(props: CommentListItemProps) {

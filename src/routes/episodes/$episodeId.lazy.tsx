@@ -1,7 +1,10 @@
 import type { CommentEditFormValues } from "@/components/comment/CommentForm";
 import { CommentForm } from "@/components/comment/CommentForm";
 import { CommentListItem } from "@/components/comment/CommentListItem";
-import { ManuscriptPreview } from "@/components/episode/ManuScriptPreview";
+import {
+	ManuscriptPreview,
+	manuscriptSchema,
+} from "@/components/episode/ManuScriptPreview";
 import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +36,9 @@ function Episode() {
 	const [lines, setLines] = useState<Line[]>([]);
 	const { isPlaying, play, seconds, seek, render } = usePlayer();
 	const newComment = trpc.newComment.useMutation();
+	const manuscript =
+		// @ts-ignore
+		episode?.script.result && manuscriptSchema.parse(episode.script.result);
 
 	useEffect(() => {
 		(async () => {
@@ -63,12 +69,14 @@ function Episode() {
 					<CardTitle>{episode.title}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<Link to="/scripts/$scriptId/edit" params={{ scriptId: episode.script_id }}>
+					<Link
+						to="/scripts/$scriptId/edit"
+						params={{ scriptId: episode.script_id }}
+					>
 						edit script
 					</Link>
 					<h2>原稿</h2>
-					{/* @ts-ignore */}
-					{episode.script.result && <ManuscriptPreview manuscript={episode.script.result} />}
+					{manuscript && <ManuscriptPreview manuscript={manuscript} />}
 					<ScriptLines
 						lines={lines}
 						toBeHighlight={(line) =>
