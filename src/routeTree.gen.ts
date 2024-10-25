@@ -20,6 +20,7 @@ import { Route as ScriptsIndexImport } from './routes/scripts/index'
 const TasksLazyImport = createFileRoute('/tasks')()
 const SigninLazyImport = createFileRoute('/signin')()
 const IndexLazyImport = createFileRoute('/')()
+const PodcastsIndexLazyImport = createFileRoute('/podcasts/')()
 const UsersUserIdLazyImport = createFileRoute('/users/$userId')()
 const ScriptsNewLazyImport = createFileRoute('/scripts/new')()
 const ScriptsScriptIdLazyImport = createFileRoute('/scripts/$scriptId')()
@@ -28,6 +29,9 @@ const PodcastsPodcastIdLazyImport = createFileRoute('/podcasts/$podcastId')()
 const EpisodesEpisodeIdLazyImport = createFileRoute('/episodes/$episodeId')()
 const ScriptsScriptIdEditLazyImport = createFileRoute(
   '/scripts/$scriptId/edit',
+)()
+const PodcastsPodcastIdEditLazyImport = createFileRoute(
+  '/podcasts/$podcastId/edit',
 )()
 
 // Create/Update Routes
@@ -46,6 +50,13 @@ const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+
+const PodcastsIndexLazyRoute = PodcastsIndexLazyImport.update({
+  path: '/podcasts/',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/podcasts/index.lazy').then((d) => d.Route),
+)
 
 const ScriptsIndexRoute = ScriptsIndexImport.update({
   path: '/scripts/',
@@ -93,6 +104,13 @@ const ScriptsScriptIdEditLazyRoute = ScriptsScriptIdEditLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() =>
   import('./routes/scripts/$scriptId_/edit.lazy').then((d) => d.Route),
+)
+
+const PodcastsPodcastIdEditLazyRoute = PodcastsPodcastIdEditLazyImport.update({
+  path: '/podcasts/$podcastId/edit',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/podcasts/$podcastId_/edit.lazy').then((d) => d.Route),
 )
 
 // Populate the FileRoutesByPath interface
@@ -169,6 +187,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScriptsIndexImport
       parentRoute: typeof rootRoute
     }
+    '/podcasts/': {
+      id: '/podcasts/'
+      path: '/podcasts'
+      fullPath: '/podcasts'
+      preLoaderRoute: typeof PodcastsIndexLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/podcasts/$podcastId/edit': {
+      id: '/podcasts/$podcastId/edit'
+      path: '/podcasts/$podcastId/edit'
+      fullPath: '/podcasts/$podcastId/edit'
+      preLoaderRoute: typeof PodcastsPodcastIdEditLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/scripts/$scriptId/edit': {
       id: '/scripts/$scriptId/edit'
       path: '/scripts/$scriptId/edit'
@@ -192,6 +224,8 @@ export const routeTree = rootRoute.addChildren({
   ScriptsNewLazyRoute,
   UsersUserIdLazyRoute,
   ScriptsIndexRoute,
+  PodcastsIndexLazyRoute,
+  PodcastsPodcastIdEditLazyRoute,
   ScriptsScriptIdEditLazyRoute,
 })
 
@@ -213,6 +247,8 @@ export const routeTree = rootRoute.addChildren({
         "/scripts/new",
         "/users/$userId",
         "/scripts/",
+        "/podcasts/",
+        "/podcasts/$podcastId/edit",
         "/scripts/$scriptId/edit"
       ]
     },
@@ -245,6 +281,12 @@ export const routeTree = rootRoute.addChildren({
     },
     "/scripts/": {
       "filePath": "scripts/index.tsx"
+    },
+    "/podcasts/": {
+      "filePath": "podcasts/index.lazy.tsx"
+    },
+    "/podcasts/$podcastId/edit": {
+      "filePath": "podcasts/$podcastId_/edit.lazy.tsx"
     },
     "/scripts/$scriptId/edit": {
       "filePath": "scripts/$scriptId_/edit.lazy.tsx"

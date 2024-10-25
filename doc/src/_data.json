@@ -1,0 +1,27 @@
+{
+  "lang": "ja",
+  "layout": "page.njk",
+  "metas": {
+    "title": "=title",
+    "site": "Botcast",
+    "lang": "ja",
+    "description": "=description"
+  },
+  "top_links": [
+    {
+      "icon": "fab fa-github",
+      "title": "GitHub Repository",
+      "url": "https://github.com/wakame-tech/botcast"
+    }
+  ],
+  "nav_links": [
+    {
+      "title": "botcast - GitHub",
+      "url": "https://github.com/wakame-tech/botcast"
+    },
+    {
+      "title": "botcast-worker - GitHub",
+      "url": "https://github.com/wakame-tech/botcast-worker"
+    }
+  ]
+}

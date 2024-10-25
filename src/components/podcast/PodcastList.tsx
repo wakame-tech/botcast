@@ -1,9 +1,10 @@
+import type { MappedString } from "@/lib/utils";
 import type { Podcast } from "@prisma/client";
 import { Link } from "@tanstack/react-router";
 import { Button } from "../ui/button";
 
 interface PodcastListProps {
-	podcasts: Podcast[];
+	podcasts: MappedString<Podcast, "created_at">[];
 }
 
 function PodcastList(props: PodcastListProps) {
@@ -25,7 +26,7 @@ function PodcastList(props: PodcastListProps) {
 }
 
 interface PodcastListItemProps {
-	podcast: Podcast;
+	podcast: MappedString<Podcast, "created_at">;
 }
 
 function PodcastListItem(props: PodcastListItemProps) {

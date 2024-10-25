@@ -11,10 +11,20 @@ export function Header({ session }: { session: Session | null }) {
 
 	return (
 		<>
-			<div className="p-2 flex justify-items-center gap-2">
+			<div className="p-2 flex items-baseline gap-2">
 				<Link to="/" className="font-bold text-teal-700 text-3xl no-underline">
 					Botcast
 				</Link>
+				<div className="pl-2">
+					<Link to="/podcasts" className="no-underline">
+						<span className="text-lg font-bold">ポッドキャスト</span>
+					</Link>
+				</div>
+				<div className="pl-2">
+					<Link to="/scripts" className="no-underline">
+						<span className="text-lg font-bold">スクリプト</span>
+					</Link>
+				</div>
 				<div className="flex-grow" />
 				<>
 					{session && (

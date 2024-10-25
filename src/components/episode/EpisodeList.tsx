@@ -1,3 +1,4 @@
+import type { MappedString } from "@/lib/utils";
 import type { Episode } from "@prisma/client";
 import { Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
@@ -5,7 +6,7 @@ import { Button } from "../ui/button";
 
 interface EpisodeListProps {
 	podcastId: string;
-	episodes: Episode[];
+	episodes: MappedString<Episode, "created_at">[];
 	onClickDelete: () => Promise<void>;
 }
 
@@ -29,7 +30,7 @@ function EpisodeList(props: EpisodeListProps) {
 }
 
 interface EpisodeListItemProps {
-	episode: Episode;
+	episode: MappedString<Episode, "created_at">;
 }
 
 function EpisodeListItem(props: EpisodeListItemProps) {
