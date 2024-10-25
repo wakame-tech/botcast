@@ -17,6 +17,8 @@ export function NewPodcast() {
 			title: values.title,
 			template: values.template,
 			icon: "🎧",
+			weekDay: values.weekDay,
+			hour: values.hour,
 		});
 		navigate({ to: "/podcasts/$podcastId", params: { podcastId: podcast.id } });
 	};

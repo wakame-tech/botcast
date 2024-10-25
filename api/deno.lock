@@ -13,6 +13,7 @@
     "npm:@supabase/postgrest-js@1.15.8": "1.15.8",
     "npm:@supabase/realtime-js@2.10.2": "2.10.2",
     "npm:@supabase/storage-js@2.7.0": "2.7.0",
+    "npm:@types/node@*": "22.4.2",
     "npm:prisma-erd-generator@*": "1.11.2_@prisma+client@5.19.0__prisma@5.18.0_prisma@5.18.0",
     "npm:prisma-erd-generator@^1.11.2": "1.11.2_@prisma+client@5.19.0__prisma@5.18.0_prisma@5.18.0",
     "npm:prisma@*": "5.18.0"

@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { Manuscript } from "@/hooks/useScript";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -20,20 +19,35 @@ interface ScriptFormProps {
 	onEvaluate?: (values: ScriptEditFormValues) => void;
 }
 
-export const MANUSCRIPT_TEMPLATE: Manuscript = {
-	title: "title",
-	sections: [
-		{
-			type: "Serif",
-			speaker: "urn:voicevox:zunda_normal",
-			text: "こんにちは",
+export const MANUSCRIPT_TEMPLATE = JSON.stringify(
+	{
+		$let: {
+			num: {
+				$eval: "str(len(get(self).episodes) + 1)",
+			},
 		},
-	],
-};
+		in: {
+			title: "第${num}話",
+			sections: [
+				{
+					speaker: "urn:voicevox:zunda_normal",
+					text: "こんにちは",
+					type: "Serif",
+				},
+			],
+		},
+	},
+	null,
+	4,
+);
 
-export const SCRIPT_TEMPLATE = {
-	$eval: "1+1",
-};
+export const SCRIPT_TEMPLATE = JSON.stringify(
+	{
+		$eval: "1+1",
+	},
+	null,
+	4,
+);
 
 const scriptEditFormSchema = z.object({
 	title: z.string(),
@@ -47,7 +61,7 @@ export function ScriptForm(props: ScriptFormProps) {
 		resolver: zodResolver(scriptEditFormSchema),
 		defaultValues: props.values ?? {
 			title: "新しいスクリプト",
-			template: JSON.stringify(SCRIPT_TEMPLATE, null, 4),
+			template: SCRIPT_TEMPLATE,
 		},
 	});
 

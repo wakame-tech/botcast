@@ -20,6 +20,7 @@ import { Route as ScriptsIndexImport } from './routes/scripts/index'
 const TasksLazyImport = createFileRoute('/tasks')()
 const SigninLazyImport = createFileRoute('/signin')()
 const IndexLazyImport = createFileRoute('/')()
+const PodcastsIndexLazyImport = createFileRoute('/podcasts/')()
 const UsersUserIdLazyImport = createFileRoute('/users/$userId')()
 const ScriptsNewLazyImport = createFileRoute('/scripts/new')()
 const ScriptsScriptIdLazyImport = createFileRoute('/scripts/$scriptId')()
@@ -46,6 +47,13 @@ const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+
+const PodcastsIndexLazyRoute = PodcastsIndexLazyImport.update({
+  path: '/podcasts/',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/podcasts/index.lazy').then((d) => d.Route),
+)
 
 const ScriptsIndexRoute = ScriptsIndexImport.update({
   path: '/scripts/',
@@ -169,6 +177,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScriptsIndexImport
       parentRoute: typeof rootRoute
     }
+    '/podcasts/': {
+      id: '/podcasts/'
+      path: '/podcasts'
+      fullPath: '/podcasts'
+      preLoaderRoute: typeof PodcastsIndexLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/scripts/$scriptId/edit': {
       id: '/scripts/$scriptId/edit'
       path: '/scripts/$scriptId/edit'
@@ -192,6 +207,7 @@ export const routeTree = rootRoute.addChildren({
   ScriptsNewLazyRoute,
   UsersUserIdLazyRoute,
   ScriptsIndexRoute,
+  PodcastsIndexLazyRoute,
   ScriptsScriptIdEditLazyRoute,
 })
 
@@ -213,6 +229,7 @@ export const routeTree = rootRoute.addChildren({
         "/scripts/new",
         "/users/$userId",
         "/scripts/",
+        "/podcasts/",
         "/scripts/$scriptId/edit"
       ]
     },
@@ -245,6 +262,9 @@ export const routeTree = rootRoute.addChildren({
     },
     "/scripts/": {
       "filePath": "scripts/index.tsx"
+    },
+    "/podcasts/": {
+      "filePath": "podcasts/index.lazy.tsx"
     },
     "/scripts/$scriptId/edit": {
       "filePath": "scripts/$scriptId_/edit.lazy.tsx"

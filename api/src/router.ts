@@ -11,7 +11,7 @@ const supabase = createClient(
 
 export const prisma = new PrismaClient();
 
-const taskArgsSchema = z.union([
+const taskArgsSchema = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("generateAudio"),
         episodeId: z.string(),
@@ -20,6 +20,20 @@ const taskArgsSchema = z.union([
         type: z.literal("evaluateScript"),
         scriptId: z.string(),
     }),
+    z.object({
+        type: z.literal("newEpisode"),
+        podcastId: z.string(),
+    }),
+]);
+
+const weekDays = z.enum([
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+    "Sun",
 ]);
 
 interface Context {
@@ -141,12 +155,17 @@ export const appRouter = t.router({
         title: z.string(),
         template: z.string(),
         icon: z.string().regex(/\p{Emoji_Presentation}/gu),
+        weekDay: weekDays,
+        // JST
+        hour: z.number().int().min(0).max(23),
     })).mutation(
-        async ({ ctx: { user }, input: { title, template, icon } }) => {
+        async (
+            { ctx: { user }, input: { title, template, icon, weekDay, hour } },
+        ) => {
             const script = await prisma.script.create({
                 data: {
                     title: `${title} script`,
-                    template,
+                    template: JSON.parse(template),
                     user_id: user.id,
                 },
             });
@@ -156,6 +175,7 @@ export const appRouter = t.router({
                     icon,
                     script_id: script.id,
                     user_id: user.id,
+                    cron: `0 0 ${(hour + 9) % 24} * * ${weekDay}`,
                     created_at: new Date().toISOString(),
                 },
             });
