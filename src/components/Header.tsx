@@ -20,6 +20,11 @@ export function Header({ session }: { session: Session | null }) {
 						<span className="text-lg font-bold">ポッドキャスト</span>
 					</Link>
 				</div>
+				<div className="pl-2">
+					<Link to="/scripts" className="no-underline">
+						<span className="text-lg font-bold">スクリプト</span>
+					</Link>
+				</div>
 				<div className="flex-grow" />
 				<>
 					{session && (

@@ -182,6 +182,23 @@ export const appRouter = t.router({
             return { podcast };
         },
     ),
+    updatePodcast: authProcedure.input(z.object({
+        id: z.string(),
+        title: z.string(),
+        weekDay: weekDays,
+        hour: z.number().int().min(0).max(23),
+    })).mutation(
+        async ({ input: { id, title, weekDay, hour } }) => {
+            const podcast = await prisma.podcast.update({
+                where: { id },
+                data: {
+                    title,
+                    cron: `0 0 ${(hour + 9) % 24} * * ${weekDay}`,
+                },
+            });
+            return { podcast };
+        },
+    ),
     deletePodcast: authProcedure.input(z.object({
         id: z.string(),
     })).mutation(async ({ input: { id } }) => {
@@ -286,6 +303,12 @@ export const appRouter = t.router({
             where: { id },
             data: { title, template: templateJson },
         });
+        return;
+    }),
+    deleteScript: authProcedure.input(z.object({
+        id: z.string(),
+    })).mutation(async ({ input: { id } }) => {
+        await prisma.script.delete({ where: { id } });
         return;
     }),
     deleteEpisode: authProcedure.input(z.object({

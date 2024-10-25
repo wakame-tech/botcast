@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
 import { trpc } from "@/trpc.ts";
-import { Link, createLazyFileRoute } from "@tanstack/react-router";
+import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
@@ -30,8 +30,10 @@ const fetchSrt = async (url: string): Promise<Line[]> => {
 };
 
 function Episode() {
+	const navigate = useNavigate();
 	const { episodeId } = Route.useParams();
 	const getEpisode = trpc.episode.useQuery({ id: episodeId });
+	const deleteEpisode = trpc.deleteEpisode.useMutation();
 	const episode = getEpisode.data?.episode;
 	const [lines, setLines] = useState<Line[]>([]);
 	const { isPlaying, play, seconds, seek, render } = usePlayer();
@@ -54,6 +56,14 @@ function Episode() {
 		return <div>not found</div>;
 	}
 
+	const handleDelete = async () => {
+		await deleteEpisode.mutateAsync({ id: episodeId });
+		navigate({
+			to: "/podcasts/$podcastId",
+			params: { podcastId: episode.podcast_id },
+		});
+	};
+
 	const handleOnSubmitComment = async (values: CommentEditFormValues) => {
 		await newComment.mutateAsync({
 			episodeId,
@@ -69,12 +79,15 @@ function Episode() {
 					<CardTitle>{episode.title}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<Link
-						to="/scripts/$scriptId/edit"
-						params={{ scriptId: episode.script_id }}
-					>
-						edit script
-					</Link>
+					<div>
+						<Link
+							to="/scripts/$scriptId/edit"
+							params={{ scriptId: episode.script_id }}
+						>
+							edit script
+						</Link>
+					</div>
+					<Button onClick={handleDelete}>delete</Button>
 					<h2>原稿</h2>
 					{manuscript && <ManuscriptPreview manuscript={manuscript} />}
 					<ScriptLines

@@ -30,6 +30,9 @@ const EpisodesEpisodeIdLazyImport = createFileRoute('/episodes/$episodeId')()
 const ScriptsScriptIdEditLazyImport = createFileRoute(
   '/scripts/$scriptId/edit',
 )()
+const PodcastsPodcastIdEditLazyImport = createFileRoute(
+  '/podcasts/$podcastId/edit',
+)()
 
 // Create/Update Routes
 
@@ -101,6 +104,13 @@ const ScriptsScriptIdEditLazyRoute = ScriptsScriptIdEditLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() =>
   import('./routes/scripts/$scriptId_/edit.lazy').then((d) => d.Route),
+)
+
+const PodcastsPodcastIdEditLazyRoute = PodcastsPodcastIdEditLazyImport.update({
+  path: '/podcasts/$podcastId/edit',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/podcasts/$podcastId_/edit.lazy').then((d) => d.Route),
 )
 
 // Populate the FileRoutesByPath interface
@@ -184,6 +194,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PodcastsIndexLazyImport
       parentRoute: typeof rootRoute
     }
+    '/podcasts/$podcastId/edit': {
+      id: '/podcasts/$podcastId/edit'
+      path: '/podcasts/$podcastId/edit'
+      fullPath: '/podcasts/$podcastId/edit'
+      preLoaderRoute: typeof PodcastsPodcastIdEditLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/scripts/$scriptId/edit': {
       id: '/scripts/$scriptId/edit'
       path: '/scripts/$scriptId/edit'
@@ -208,6 +225,7 @@ export const routeTree = rootRoute.addChildren({
   UsersUserIdLazyRoute,
   ScriptsIndexRoute,
   PodcastsIndexLazyRoute,
+  PodcastsPodcastIdEditLazyRoute,
   ScriptsScriptIdEditLazyRoute,
 })
 
@@ -230,6 +248,7 @@ export const routeTree = rootRoute.addChildren({
         "/users/$userId",
         "/scripts/",
         "/podcasts/",
+        "/podcasts/$podcastId/edit",
         "/scripts/$scriptId/edit"
       ]
     },
@@ -265,6 +284,9 @@ export const routeTree = rootRoute.addChildren({
     },
     "/podcasts/": {
       "filePath": "podcasts/index.lazy.tsx"
+    },
+    "/podcasts/$podcastId/edit": {
+      "filePath": "podcasts/$podcastId_/edit.lazy.tsx"
     },
     "/scripts/$scriptId/edit": {
       "filePath": "scripts/$scriptId_/edit.lazy.tsx"
