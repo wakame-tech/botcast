@@ -34,27 +34,28 @@ function Episode() {
 	const { episodeId } = Route.useParams();
 	const getEpisode = trpc.episode.useQuery({ id: episodeId });
 	const deleteEpisode = trpc.deleteEpisode.useMutation();
-	const episode = getEpisode.data?.episode;
 	const [lines, setLines] = useState<Line[]>([]);
 	const { isPlaying, play, seconds, seek, render } = usePlayer();
 	const newComment = trpc.newComment.useMutation();
-	const manuscript =
-		// @ts-ignore
-		episode?.script.result && manuscriptSchema.parse(episode.script.result);
 
 	useEffect(() => {
 		(async () => {
-			if (!episode || !episode?.srt_url) {
+			if (!getEpisode.data?.episode.srt_url) {
 				return;
 			}
-			const lines = await fetchSrt(episode.srt_url);
+			const lines = await fetchSrt(getEpisode.data.episode.srt_url);
 			setLines(lines);
 		})();
-	}, [episode]);
+	}, [getEpisode.data]);
 
-	if (!episode || !episode.user) {
-		return <div>not found</div>;
+	if (!getEpisode.data || getEpisode.error) {
+		return <div>{getEpisode.error?.message}</div>;
 	}
+
+	const episode = getEpisode.data.episode;
+	const manuscript =
+		// @ts-ignore
+		episode.script.result && manuscriptSchema.parse(episode.script.result);
 
 	const handleDelete = async () => {
 		await deleteEpisode.mutateAsync({ id: episodeId });

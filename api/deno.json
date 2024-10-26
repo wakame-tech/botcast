@@ -1,6 +1,7 @@
 {
   "imports": {
     "@/": "./",
+    "@bradenmacdonald/s3-lite-client": "jsr:@bradenmacdonald/s3-lite-client@^0.7.6",
     "@hono/trpc-server": "https://esm.sh/@hono/trpc-server@0.3.2",
     "@mermaid-js/mermaid-cli": "npm:@mermaid-js/mermaid-cli@^11.2.1",
     "@prisma/client": "./prisma/client/deno/edge.ts",

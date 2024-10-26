@@ -3,6 +3,8 @@ import { PrismaClient, User } from "@prisma/client";
 import { z } from "zod";
 // @ts-ignore: cannot resolve deps from npm package
 import { createClient } from "jsr:@supabase/supabase-js@2";
+// @ts-ignore: cannot resolve deps from npm package
+import { s3 } from "@/src/presign.ts";
 
 const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -222,6 +224,27 @@ export const appRouter = t.router({
         });
         if (!episode) {
             throw new Error("Episode not found");
+        }
+        if (episode.audio_url && episode.srt_url) {
+            try {
+                const audioPresignUrl = await s3.getPresignedUrl(
+                    "GET",
+                    episode.audio_url,
+                );
+                episode.audio_url = audioPresignUrl ?? null;
+                const srtPresignUrl = await s3.getPresignedUrl(
+                    "GET",
+                    episode.srt_url,
+                );
+                episode.srt_url = srtPresignUrl ?? null;
+            } catch (e) {
+                console.error(e);
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Failed to get presigned URL",
+                    cause: e,
+                });
+            }
         }
         return { episode };
     }),
