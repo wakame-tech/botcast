@@ -19,7 +19,7 @@ nav_order: 1
   - `get(urn: Urn)`: サービス内のデータを URN(`urn:<resource>:<id>`) で取得出来る
     - 例えばコメント, 原稿等
   - `fetch(url), fetch_json(url)`: 外部のURLをHTML, JSONとして取得
-  - `jq(json)`: JSONを加工(TODO)
+  - `jq(json)`: JSONを加工
   - `llm(prompt)`: LLM呼び出し, 内部実装は [langchain-rs](https://github.com/Abraxas-365/langchain-rust)
 
 ## 原稿
@@ -57,12 +57,14 @@ interface Manuscript {
         "sections": [
             {
                 "type": "serif",
-                "speaker": "${speaker}",
-                "text": { "$eval": "こんにちは、今日は${today}です。突然ですが雨ニモマケズの概要を話します。" }
+                "speaker": { "$eval": "${speaker}" },
+                "text": {
+                  "$eval": "こんにちは、今日は${today}です。突然ですが雨ニモマケズの概要を話します。"
+                }
             },
             {
                 "type": "serif",
-                "speaker": "${speaker}",
+                "speaker": { "$eval": "${speaker}" },
                 "text": {
                     "$eval": "llm('次の文章を要約してください\n${novel}')"
                 }
@@ -84,7 +86,7 @@ interface Manuscript {
     }
   },
   "in": {
-    "title": "第${num}話",
+    "title": { "$eval": "第${num}話" },
     "sections": []
   }
 }
