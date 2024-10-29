@@ -5,6 +5,7 @@ import {
 	FormField,
 	FormItem,
 	FormLabel,
+	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,9 +30,9 @@ const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 const weekDays = z.enum(WEEK_DAYS);
 
 const podcastEditFormSchema = z.object({
-	title: z.string(),
+	title: z.string().min(1).max(50),
 	weekDay: weekDays,
-	hour: z.number().int().min(0).max(23),
+	hour: z.coerce.number().int().min(0).max(23),
 });
 
 export type PodcastEditFormValues = z.infer<typeof podcastEditFormSchema>;
@@ -63,6 +64,7 @@ export function PodcastForm(props: PropsWithChildren<PodcastFormProps>) {
 							<FormControl>
 								<Input placeholder="title" {...field} />
 							</FormControl>
+							<FormMessage />
 						</FormItem>
 					)}
 				/>
@@ -74,9 +76,9 @@ export function PodcastForm(props: PropsWithChildren<PodcastFormProps>) {
 							<FormItem>
 								<FormLabel>曜日</FormLabel>
 								<FormControl>
-									<Select>
+									<Select defaultValue={field.value}>
 										<SelectTrigger>
-											<SelectValue placeholder="曜日" {...field} />
+											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
 											{WEEK_DAYS.map((d) => (
@@ -87,6 +89,7 @@ export function PodcastForm(props: PropsWithChildren<PodcastFormProps>) {
 										</SelectContent>
 									</Select>
 								</FormControl>
+								<FormMessage />
 							</FormItem>
 						)}
 					/>
@@ -98,8 +101,9 @@ export function PodcastForm(props: PropsWithChildren<PodcastFormProps>) {
 							<FormItem>
 								<FormLabel>時間</FormLabel>
 								<FormControl>
-									<Input placeholder="hour" {...field} />
+									<Input type="number" placeholder="hour" {...field} />
 								</FormControl>
+								<FormMessage />
 							</FormItem>
 						)}
 					/>
@@ -107,7 +111,9 @@ export function PodcastForm(props: PropsWithChildren<PodcastFormProps>) {
 
 				{props.children}
 
-				<Button type="submit">作成</Button>
+				<Button disabled={!form.formState.isValid} type="submit">
+					作成
+				</Button>
 			</form>
 		</Form>
 	);
