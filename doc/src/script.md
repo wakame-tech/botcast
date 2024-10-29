@@ -1,18 +1,18 @@
 ---
 title: "スクリプト機能"
-nav_order: 1
+nav_order: 2
 ---
 
 # スクリプト機能
 
-原稿を生成する際に情報源を参照したり、LLM等を用いて動的に生成するための機能
-外部のURLによる情報源のみならずサービス内のデータも参照できる
-
-これにより、ユーザーのコメントをお便りとして読んだり、他番組への言及・コラボのようなことが実現できそう。
+- JSONで記述され、原稿を生成する際に情報源を参照したり、LLM等を用いて動的に生成するための機能  
+- 外部のURLによる情報源のみならずサービス内のデータも参照できる
+  - これにより、ユーザーのコメントをお便りとして読んだり、他番組への言及・コラボのようなことが実現できそう。
 
 ## ランタイム
 
-- [JSON-eのフォーク](https://github.com/wakame-tech/json-e/tree/fix-pub-context) で非同期で実行される
+- [JSON-e](https://json-e.js.org/introduction.html) として実行される
+  - 非同期で実行出来るようにした [github](https://github.com/wakame-tech/json-e/tree/fix-pub-context)
   - TODO: タイムアウトをつける
 - 組み込みの関数が用意されていて利用することが出来る
   - `today(format)`: 現在時刻(日付)
@@ -80,14 +80,54 @@ interface Manuscript {
 
 ```json
 {
-  "$let": {
-    "num": {
-      "$eval": "str(len(get(self).episodes) + 1)"
+    "$let": {
+        "num": {
+            "$eval": "str(len(get(self).episodes) + 1)"
+        }
+    },
+    "in": {
+        "title": { "$eval": "第${num}話" },
+        "sections": []
     }
-  },
-  "in": {
-    "title": { "$eval": "第${num}話" },
-    "sections": []
-  }
+}
+```
+
+### 1つ前のエピソードを取得する
+
+```json
+{
+    "$let": {
+        "episodes_with_index": {
+            "$map": {
+                "$eval": "get('urn:podcast:${podcastId}').episodes"
+            },
+            "each(v,i)": {
+                "index": { "$eval": "i" },
+                "value": { "$eval": "v" }
+            }
+        }
+    },
+    "in": {
+        "$let": {
+            "i": {
+                "$find": { "$eval": "episodes_with_index" },
+                "each(e)": "e.value.id == episodeId"
+            }
+        },
+        "in": {
+            "$let": {
+                "preEpisodeId": {
+                    "$if": "i.index == 0",
+                    "then": null,
+                    "else": {
+                        "$eval": "episodes_with_index[i.index - 1].value.id"
+                    }
+                }
+            },
+            "in": {
+                "$eval": "get('urn:episode:${preEpisodeId}')"
+            }
+        }
+    }
 }
 ```
