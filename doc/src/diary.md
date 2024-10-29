@@ -1,6 +1,6 @@
 ---
 title: "リリースノート"
-nav_order: 1
+nav_order: 4
 ---
 
 # ~~日記~~ リリースノート
@@ -51,17 +51,26 @@ nav_order: 1
 
 ## Sprint 2024-10-09
 
-- スクリプト機能 #44
-  - スクリプト実行ランタイム #17
-  - 原稿生成と音声生成を分離した #45
-  - スクリプト作成機能 #49
-  - ポッドキャストにスクリプトを設定し、エピソードはそれを引き継ぐように #50
-- コメント機能 #47
+- feat: スクリプト機能 [#44](https://github.com/wakame-tech/botcast/issues/44)
+  - スクリプト実行ランタイム [#17](https://github.com/wakame-tech/botcast-worker/issues/17)
+  - 原稿生成と音声生成を分離した [#45](https://github.com/wakame-tech/botcast/issues/45)
+  - スクリプト作成機能 [#49](https://github.com/wakame-tech/botcast/issues/49)
+  - ポッドキャストにスクリプトを設定し、エピソードはそれを引き継ぐように [#50](https://github.com/wakame-tech/botcast/issues/50)
+- feat: コメント機能 [#47](https://github.com/wakame-tech/botcast/issues/47)
 
 ## Sprint 2024-10-16
 
-- ローカルでスクリプト作成・実行するためのCLIを作成
-- worker側の猛烈なリファクタリング
-- エピソード作成定期実行機能 [#21](https://github.com/wakame-tech/botcast-worker/issues/21)
+- feat: ローカルでスクリプト作成・実行するためのCLIを作成 [#24](https://github.com/wakame-tech/botcast-worker/issues/24)
+- clean: worker側の猛烈なリファクタリング
+- feat: エピソード作成定期実行機能 [#21](https://github.com/wakame-tech/botcast-worker/issues/21)
   - 実行予定時刻とcronを持つ
   - 実行予定時刻を過ぎたらタスクを実行する, cronがあれば次回の実行予定時刻でタスクを作成
+
+## Sprint 2024-10-23
+
+- chore: ドキュメントページを作成 [#52](https://github.com/wakame-tech/botcast/pull/52)
+- feat: エピソード定期作成フォーム [#53](https://github.com/wakame-tech/botcast/pull/53)
+- fix: mp3とsrtファイルはPreSign URLを使うように [#54](https://github.com/wakame-tech/botcast/issues/54)
+- fix: ローカルのスクリプトを呼べるようにする [#32](https://github.com/wakame-tech/botcast-worker/issues/32)
+
+## Sprint 2024-10-30

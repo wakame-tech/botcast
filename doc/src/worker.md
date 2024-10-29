@@ -1,6 +1,6 @@
 ---
 title: "ワーカー"
-nav_order: 1
+nav_order: 3
 ---
 
 # ワーカー
@@ -16,7 +16,6 @@ graph TD;
   worker --> readable_text;
   script_runtime --> script_http_client;
   script_runtime --> script_llm;
-  script_runtime --> repos;
 ```
 
 ## スクリプト評価
