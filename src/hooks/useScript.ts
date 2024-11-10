@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 export const useScript = (scriptId: string) => {
 	const [taskId, setTaskId] = useState<string | null>(null);
+	const [taskResult, setTaskResult] = useState<object>({});
 	const getScript = trpc.script.useQuery({ id: scriptId });
 	const _updateScript = trpc.updateScript.useMutation();
 	const addTask = trpc.addTask.useMutation();
@@ -26,12 +27,13 @@ export const useScript = (scriptId: string) => {
 			console.log(task);
 			if (task.status === "COMPLETED" || task.status === "FAILED") {
 				setTaskId(null);
-				getScript.refetch();
+				// @ts-ignore
+				setTaskResult(JSON.stringify(task.result));
 				clearInterval(id);
 			}
 		}, 3000);
 		return () => clearInterval(id);
-	}, [taskId, getTask, getScript]);
+	}, [taskId, getTask]);
 
 	const updateScript = async (title: string, template: string) => {
 		await _updateScript.mutateAsync({
@@ -55,6 +57,7 @@ export const useScript = (scriptId: string) => {
 
 	return {
 		taskId,
+		taskResult,
 		evaluate,
 		running: taskId !== null,
 	};

@@ -214,7 +214,6 @@ export const appRouter = t.router({
             where: { id },
             include: {
                 user: true,
-                script: true,
                 comments: {
                     include: {
                         user: true,
@@ -248,31 +247,6 @@ export const appRouter = t.router({
         }
         return { episode };
     }),
-    newEpisode: authProcedure.input(z.object({
-        podcastId: z.string(),
-    })).mutation(
-        async ({ ctx: { user }, input: { podcastId } }) => {
-            const podcast = await prisma.podcast.findUnique({
-                where: { id: podcastId },
-            });
-            if (!podcast) {
-                throw new Error("Podcast not found");
-            }
-            const episode = await prisma.episode.create({
-                include: {
-                    script: true,
-                },
-                data: {
-                    script_id: podcast.script_id,
-                    podcast_id: podcastId,
-                    title: "new episode",
-                    user_id: user.id,
-                    created_at: new Date().toISOString(),
-                },
-            });
-            return { episode };
-        },
-    ),
     updateEpisode: authProcedure.input(z.object({
         id: z.string(),
         title: z.string(),

@@ -14,7 +14,7 @@ export function EditScript() {
 	const navigate = Route.useNavigate();
 	const getScript = trpc.script.useQuery({ id: scriptId });
 	const updateScript = trpc.updateScript.useMutation();
-	const { evaluate, running } = useScript(scriptId);
+	const { evaluate, running, taskResult } = useScript(scriptId);
 
 	const handleSubmit = async (values: ScriptEditFormValues) => {
 		await updateScript.mutateAsync({
@@ -51,10 +51,9 @@ export function EditScript() {
 				onSubmit={handleSubmit}
 				onEvaluate={handleEvaluate}
 			/>
-			{/* @ts-ignore */}
 			<Textarea
 				rows={10}
-				value={JSON.stringify(script.result, null, 4)}
+				value={JSON.stringify(taskResult, null, 4)}
 				readOnly
 			/>
 		</>
