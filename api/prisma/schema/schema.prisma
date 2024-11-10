@@ -5,9 +5,9 @@ generator client {
 }
 
 generator erd {
-  provider = "npx prisma-erd-generator"
-  theme = "forest"
-  output = "ERD.md"
+  provider                  = "npx prisma-erd-generator"
+  theme                     = "forest"
+  output                    = "ERD.md"
   includeRelationFromFields = true
 }
 

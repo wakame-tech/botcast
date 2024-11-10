@@ -21,7 +21,7 @@ FAILED FAILED
     String id "🗝️"
     String title 
     String audio_url "❓"
-    String script_id 
+    Json sections 
     String srt_url "❓"
     String podcast_id 
     String user_id "❓"
@@ -44,7 +44,6 @@ FAILED FAILED
     String id "🗝️"
     String title 
     Json template 
-    Json result "❓"
     String user_id 
     }
   
@@ -55,6 +54,8 @@ FAILED FAILED
     Json args 
     String user_id "❓"
     DateTime executed_at "❓"
+    DateTime executed_finished_at "❓"
+    Json result "❓"
     DateTime execute_after 
     }
   
@@ -68,7 +69,6 @@ FAILED FAILED
   
     "comments" o|--|| "users" : "user"
     "comments" o|--|| "episodes" : "episode"
-    "episodes" o|--|| "scripts" : "script"
     "episodes" o|--|| "podcasts" : "podcast"
     "episodes" o|--|o "users" : "user"
     "episodes" o{--}o "comments" : "comments"
@@ -76,7 +76,6 @@ FAILED FAILED
     "podcasts" o{--}o "episodes" : "episodes"
     "podcasts" o|--|o "users" : "user"
     "scripts" o|--|| "users" : "user"
-    "scripts" o{--}o "episodes" : "episodes"
     "scripts" o{--}o "podcasts" : "podcasts"
     "tasks" o|--|| "TaskStatus" : "enum:status"
     "tasks" o|--|o "users" : "user"
