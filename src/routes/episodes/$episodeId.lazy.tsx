@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
 import { trpc } from "@/trpc.ts";
-import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
@@ -80,14 +80,6 @@ function Episode() {
 					<CardTitle>{episode.title}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div>
-						<Link
-							to="/scripts/$scriptId/edit"
-							params={{ scriptId: episode.script_id }}
-						>
-							edit script
-						</Link>
-					</div>
 					<Button onClick={handleDelete}>delete</Button>
 					<h2>原稿</h2>
 					{manuscript && <ManuscriptPreview manuscript={manuscript} />}
