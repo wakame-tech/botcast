@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useEvaluateScript } from "@/hooks/useEvaluateScript";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -57,6 +58,7 @@ const scriptEditFormSchema = z.object({
 export type ScriptEditFormValues = z.infer<typeof scriptEditFormSchema>;
 
 export function ScriptForm(props: ScriptFormProps) {
+	const { evaluate, running, taskResult } = useEvaluateScript();
 	const form = useForm<z.infer<typeof scriptEditFormSchema>>({
 		resolver: zodResolver(scriptEditFormSchema),
 		defaultValues: props.values ?? {
@@ -97,12 +99,19 @@ export function ScriptForm(props: ScriptFormProps) {
 				</Button>
 				<Button
 					type="button"
-					disabled={props.disabled}
-					onClick={() => props.onEvaluate?.(form.getValues())}
+					disabled={running}
+					onClick={() => evaluate(form.getValues().template)}
 				>
 					実行
 				</Button>
 			</form>
+
+			<h2>実行結果</h2>
+			<Textarea
+				rows={10}
+				value={JSON.stringify(taskResult, null, 4)}
+				readOnly
+			/>
 		</Form>
 	);
 }

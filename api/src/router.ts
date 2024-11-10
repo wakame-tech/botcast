@@ -19,8 +19,9 @@ const taskArgsSchema = z.discriminatedUnion("type", [
         episodeId: z.string(),
     }),
     z.object({
-        type: z.literal("evaluateScript"),
-        scriptId: z.string(),
+        type: z.literal("evaluateTemplate"),
+        template: z.any(),
+        context: z.record(z.any()),
     }),
     z.object({
         type: z.literal("newEpisode"),
