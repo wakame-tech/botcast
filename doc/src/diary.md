@@ -74,3 +74,15 @@ nav_order: 4
 - fix: ローカルのスクリプトを呼べるようにする [#32](https://github.com/wakame-tech/botcast-worker/issues/32)
 
 ## Sprint 2024-10-30
+
+- 進捗ないです...
+
+## Sprint 2024-11-06
+
+- fix: スクリプトではなくタスクが評価結果を持つ [#57](https://github.com/wakame-tech/botcast/issues/57)
+- WIP: 環境変数を設定出来るようにする [#60](https://github.com/wakame-tech/botcast/issues/60)
+  - [supabase vault](https://supabase.com/docs/guides/database/vault) 使う?
+- WIP: UIブラッシュアップ [#59](https://github.com/wakame-tech/botcast/issues/59)
+  - Figmaでイメージ作成中
+
+## Sprint 2024-11-13
