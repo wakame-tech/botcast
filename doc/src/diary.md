@@ -86,3 +86,72 @@ nav_order: 4
   - Figmaでイメージ作成中
 
 ## Sprint 2024-11-13
+
+- 進捗ないです...
+
+## Sprint 2024-11-20
+
+### Aivis Speech
+
+- [AivisSpeech](https://github.com/Aivis-Project/AivisSpeech) 導入中
+  - Nvidia + CUDA driver N回入れ直しています。コンテナ上でのみ?発生する?
+  - `voicevox_engine:nvidia-latest` イメージが悪いのか、ホストが悪いのかわからない
+
+```bash
+voicevox_engine-1  |     raise CoreError(
+voicevox_engine-1  | voicevox_engine.core.core_wrapper.CoreError: modelデータ読み込みに失敗しました 
+(/opt/voicevox_core/model/d0.bin): Failed to create session: Error calling ONNX Runtime C function: /onnxruntime_src/onnxruntime/core/providers/cuda/cuda_call.cc:124 std::conditional_t<THRW, void, onnxruntime::common::Status> onnxruntime::CudaCall(ERRTYPE, const char*, const char*, ERRTYPE, const char*) 
+[with ERRTYPE = cudaError; bool THRW = true; std::conditional_t<THRW, void, onnxruntime::common::Status> = void] /onnxruntime_src/onnxruntime/core/providers/cuda/cuda_call.cc:117 std::conditional_t<THRW, void, onnxruntime::common::Status> onnxruntime::CudaCall(ERRTYPE, const char*, const char*, ERRTYPE, const char*) 
+[with ERRTYPE = cudaError; bool THRW = true; std::conditional_t<THRW, void, onnxruntime::common::Status> = void] 
+CUDA failure 35: CUDA driver version is insufficient for CUDA runtime version ; GPU=0 ; hostname=c348de8374be ; expr=cudaSetDevice(info_.device_id);
+```
+
+### スクリプト機能
+
+- OpenAI Assistants APIをサポート [#40](https://github.com/wakame-tech/botcast-worker/issues/40)
+  - `llm_assistant(prompt, assistant_id)` 関数を追加
+  - `thread_id` はスクリプト実行毎に作成される
+- スクリプトを直接JSONで書くよりTypeScriptで書いてJSONを出力すると楽なことに気づいた。
+
+```typescript
+const assistant = (
+    assistant_id: string,
+    prompt: string,
+): Expr => {
+    return eval_(
+        `llm_assistant('${prompt}', '${assistant_id}')`,
+    );
+};
+
+const listener_assistant_id = "asst_xxx";
+const personality_assistant_id = "asst_yyy";
+const mail: Mail = {
+    name: "ポメ太郎",
+    body: "カレーを作るときのコツはなんですか？",
+};
+const res = let_in({
+    "mail": assistant(listener_assistant_id, mail.body),
+}, {
+    "sections": [
+        serif(`${mail.name} さんからのお便りです。`),
+        serif(assistant(listener_assistant_id, mail.body)),
+        serif(assistant(personality_assistant_id, mail.body)),
+    ],
+});
+```
+
+### 次週以降
+
+- 【スクリプト】環境変数を設定出来るようにする [#60](https://github.com/wakame-tech/botcast/issues/60)
+- ダミーデータを作成する
+- 【スクリプト】コメント機能 [#42](https://github.com/wakame-tech/botcast-worker/issues/42)
+  - ボットを作りたい
+  - LLMで勝手にコメントを追加してほしい
+  - ポッドキャストの定期作成機能の拡張が必要
+  - 原稿作成に特化しているスクリプト機能も拡張する必要がある
+- 【音声合成】音声ファイルの再生に対応する [#61](https://github.com/wakame-tech/botcast/issues/61)
+- 【UI】ポッドキャストのスクリプト作成の敷居が高いので簡単に作れるフォームがあると嬉しいかも?
+  - 何らかのテキストを入力としてSectionを返すフォーム
+  - それらを組み合わせてEpisodeを作る
+
+## Sprint 2024-11-27
