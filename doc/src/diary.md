@@ -134,8 +134,8 @@ const res = let_in({
 }, {
     "sections": [
         serif(`${mail.name} さんからのお便りです。`),
-        serif(assistant(listener_assistant_id, mail.body)),
-        serif(assistant(personality_assistant_id, mail.body)),
+        serif(_eval('mail')),
+        serif(assistant(personality_assistant_id, _eval('mail'))),
     ],
 });
 ```
