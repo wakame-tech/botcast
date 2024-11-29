@@ -49,7 +49,22 @@ const t = initTRPC.context<Context>().create();
 const authProcedure = t.procedure.use(
     async ({ ctx: { accessToken }, next }) => {
         if (!accessToken) {
-            throw new Error("Unauthorized");
+            throw unauthorized();
+        }
+        if (accessToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+            const user = await prisma.user.findUnique({
+                where: {
+                    auth_id: Deno.env.get("SUPABASE_SERVICE_ROLE_USER_ID"),
+                },
+            });
+            if (!user) {
+                throw unauthorized();
+            }
+            return next({
+                ctx: {
+                    user,
+                },
+            });
         }
         const { data: { user: authUser } } = await supabase.auth.getUser(
             accessToken,
@@ -73,10 +88,18 @@ const authProcedure = t.procedure.use(
     },
 );
 
-const unauthorized = new TRPCError({
-    code: "UNAUTHORIZED",
-    message: "Unauthorized",
-});
+const unauthorized = (e?: unknown) =>
+    new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Unauthorized",
+        cause: e,
+    });
+
+const not_found = (id: string) =>
+    new TRPCError({
+        code: "NOT_FOUND",
+        message: `${id} Not found`,
+    });
 
 export const appRouter = t.router({
     signIn: t.procedure.input(z.object({
@@ -88,7 +111,7 @@ export const appRouter = t.router({
             password: input.password,
         });
         if (res.error) {
-            throw res.error;
+            throw unauthorized(res.error);
         }
         const { data: { session } } = res;
         return session.access_token;
@@ -111,10 +134,7 @@ export const appRouter = t.router({
             where: { id },
         });
         if (!task) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Task not found",
-            });
+            throw not_found(id);
         }
         return { task };
     }),
@@ -150,7 +170,7 @@ export const appRouter = t.router({
             },
         });
         if (!podcast) {
-            throw new Error("Episode not found");
+            throw not_found(id);
         }
         return { podcast };
     }),
@@ -223,7 +243,7 @@ export const appRouter = t.router({
             },
         });
         if (!episode) {
-            throw new Error("Episode not found");
+            throw not_found(id);
         }
         if (episode.audio_url && episode.srt_url) {
             try {
@@ -273,7 +293,7 @@ export const appRouter = t.router({
             where: { id },
         });
         if (!script) {
-            throw new Error("Script not found");
+            throw not_found(id);
         }
         return { script };
     }),
