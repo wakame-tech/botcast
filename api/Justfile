@@ -8,4 +8,6 @@ build:
      ~/.deno/bin/deno task generate
 
 check:
-     ~/.deno/bin/deno check src/index.ts
+     ~/.deno/bin/deno fmt ./src/**/*.ts
+     ~/.deno/bin/deno lint ./src/**/*.ts
+     ~/.deno/bin/deno check ./src/**/*.ts

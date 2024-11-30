@@ -8,6 +8,6 @@ export type {
 	Task,
 	TaskArgs,
 	WithSerializedDates,
-} from "../api/src/router";
+} from "../api/src/model";
 
 export const trpc = createTRPCReact<AppRouter>();
