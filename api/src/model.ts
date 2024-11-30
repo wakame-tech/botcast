@@ -3,6 +3,7 @@ import {
   Comment as CommentPrisma,
   Episode as EpisodePrisma,
   Podcast as PodcastPrisma,
+  Script as ScriptPrisma,
   Task as TaskPrisma,
 } from "@prisma/client";
 
@@ -36,7 +37,7 @@ export const taskArgsSchema = z.discriminatedUnion("type", [
 
 export type TaskArgs = z.infer<typeof taskArgsSchema>;
 
-export type Task = TaskPrisma & {
+export type Task = Omit<TaskPrisma, "args" | "result"> & {
   args: TaskArgs;
   result: Record<string, unknown> | null;
 };
@@ -53,13 +54,25 @@ export const sectionsSchema = z.array(sectionSchema);
 
 export type Sections = z.infer<typeof sectionsSchema>;
 
-export type Episode = EpisodePrisma & {
+export type Episode = Omit<EpisodePrisma, "sections"> & {
   sections: Sections;
 };
+
+export const parseEpisode = (
+  episode: EpisodePrisma,
+): WithSerializedDates<Episode> =>
+  withoutDates({
+    ...episode,
+    sections: sectionsSchema.parse(episode.sections),
+  });
 
 export type Podcast = WithSerializedDates<PodcastPrisma>;
 
 export type Comment = WithSerializedDates<CommentPrisma>;
+
+export type Script = Omit<ScriptPrisma, "template"> & {
+  template: Record<string, unknown>;
+};
 
 export const weekDays = z.enum([
   "Mon",

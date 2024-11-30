@@ -1,12 +1,17 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "@prisma/client";
-import type { Sections, Task } from "./model.ts";
+import type { Script, Sections, Task } from "./model.ts";
 import { z } from "zod";
 // @ts-ignore: cannot resolve deps from npm package
 import { createClient } from "jsr:@supabase/supabase-js@2";
 // @ts-ignore: cannot resolve deps from npm package
 import { s3 } from "./presign.ts";
-import { taskArgsSchema, weekDays, withoutDates } from "./model.ts";
+import {
+  parseEpisode,
+  taskArgsSchema,
+  weekDays,
+  withoutDates,
+} from "./model.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -250,10 +255,12 @@ export const appRouter = t.router({
         });
       }
     }
+    const clientEpisode = parseEpisode(episode);
+    const comments = withoutDates(episode.comments);
     return {
       episode: {
-        ...episode,
-        comments: withoutDates(episode.comments),
+        ...clientEpisode,
+        comments,
       },
     };
   }),
@@ -276,7 +283,7 @@ export const appRouter = t.router({
         user,
       },
     });
-    return { scripts };
+    return { scripts: scripts as Script[] };
   }),
   script: authProcedure.input(z.object({
     id: z.string(),
@@ -287,7 +294,7 @@ export const appRouter = t.router({
     if (!script) {
       throw not_found(id);
     }
-    return { script };
+    return { script: script as Script };
   }),
   newScript: authProcedure.input(z.object({
     title: z.string(),
