@@ -27,10 +27,7 @@ export function Script() {
 		<>
 			<h1>{script.title}</h1>
 			<pre className="p-2 text-lg bg-gray-1">
-				<code>
-					{/* @ts-ignore: */}
-					{JSON.stringify(script.template, null, 4)}
-				</code>
+				<code>{JSON.stringify(script.template, null, 4)}</code>
 			</pre>
 			<Link to="/scripts/$scriptId/edit" params={{ scriptId }}>
 				<Button>edit</Button>

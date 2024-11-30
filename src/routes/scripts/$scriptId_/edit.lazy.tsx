@@ -27,7 +27,6 @@ export function EditScript() {
 	}
 
 	const script = getScript.data.script;
-	// @ts-ignore
 	const template = JSON.stringify(script.template, null, 4);
 
 	return (

@@ -1,12 +1,16 @@
-import type { MappedString } from "@/lib/utils";
-import type { Episode } from "@prisma/client";
+import type { Episode, WithSerializedDates } from "@/trpc";
 import { Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import { Button } from "../ui/button";
 
+type EpisodeDigest = Pick<
+	WithSerializedDates<Episode>,
+	"id" | "title" | "created_at"
+>;
+
 interface EpisodeListProps {
 	podcastId: string;
-	episodes: MappedString<Episode, "created_at">[];
+	episodes: EpisodeDigest[];
 	onClickDelete: () => Promise<void>;
 }
 
@@ -30,7 +34,7 @@ function EpisodeList(props: EpisodeListProps) {
 }
 
 interface EpisodeListItemProps {
-	episode: MappedString<Episode, "created_at">;
+	episode: EpisodeDigest;
 }
 
 function EpisodeListItem(props: EpisodeListItemProps) {

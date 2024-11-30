@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 
 export const useEvaluateScript = () => {
 	const [taskId, setTaskId] = useState<string | null>(null);
-	const [taskResult, setTaskResult] = useState<object>({});
+	const [taskResult, setTaskResult] = useState<Record<string, unknown> | null>(
+		{},
+	);
 	const addTask = trpc.addTask.useMutation();
 	const getTask = trpc.task.useQuery(
 		// biome-ignore lint/style/noNonNullAssertion: conditional fetch
@@ -25,8 +27,7 @@ export const useEvaluateScript = () => {
 			console.log(task);
 			if (task.status === "COMPLETED" || task.status === "FAILED") {
 				setTaskId(null);
-				// @ts-ignore
-				setTaskResult(JSON.stringify(task.result));
+				setTaskResult(task.result);
 				clearInterval(id);
 			}
 		}, 3000);

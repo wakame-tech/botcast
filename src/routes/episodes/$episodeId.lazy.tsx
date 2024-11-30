@@ -1,11 +1,8 @@
 import type { CommentEditFormValues } from "@/components/comment/CommentForm";
 import { CommentForm } from "@/components/comment/CommentForm";
 import { CommentListItem } from "@/components/comment/CommentListItem";
-import {
-	ManuscriptPreview,
-	manuscriptSchema,
-} from "@/components/episode/ManuScriptPreview";
 import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
+import { SectionsComponent } from "@/components/episode/Sections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
@@ -53,9 +50,6 @@ function Episode() {
 	}
 
 	const episode = getEpisode.data.episode;
-	const manuscript =
-		// @ts-ignore
-		episode.script.result && manuscriptSchema.parse(episode.script.result);
 
 	const handleDelete = async () => {
 		await deleteEpisode.mutateAsync({ id: episodeId });
@@ -81,8 +75,7 @@ function Episode() {
 				</CardHeader>
 				<CardContent>
 					<Button onClick={handleDelete}>delete</Button>
-					<h2>原稿</h2>
-					{manuscript && <ManuscriptPreview manuscript={manuscript} />}
+					<SectionsComponent sections={episode.sections} />
 					<ScriptLines
 						lines={lines}
 						toBeHighlight={(line) =>
@@ -91,7 +84,6 @@ function Episode() {
 						onClick={(line) => seek(line.startSeconds)}
 					/>
 
-					<h2>音声</h2>
 					{episode.audio_url ? (
 						<div className="sticky bottom-0 float-right p-2">
 							<Button
