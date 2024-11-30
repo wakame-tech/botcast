@@ -1,8 +1,0 @@
-{
-    "deno.enable": true,
-    "deno.lint": true,
-    "cSpell.words": [
-        "supabase",
-        "TRPC"
-    ],
-}

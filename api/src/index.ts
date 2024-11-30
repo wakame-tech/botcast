@@ -8,27 +8,27 @@ const app = new Hono();
 
 app.use(cors());
 app.use(
-    "/trpc/*",
-    // @ts-ignore: TS2339
-    trpcServer({
-        router: appRouter,
-        createContext: (opts) => {
-            const accessToken = opts.req.headers.get("Authorization");
-            return {
-                accessToken,
-                ...opts,
-            };
-        },
-    }),
+  "/trpc/*",
+  // @ts-ignore: TS2339
+  trpcServer({
+    router: appRouter,
+    createContext: (opts) => {
+      const accessToken = opts.req.headers.get("Authorization");
+      return {
+        accessToken,
+        ...opts,
+      };
+    },
+  }),
 );
 app
-    .use("/assets/*", serveStatic({ root: "./dist/" }))
-    .use(
-        "/*",
-        serveStatic({
-            root: "./dist/",
-            path: "index.html",
-        }),
-    );
+  .use("/assets/*", serveStatic({ root: "./dist/" }))
+  .use(
+    "/*",
+    serveStatic({
+      root: "./dist/",
+      path: "index.html",
+    }),
+  );
 
 Deno.serve({ port: 1234 }, app.fetch);

@@ -1,7 +1,7 @@
-import type { Task } from "@prisma/client";
+import type { Task, WithSerializedDates } from "@/trpc";
 
 interface TaskListProps {
-	tasks: Task[];
+	tasks: WithSerializedDates<Task>[];
 }
 
 export function TaskList(props: TaskListProps) {

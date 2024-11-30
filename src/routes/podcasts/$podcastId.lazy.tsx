@@ -58,7 +58,6 @@ export function Podcast() {
 					<Button onClick={handleDispatchNewEpisodeTask}>
 						エピソード作成を実行
 					</Button>
-					{/* @ts-ignore */}
 					<Episode.List
 						podcastId={podcastId}
 						episodes={podcast.episodes}

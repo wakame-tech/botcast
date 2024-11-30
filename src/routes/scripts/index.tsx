@@ -19,7 +19,6 @@ export function Scripts() {
 			<Link to="/scripts/new">New Script</Link>
 
 			<ul>
-				{/* @ts-ignore */}
 				{scripts.map((script) => (
 					<li key={script.id}>
 						<Link to="/scripts/$scriptId" params={{ scriptId: script.id }}>

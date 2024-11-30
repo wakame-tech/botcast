@@ -19,7 +19,6 @@ function Tasks() {
 
 	return (
 		<div>
-			{/* @ts-ignore: TS2589 */}
 			<TaskList tasks={getTasks.data?.tasks ?? []} />
 		</div>
 	);
