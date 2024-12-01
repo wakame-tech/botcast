@@ -11,11 +11,12 @@ export const createSecret = async (
     secret: string,
     name: string,
 ): Promise<string> => {
-    // NOTE: description used by storing user uuid
+    // NOTE: `name` is globally unique for users, so prefixed `userUuid`
+    const storedName = `${userUuid}:${name}`;
     prisma.$queryRaw;
     const res = await prisma.$queryRaw<
         CreateSecretResponse[]
-    >`select vault.create_secret(${secret}, ${name}, ${userUuid});`;
+    >`select vault.create_secret(${secret}, ${storedName});`;
     return res[0].create_secret;
 };
 
@@ -36,7 +37,7 @@ export const listSecrets = (
 ): Promise<SelectSecretResponse[]> => {
     return prisma.$queryRaw<
         SelectSecretResponse[]
-    >`select * from vault.decrypted_secrets where description = ${userUuid};`;
+    >`select * from vault.decrypted_secrets where name like ${`${userUuid}:%`};`;
 };
 
 export const getSecret = async (
@@ -46,7 +47,7 @@ export const getSecret = async (
 ): Promise<SelectSecretResponse | null> => {
     const res = await prisma.$queryRaw<
         SelectSecretResponse[]
-    >`select * from vault.decrypted_secrets where description = ${userUuid} and id = ${id}::uuid;`;
+    >`select * from vault.decrypted_secrets where name like ${`${userUuid}:%`} and id = ${id}::uuid;`;
     return res.length === 1 ? res[0] : null;
 };
 
@@ -60,14 +61,22 @@ export const updateSecret = async (
     if (await getSecret(prisma, userUuid, id) === null) {
         throw new Error("Secret not found");
     }
+    const storedName = `${userUuid}:${name}`;
     await prisma.$executeRaw`select
       vault.update_secret(
         ${id}::uuid,
         ${secret},
-        ${name},
-        ${userUuid}
+        ${storedName}
       );
     `;
+};
+
+export const deleteSecretById = async (
+    prisma: PrismaClient,
+    id: string,
+): Promise<void> => {
+    await prisma
+        .$executeRaw`delete from vault.secrets where id = ${id}::uuid;`;
 };
 
 export const deleteSecret = async (
@@ -76,5 +85,5 @@ export const deleteSecret = async (
     id: string,
 ): Promise<void> => {
     await prisma
-        .$executeRaw`delete from vault.secrets where description = ${userUuid} and id = ${id}::uuid;`;
+        .$executeRaw`delete from vault.secrets where name like ${`${userUuid}:%`} and id = ${id}::uuid;`;
 };

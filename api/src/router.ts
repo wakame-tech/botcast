@@ -106,7 +106,7 @@ export const appRouter = t.router({
     return {
       secrets: secrets.map((s) => ({
         id: s.id,
-        name: s.name,
+        name: s.name.split(":", 2)[1],
       })),
     };
   }),
