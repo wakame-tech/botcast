@@ -109,49 +109,39 @@ CUDA failure 35: CUDA driver version is insufficient for CUDA runtime version ; 
 ### スクリプト機能
 
 - OpenAI Assistants APIをサポート [#40](https://github.com/wakame-tech/botcast-worker/issues/40)
-  - `llm_assistant(prompt, assistant_id)` 関数を追加
-  - `thread_id` はスクリプト実行毎に作成される
+  - `llm(api_key, prompt)` 関数を追加
+  - `llm_assistant(api_key, thread_id, assistant_id, prompt)` 関数を追加
+    - `thread_id` はスクリプト実行毎に作成される
 - スクリプトを直接JSONで書くよりTypeScriptで書いてJSONを出力すると楽なことに気づいた。
 
 ```typescript
-const assistant = (
-    assistant_id: string,
-    prompt: string,
-): Expr => {
-    return eval_(
-        `llm_assistant('${prompt}', '${assistant_id}')`,
-    );
-};
-
 const listener_assistant_id = "asst_xxx";
 const personality_assistant_id = "asst_yyy";
 const mail: Mail = {
     name: "ポメ太郎",
     body: "カレーを作るときのコツはなんですか？",
 };
-const res = let_in({
-    "mail": assistant(listener_assistant_id, mail.body),
-}, {
-    "sections": [
-        serif(`${mail.name} さんからのお便りです。`),
-        serif(_eval('mail')),
-        serif(assistant(personality_assistant_id, _eval('mail'))),
-    ],
-});
+const context = {
+    "api_key": "$OPENAI_API_KEY",
+};
+const template = let_in(
+    { "thread_id": eval_("create_thread(api_key)") },
+    let_in(
+        { "mail": llm_assistant(listener_assistant_id, mail.body) },
+        {
+            "sections": [
+                serif(`${mail.name} さんからのお便りです。`),
+                serif(llm_assistant(listener_assistant_id, mail.body)),
+                serif(llm_assistant(personality_assistant_id, mail.body)),
+            ],
+        },
+    ),
+);
 ```
 
-### 次週以降
-
-- 【スクリプト】環境変数を設定出来るようにする [#60](https://github.com/wakame-tech/botcast/issues/60)
-- ダミーデータを作成する
-- 【スクリプト】コメント機能 [#42](https://github.com/wakame-tech/botcast-worker/issues/42)
-  - ボットを作りたい
-  - LLMで勝手にコメントを追加してほしい
-  - ポッドキャストの定期作成機能の拡張が必要
-  - 原稿作成に特化しているスクリプト機能も拡張する必要がある
-- 【音声合成】音声ファイルの再生に対応する [#61](https://github.com/wakame-tech/botcast/issues/61)
-- 【UI】ポッドキャストのスクリプト作成の敷居が高いので簡単に作れるフォームがあると嬉しいかも?
-  - 何らかのテキストを入力としてSectionを返すフォーム
-  - それらを組み合わせてEpisodeを作る
-
 ## Sprint 2024-11-27
+
+- workerにOpenTelemetryを導入 [#37](https://github.com/wakame-tech/botcast-worker/issues/37)
+  - workerのトレースをOpenTelemetry CollectorにTraceを送信してJaegerで確認できるようになった。
+- 【スクリプト】環境変数を設定出来るようにする [#60](https://github.com/wakame-tech/botcast/issues/60)
+- 【スクリプト】コメント機能 [#42](https://github.com/wakame-tech/botcast-worker/issues/42)

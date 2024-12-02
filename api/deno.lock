@@ -3,7 +3,9 @@
   "specifiers": {
     "jsr:@bradenmacdonald/s3-lite-client@~0.7.6": "0.7.6",
     "jsr:@hono/hono@^4.4.9": "4.5.7",
+    "jsr:@std/assert@*": "1.0.8",
     "jsr:@std/bytes@^1.0.2": "1.0.2",
+    "jsr:@std/internal@^1.0.5": "1.0.5",
     "jsr:@std/io@0.224": "0.224.9",
     "jsr:@std/io@0.225": "0.225.0",
     "jsr:@supabase/supabase-js@2": "2.45.3",
@@ -30,8 +32,17 @@
     "@hono/hono@4.5.7": {
       "integrity": "c569220a4c13575b7bc98cb62742d0fd97d89fb80a3a4a29929ff1ea190765c4"
     },
+    "@std/assert@1.0.8": {
+      "integrity": "ebe0bd7eb488ee39686f77003992f389a06c3da1bbd8022184804852b2fa641b",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
     "@std/bytes@1.0.2": {
       "integrity": "fbdee322bbd8c599a6af186a1603b3355e59a5fb1baa139f8f4c3c9a1b3e3d57"
+    },
+    "@std/internal@1.0.5": {
+      "integrity": "54a546004f769c1ac9e025abd15a76b6671ddc9687e2313b67376125650dc7ba"
     },
     "@std/io@0.224.9": {
       "integrity": "4414664b6926f665102e73c969cfda06d2c4c59bd5d0c603fd4f1b1c840d6ee3",

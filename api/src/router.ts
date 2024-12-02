@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "@prisma/client";
 import type { Script, Sections, Task } from "./model.ts";
+import { createSecret, deleteSecret, listSecrets } from "./vault.ts";
 import { z } from "zod";
 // @ts-ignore: cannot resolve deps from npm package
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -99,6 +100,31 @@ export const appRouter = t.router({
   }),
   me: authProcedure.query(({ ctx: { user } }) => {
     return { user };
+  }),
+  secrets: authProcedure.query(async ({ ctx: { user } }) => {
+    const secrets = await listSecrets(prisma, user.id);
+    return {
+      secrets: secrets.map((s) => ({
+        id: s.id,
+        name: s.name.split(":", 2)[1],
+      })),
+    };
+  }),
+  updateSecrets: authProcedure.input(z.object({
+    news: z.array(z.object({
+      name: z.string(),
+      value: z.string(),
+    })),
+    deletionIds: z.array(z.string()),
+  })).mutation(async ({ ctx: { user }, input }) => {
+    await Promise.all(
+      input.news.map((secret) =>
+        createSecret(prisma, user.id, secret.value, secret.name)
+      ),
+    );
+    await Promise.all(
+      input.deletionIds.map((id) => deleteSecret(prisma, user.id, id)),
+    );
   }),
   tasks: authProcedure.query(async ({ ctx: { user } }) => {
     const tasks = await prisma.task.findMany({

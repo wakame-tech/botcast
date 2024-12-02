@@ -11,3 +11,6 @@ check:
      ~/.deno/bin/deno fmt ./src/**/*.ts
      ~/.deno/bin/deno lint ./src/**/*.ts
      ~/.deno/bin/deno check ./src/**/*.ts
+
+test:
+     ~/.deno/bin/deno test -A ./test/vault.ts
