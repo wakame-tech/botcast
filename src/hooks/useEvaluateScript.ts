@@ -36,9 +36,12 @@ export const useEvaluateScript = () => {
 
 	const evaluate = async (template: string) => {
 		const { task } = await addTask.mutateAsync({
-			type: "evaluateTemplate",
-			template: JSON.parse(template),
-			context: {},
+			cron: null,
+			args: {
+				type: "evaluateTemplate",
+				template: JSON.parse(template),
+				context: {},
+			},
 		});
 		setTaskId(task.id);
 	};

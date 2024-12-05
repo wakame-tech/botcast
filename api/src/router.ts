@@ -9,8 +9,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { s3 } from "./presign.ts";
 import {
   parseEpisode,
+  sectionsSchema,
   taskArgsSchema,
-  weekDays,
   withoutDates,
 } from "./model.ts";
 
@@ -147,11 +147,15 @@ export const appRouter = t.router({
       task: task as Task,
     };
   }),
-  addTask: authProcedure.input(taskArgsSchema).mutation(
-    async ({ ctx: { user }, input: args }) => {
+  addTask: authProcedure.input(z.object({
+    cron: z.string().nullable(),
+    args: taskArgsSchema,
+  })).mutation(
+    async ({ ctx: { user }, input: { args, cron } }) => {
       const task = await prisma.task.create({
         data: {
           user_id: user.id,
+          cron,
           status: "PENDING",
           args,
         },
@@ -175,7 +179,6 @@ export const appRouter = t.router({
       include: {
         user: true,
         episodes: true,
-        script: true,
       },
     });
     if (!podcast) {
@@ -191,29 +194,16 @@ export const appRouter = t.router({
   }),
   newPodcast: authProcedure.input(z.object({
     title: z.string(),
-    template: z.string(),
     icon: z.string().regex(/\p{Emoji_Presentation}/gu),
-    weekDay: weekDays,
-    // JST
-    hour: z.number().int().min(0).max(23),
   })).mutation(
     async (
-      { ctx: { user }, input: { title, template, icon, weekDay, hour } },
+      { ctx: { user }, input: { title, icon } },
     ) => {
-      const script = await prisma.script.create({
-        data: {
-          title: `${title} script`,
-          template: JSON.parse(template),
-          user_id: user.id,
-        },
-      });
       const podcast = await prisma.podcast.create({
         data: {
           title,
           icon,
-          script_id: script.id,
           user_id: user.id,
-          cron: `0 0 ${(hour + 9) % 24} * * ${weekDay}`,
           created_at: new Date().toISOString(),
         },
       });
@@ -223,15 +213,12 @@ export const appRouter = t.router({
   updatePodcast: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
-    weekDay: weekDays,
-    hour: z.number().int().min(0).max(23),
   })).mutation(
-    async ({ input: { id, title, weekDay, hour } }) => {
+    async ({ input: { id, title } }) => {
       const podcast = await prisma.podcast.update({
         where: { id },
         data: {
           title,
-          cron: `0 0 ${(hour + 9) % 24} * * ${weekDay}`,
         },
       });
       return { podcast };
@@ -290,6 +277,26 @@ export const appRouter = t.router({
       },
     };
   }),
+  newEpisode: authProcedure.input(z.object({
+    podcastId: z.string(),
+    title: z.string(),
+    sections: sectionsSchema,
+  })).mutation(
+    async (
+      { ctx: { user }, input: { podcastId, title, sections } },
+    ) => {
+      const episode = await prisma.episode.create({
+        data: {
+          title,
+          user_id: user.id,
+          podcast_id: podcastId,
+          sections,
+          created_at: new Date().toISOString(),
+        },
+      });
+      return { episode: parseEpisode(episode) };
+    },
+  ),
   updateEpisode: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
@@ -325,17 +332,19 @@ export const appRouter = t.router({
   newScript: authProcedure.input(z.object({
     title: z.string(),
     template: z.string(),
-  })).mutation(async ({ ctx: { user }, input: { title, template } }) => {
-    const templateJson = JSON.parse(template);
-    const script = await prisma.script.create({
-      data: {
-        title,
-        template: templateJson,
-        user_id: user.id,
-      },
-    });
-    return { script };
-  }),
+  })).mutation(
+    async ({ ctx: { user }, input: { title, template } }) => {
+      const templateJson = JSON.parse(template);
+      const script = await prisma.script.create({
+        data: {
+          title,
+          template: templateJson,
+          user_id: user.id,
+        },
+      });
+      return { script };
+    },
+  ),
   updateScript: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
@@ -344,7 +353,10 @@ export const appRouter = t.router({
     const templateJson = JSON.parse(template);
     await prisma.script.update({
       where: { id },
-      data: { title, template: templateJson },
+      data: {
+        title,
+        template: templateJson,
+      },
     });
     return;
   }),

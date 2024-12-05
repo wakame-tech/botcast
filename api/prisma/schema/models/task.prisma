@@ -7,6 +7,7 @@ model Task {
   executed_at          DateTime?  @db.Timestamptz(3)
   executed_finished_at DateTime?  @db.Timestamptz(3)
   result               Json?
+  cron                 String?
   execute_after        DateTime   @default(now()) @db.Timestamptz(3)
 
   @@map("tasks")

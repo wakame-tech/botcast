@@ -17,8 +17,6 @@ export default function EditPodcast() {
 		await updatePodcast.mutateAsync({
 			id: podcastId,
 			title: values.title,
-			weekDay: values.weekDay,
-			hour: values.hour,
 		});
 		navigate({ to: "/podcasts/$podcastId", params: { podcastId } });
 	};
@@ -35,8 +33,6 @@ export default function EditPodcast() {
 				onSubmit={handleSubmit}
 				values={{
 					title: podcast.title,
-					weekDay: "Mon",
-					hour: 0,
 				}}
 			/>
 		</>
