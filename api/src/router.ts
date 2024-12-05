@@ -7,7 +7,12 @@ import { z } from "zod";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 // @ts-ignore: cannot resolve deps from npm package
 import { s3 } from "./presign.ts";
-import { parseEpisode, taskArgsSchema, withoutDates } from "./model.ts";
+import {
+  parseEpisode,
+  sectionsSchema,
+  taskArgsSchema,
+  withoutDates,
+} from "./model.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -272,6 +277,26 @@ export const appRouter = t.router({
       },
     };
   }),
+  newEpisode: authProcedure.input(z.object({
+    podcastId: z.string(),
+    title: z.string(),
+    sections: sectionsSchema,
+  })).mutation(
+    async (
+      { ctx: { user }, input: { podcastId, title, sections } },
+    ) => {
+      const episode = await prisma.episode.create({
+        data: {
+          title,
+          user_id: user.id,
+          podcast_id: podcastId,
+          sections,
+          created_at: new Date().toISOString(),
+        },
+      });
+      return { episode: parseEpisode(episode) };
+    },
+  ),
   updateEpisode: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
