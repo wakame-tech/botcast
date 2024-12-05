@@ -73,13 +73,3 @@ export type Comment = WithSerializedDates<CommentPrisma>;
 export type Script = Omit<ScriptPrisma, "template"> & {
   template: Record<string, unknown>;
 };
-
-export const weekDays = z.enum([
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat",
-  "Sun",
-]);

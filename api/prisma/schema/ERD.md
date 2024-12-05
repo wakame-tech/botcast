@@ -33,8 +33,6 @@ FAILED FAILED
     String id "🗝️"
     String title 
     String icon 
-    String script_id 
-    String cron "❓"
     String user_id "❓"
     DateTime created_at 
     }
@@ -56,6 +54,7 @@ FAILED FAILED
     DateTime executed_at "❓"
     DateTime executed_finished_at "❓"
     Json result "❓"
+    String cron "❓"
     DateTime execute_after 
     }
   
@@ -72,11 +71,9 @@ FAILED FAILED
     "episodes" o|--|| "podcasts" : "podcast"
     "episodes" o|--|o "users" : "user"
     "episodes" o{--}o "comments" : "comments"
-    "podcasts" o|--|| "scripts" : "script"
     "podcasts" o{--}o "episodes" : "episodes"
     "podcasts" o|--|o "users" : "user"
     "scripts" o|--|| "users" : "user"
-    "scripts" o{--}o "podcasts" : "podcasts"
     "tasks" o|--|| "TaskStatus" : "enum:status"
     "tasks" o|--|o "users" : "user"
     "users" o{--}o "scripts" : "scripts"

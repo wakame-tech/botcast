@@ -2,9 +2,6 @@ model Podcast {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title      String
   icon       String    @db.VarChar(1)
-  script_id  String    @db.Uuid
-  script     Script    @relation(fields: [script_id], references: [id])
-  cron       String?
   episodes   Episode[]
   user       User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id    String?   @db.Uuid
