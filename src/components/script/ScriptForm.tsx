@@ -82,6 +82,7 @@ export function ScriptForm(props: ScriptFormProps) {
 						</FormItem>
 					)}
 				/>
+
 				<FormField
 					control={form.control}
 					name="template"

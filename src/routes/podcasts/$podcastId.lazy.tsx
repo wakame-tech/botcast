@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserIcon } from "@/components/user/UserIcon";
 import { trpc } from "@/trpc.ts";
-import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId")({
 	component: Podcast,
@@ -23,8 +23,11 @@ export function Podcast() {
 
 	const handleDispatchNewEpisodeTask = async () => {
 		await addTask.mutateAsync({
-			type: "newEpisode",
-			podcastId,
+			cron: null,
+			args: {
+				type: "newEpisode",
+				podcastId,
+			},
 		});
 	};
 
@@ -47,14 +50,6 @@ export function Podcast() {
 					/>
 				</CardHeader>
 				<CardContent>
-					<div>
-						<Link
-							to="/scripts/$scriptId/edit"
-							params={{ scriptId: podcast.script_id }}
-						>
-							スクリプトを編集
-						</Link>
-					</div>
 					<Button onClick={handleDispatchNewEpisodeTask}>
 						エピソード作成を実行
 					</Button>
