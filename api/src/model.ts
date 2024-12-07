@@ -29,10 +29,6 @@ export const taskArgsSchema = z.discriminatedUnion("type", [
     template: z.any(),
     context: z.record(z.any()),
   }),
-  z.object({
-    type: z.literal("newEpisode"),
-    podcastId: z.string(),
-  }),
 ]);
 
 export type TaskArgs = z.infer<typeof taskArgsSchema>;
@@ -48,7 +44,14 @@ const serifSchema = z.object({
   text: z.string(),
 });
 
-const sectionSchema = z.discriminatedUnion("type", [serifSchema]);
+const audioSchema = z.object({
+  type: z.literal("Audio"),
+  url: z.string(),
+  from: z.number().optional(),
+  to: z.number().optional(),
+});
+
+const sectionSchema = z.discriminatedUnion("type", [serifSchema, audioSchema]);
 
 export const sectionsSchema = z.array(sectionSchema);
 

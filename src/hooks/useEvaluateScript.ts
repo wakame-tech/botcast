@@ -34,12 +34,12 @@ export const useEvaluateScript = () => {
 		return () => clearInterval(id);
 	}, [taskId, getTask]);
 
-	const evaluate = async (template: string) => {
+	const evaluate = async (template: Record<string, unknown>) => {
 		const { task } = await addTask.mutateAsync({
 			cron: null,
 			args: {
 				type: "evaluateTemplate",
-				template: JSON.parse(template),
+				template: JSON.parse(JSON.stringify(template)),
 				context: {},
 			},
 		});
