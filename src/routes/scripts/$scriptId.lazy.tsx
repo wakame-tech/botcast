@@ -1,3 +1,4 @@
+import { SchemaForm } from "@/components/script/SchemaForm";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/trpc.ts";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
@@ -5,6 +6,7 @@ import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 export const Route = createLazyFileRoute("/scripts/$scriptId")({
 	component: Script,
 });
+
 
 export function Script() {
 	const navigate = useNavigate();
@@ -26,6 +28,8 @@ export function Script() {
 	return (
 		<>
 			<h1>{script.title}</h1>
+			{script.template.parameters
+				&& <SchemaForm schema={script.template.parameters} onSubmit={console.log} />}
 			<pre className="p-2 text-lg bg-gray-1">
 				<code>{JSON.stringify(script.template, null, 4)}</code>
 			</pre>
