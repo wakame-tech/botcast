@@ -84,3 +84,11 @@ export type Comment = WithSerializedDates<CommentPrisma>;
 export type Script = Omit<ScriptPrisma, "template"> & {
   template: Record<string, unknown>;
 };
+
+export const ScriptInputSchema = z.object({
+  title: z.string(),
+  description: z.string().nullable(),
+  template: z.string(),
+});
+
+export type ScriptInput = z.infer<typeof ScriptInputSchema>;

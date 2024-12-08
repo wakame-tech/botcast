@@ -10,6 +10,7 @@ import { s3 } from "./presign.ts";
 import {
   parseEpisode,
   PodcastInputSchema,
+  ScriptInputSchema,
   sectionsSchema,
   taskArgsSchema,
   withoutDates,
@@ -333,11 +334,7 @@ export const appRouter = t.router({
     }
     return { script: script as Script };
   }),
-  newScript: authProcedure.input(z.object({
-    title: z.string(),
-    description: z.string().optional(),
-    template: z.string(),
-  })).mutation(
+  newScript: authProcedure.input(ScriptInputSchema).mutation(
     async ({ ctx: { user }, input: { title, description, template } }) => {
       const templateJson = JSON.parse(template);
       const script = await prisma.script.create({
@@ -351,11 +348,8 @@ export const appRouter = t.router({
       return { script };
     },
   ),
-  updateScript: authProcedure.input(z.object({
+  updateScript: authProcedure.input(ScriptInputSchema.extend({
     id: z.string(),
-    title: z.string(),
-    description: z.string().optional(),
-    template: z.string(),
   })).mutation(async ({ input: { id, title, description, template } }) => {
     const templateJson = JSON.parse(template);
     await prisma.script.update({

@@ -1,6 +1,6 @@
 import { ScriptForm } from "@/components/script/ScriptForm";
-import type { ScriptEditFormValues } from "@/components/script/ScriptForm";
 import { trpc } from "@/trpc.ts";
+import type { ScriptInput } from "@/trpc.ts";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/scripts/new")({
@@ -11,10 +11,8 @@ export function NewScript() {
 	const navigate = useNavigate();
 	const newScript = trpc.newScript.useMutation();
 
-	const handleSubmit = async (values: ScriptEditFormValues) => {
-		const { script } = await newScript.mutateAsync({
-			...values,
-		});
+	const handleSubmit = async (values: ScriptInput) => {
+		const { script } = await newScript.mutateAsync(values);
 		navigate({ to: "/scripts/$scriptId", params: { scriptId: script.id } });
 	};
 
