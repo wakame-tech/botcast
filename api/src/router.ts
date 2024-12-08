@@ -239,11 +239,6 @@ export const appRouter = t.router({
       where: { id },
       include: {
         user: true,
-        comments: {
-          include: {
-            user: true,
-          },
-        },
       },
     });
     if (!episode) {
@@ -270,14 +265,22 @@ export const appRouter = t.router({
         });
       }
     }
-    const clientEpisode = parseEpisode(episode);
-    const comments = withoutDates(episode.comments);
     return {
-      episode: {
-        ...clientEpisode,
-        comments,
-      },
+      episode: parseEpisode(episode),
     };
+  }),
+  episodeComments: authProcedure.input(z.object({
+    episodeId: z.string(),
+  })).query(async ({ input: { episodeId } }) => {
+    const comments = await prisma.comment.findMany({
+      where: {
+        episode_id: episodeId,
+      },
+      include: {
+        user: true,
+      },
+    });
+    return { comments: withoutDates(comments) };
   }),
   newEpisode: authProcedure.input(z.object({
     podcastId: z.string(),

@@ -81,6 +81,12 @@ export type PodcastInput = z.infer<typeof PodcastInputSchema>;
 
 export type Comment = WithSerializedDates<CommentPrisma>;
 
+export const CommentInputSchema = z.object({
+  content: z.string(),
+});
+
+export type CommentInput = z.infer<typeof CommentInputSchema>;
+
 export type Script = Omit<ScriptPrisma, "template"> & {
   template: Record<string, unknown>;
 };

@@ -1,8 +1,13 @@
 import { createTRPCReact } from "@trpc/react-query";
 import type { AppRouter } from "../api/src/router";
-export { PodcastInputSchema, ScriptInputSchema } from "../api/src/model";
+export {
+	CommentInputSchema,
+	PodcastInputSchema,
+	ScriptInputSchema,
+} from "../api/src/model";
 export type {
 	Comment,
+	CommentInput,
 	Episode,
 	Podcast,
 	PodcastInput,

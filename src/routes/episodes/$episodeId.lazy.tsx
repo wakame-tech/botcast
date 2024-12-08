@@ -1,6 +1,4 @@
-import type { CommentEditFormValues } from "@/components/comment/CommentForm";
-import { CommentForm } from "@/components/comment/CommentForm";
-import { CommentListItem } from "@/components/comment/CommentListItem";
+import { EpisodeComments } from "@/components/episode/EpisodeComments";
 import { ScriptLines } from "@/components/episode/ScriptLines.tsx";
 import { SectionsComponent } from "@/components/episode/Sections";
 import { Button } from "@/components/ui/button";
@@ -33,7 +31,6 @@ function Episode() {
 	const deleteEpisode = trpc.deleteEpisode.useMutation();
 	const [lines, setLines] = useState<Line[]>([]);
 	const { isPlaying, play, seconds, seek, render } = usePlayer();
-	const newComment = trpc.newComment.useMutation();
 
 	useEffect(() => {
 		(async () => {
@@ -57,14 +54,6 @@ function Episode() {
 			to: "/podcasts/$podcastId",
 			params: { podcastId: episode.podcast_id },
 		});
-	};
-
-	const handleOnSubmitComment = async (values: CommentEditFormValues) => {
-		await newComment.mutateAsync({
-			episodeId,
-			content: values.content,
-		});
-		await getEpisode.refetch();
 	};
 
 	return (
@@ -106,17 +95,7 @@ function Episode() {
 				</CardContent>
 			</Card>
 
-			<div className="p-2">
-				{episode.comments.map((comment) => (
-					<div key={comment.id}>
-						<CommentListItem user={comment.user} comment={comment} />
-					</div>
-				))}
-
-				<div className="p-2">
-					<CommentForm onSubmit={handleOnSubmitComment} />
-				</div>
-			</div>
+			<EpisodeComments episodeId={episodeId} />
 		</>
 	);
 }
