@@ -9,6 +9,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { s3 } from "./presign.ts";
 import {
   parseEpisode,
+  PodcastInputSchema,
   sectionsSchema,
   taskArgsSchema,
   withoutDates,
@@ -192,11 +193,7 @@ export const appRouter = t.router({
       },
     };
   }),
-  newPodcast: authProcedure.input(z.object({
-    title: z.string(),
-    description: z.string().optional(),
-    icon: z.string().regex(/\p{Emoji_Presentation}/gu),
-  })).mutation(
+  newPodcast: authProcedure.input(PodcastInputSchema).mutation(
     async (
       { ctx: { user }, input: { title, description, icon } },
     ) => {

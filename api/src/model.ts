@@ -71,6 +71,14 @@ export const parseEpisode = (
 
 export type Podcast = WithSerializedDates<PodcastPrisma>;
 
+export const PodcastInputSchema = z.object({
+  icon: z.string().regex(/\p{Emoji_Presentation}/gu),
+  title: z.string(),
+  description: z.string().nullable(),
+});
+
+export type PodcastInput = z.infer<typeof PodcastInputSchema>;
+
 export type Comment = WithSerializedDates<CommentPrisma>;
 
 export type Script = Omit<ScriptPrisma, "template"> & {
