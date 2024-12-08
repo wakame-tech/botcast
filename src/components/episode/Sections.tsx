@@ -1,29 +1,49 @@
 import type { Sections } from "@/trpc";
+import type { Line } from "srt-parser-2";
+
+interface ScriptLinesProps {
+	lines: Line[];
+	toBeHighlight: (line: Line) => boolean;
+	onClick: (line: Line) => void;
+}
+
+export function SectionSentences(props: ScriptLinesProps) {
+	return (
+		<>
+			{props.lines.map((line) => (
+				<span
+					key={`t${line.startSeconds}`}
+					className={`${props.toBeHighlight(line) ? "bg-yellow-200" : "hover:bg-gray-200"} `}
+					onClick={() => props.onClick(line)}
+					onKeyDown={() => props.onClick(line)}
+				>
+					{line.text}
+				</span>
+			))}
+		</>
+	);
+}
 
 interface SectionsComponentProps {
+	isPlayingEpisode: boolean;
+	seconds: number;
+	lines: Line[];
 	sections: Sections;
+	onClickLine: (seconds: number) => void;
 }
 
 export function SectionsComponent(props: SectionsComponentProps) {
 	return (
-		<>
-			{props.sections.map((section) => (
-				<div key={section.type === "Serif" ? section.text : section.url}>
-					{section.type === "Serif" && (
-						<p>
-							<span className="pr-2 text-small text-gray">
-								{section.speaker}
-							</span>
-							<span>{section.text}</span>
-						</p>
-					)}
-					{section.type === "Audio" && (
-						<p>
-							<span className="pr-2 text-small text-gray">♪</span>
-						</p>
-					)}
-				</div>
-			))}
-		</>
+		<div>
+			<SectionSentences
+				lines={props.lines}
+				toBeHighlight={(line) =>
+					props.isPlayingEpisode &&
+					line.startSeconds <= props.seconds &&
+					props.seconds < line.endSeconds
+				}
+				onClick={(line) => props.onClickLine(line.startSeconds)}
+			/>
+		</div>
 	);
 }

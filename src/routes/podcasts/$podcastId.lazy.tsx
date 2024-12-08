@@ -25,7 +25,7 @@ export function Podcast() {
 						<span className="bg-teal-300 w-16 h-16 rounded-xl flex items-center justify-center">
 							{podcast.icon}
 						</span>
-						<h1 className="grow pl-2 text-xl font-bold">{podcast.title}</h1>
+						<span className="grow pl-2 text-xl font-bold">{podcast.title}</span>
 						<p className="text-sm">
 							<Link
 								to="/podcasts/$podcastId/edit"

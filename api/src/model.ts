@@ -57,7 +57,7 @@ export const sectionsSchema = z.array(sectionSchema);
 
 export type Sections = z.infer<typeof sectionsSchema>;
 
-export type Episode = Omit<EpisodePrisma, "sections"> & {
+export type Episode = Omit<WithSerializedDates<EpisodePrisma>, "sections"> & {
   sections: Sections;
 };
 

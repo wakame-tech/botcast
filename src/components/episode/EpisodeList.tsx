@@ -23,6 +23,12 @@ function EpisodeList(props: EpisodeListProps) {
 	);
 }
 
+export const formatMmss = (duration_sec: number | null): string => {
+	return duration_sec
+		? dayjs.duration(duration_sec, "seconds").format("m:ss")
+		: "--:--";
+};
+
 interface EpisodeListItemProps {
 	episode: EpisodeDigest;
 }
@@ -45,11 +51,7 @@ function EpisodeListItem(props: EpisodeListItemProps) {
 						{dayjs(props.episode.created_at).format("YYYY-MM-DD HH:mm")}
 					</span>
 					<span className="font-bold">
-						{props.episode.duration_sec
-							? dayjs
-									.duration(props.episode.duration_sec, "seconds")
-									.format("m:ss")
-							: "--:--"}
+						{formatMmss(props.episode.duration_sec)}
 					</span>
 				</div>
 			</div>
