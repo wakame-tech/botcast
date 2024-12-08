@@ -3,6 +3,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "virtual:uno.css";
 
+import { extend } from "dayjs";
+import duration from "dayjs/plugin/duration";
+
+extend(duration);
+
 import { routeTree } from "./routeTree.gen";
 const router = createRouter({ routeTree });
 

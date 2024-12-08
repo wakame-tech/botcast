@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 
 type EpisodeDigest = Pick<
 	WithSerializedDates<Episode>,
-	"id" | "title" | "created_at"
+	"id" | "title" | "description" | "duration_sec" | "created_at"
 >;
 
 interface EpisodeListProps {
@@ -51,6 +51,13 @@ function EpisodeListItem(props: EpisodeListItemProps) {
 				<span className="text-xs text-gray">
 					{dayjs(props.episode.created_at).format("YYYY-MM-DD HH:mm")}
 				</span>
+				{props.episode.duration_sec && (
+					<span className="text-xs text-gray">
+						{dayjs
+							.duration(props.episode.duration_sec, "seconds")
+							.format("m:ss")}
+					</span>
+				)}
 			</p>
 		</>
 	);

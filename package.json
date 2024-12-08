@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "check": "npm run lint && npm run format && npm run build",
+    "check": "tsc && npm run lint && npm run format",
     "build": "tsc && vite build",
     "lint": "npx @biomejs/biome lint --write src",
     "format": "npx @biomejs/biome format --write src && npx @biomejs/biome check --write src",
