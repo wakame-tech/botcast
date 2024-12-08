@@ -194,14 +194,16 @@ export const appRouter = t.router({
   }),
   newPodcast: authProcedure.input(z.object({
     title: z.string(),
+    description: z.string().optional(),
     icon: z.string().regex(/\p{Emoji_Presentation}/gu),
   })).mutation(
     async (
-      { ctx: { user }, input: { title, icon } },
+      { ctx: { user }, input: { title, description, icon } },
     ) => {
       const podcast = await prisma.podcast.create({
         data: {
           title,
+          description,
           icon,
           user_id: user.id,
           created_at: new Date().toISOString(),
@@ -213,12 +215,14 @@ export const appRouter = t.router({
   updatePodcast: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
+    description: z.string().optional(),
   })).mutation(
-    async ({ input: { id, title } }) => {
+    async ({ input: { id, title, description } }) => {
       const podcast = await prisma.podcast.update({
         where: { id },
         data: {
           title,
+          description,
         },
       });
       return { podcast };
@@ -280,14 +284,16 @@ export const appRouter = t.router({
   newEpisode: authProcedure.input(z.object({
     podcastId: z.string(),
     title: z.string(),
+    description: z.string().optional(),
     sections: sectionsSchema,
   })).mutation(
     async (
-      { ctx: { user }, input: { podcastId, title, sections } },
+      { ctx: { user }, input: { podcastId, title, description, sections } },
     ) => {
       const episode = await prisma.episode.create({
         data: {
           title,
+          description,
           user_id: user.id,
           podcast_id: podcastId,
           sections,
@@ -300,10 +306,11 @@ export const appRouter = t.router({
   updateEpisode: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
-  })).mutation(async ({ input: { id, title } }) => {
+    description: z.string().optional(),
+  })).mutation(async ({ input: { id, title, description } }) => {
     const episode = await prisma.episode.update({
       where: { id },
-      data: { title },
+      data: { title, description },
     });
     return {
       ...episode,
@@ -331,13 +338,15 @@ export const appRouter = t.router({
   }),
   newScript: authProcedure.input(z.object({
     title: z.string(),
+    description: z.string().optional(),
     template: z.string(),
   })).mutation(
-    async ({ ctx: { user }, input: { title, template } }) => {
+    async ({ ctx: { user }, input: { title, description, template } }) => {
       const templateJson = JSON.parse(template);
       const script = await prisma.script.create({
         data: {
           title,
+          description,
           template: templateJson,
           user_id: user.id,
         },
@@ -348,13 +357,15 @@ export const appRouter = t.router({
   updateScript: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
+    description: z.string().optional(),
     template: z.string(),
-  })).mutation(async ({ input: { id, title, template } }) => {
+  })).mutation(async ({ input: { id, title, description, template } }) => {
     const templateJson = JSON.parse(template);
     await prisma.script.update({
       where: { id },
       data: {
         title,
+        description,
         template: templateJson,
       },
     });
