@@ -1,15 +1,17 @@
 model Episode {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title      String
-  audio_url  String?
-  sections   Json
-  srt_url    String?
-  podcast    Podcast   @relation(fields: [podcast_id], references: [id], onDelete: Cascade)
-  podcast_id String    @db.Uuid
-  user       User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  user_id    String?   @db.Uuid
-  created_at DateTime  @default(now()) @db.Timestamptz(3)
-  comments   Comment[]
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title        String
+  description  String?
+  duration_sec Int?
+  audio_url    String?
+  sections     Json
+  srt_url      String?
+  podcast      Podcast   @relation(fields: [podcast_id], references: [id], onDelete: Cascade)
+  podcast_id   String    @db.Uuid
+  user         User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id      String?   @db.Uuid
+  created_at   DateTime  @default(now()) @db.Timestamptz(3)
+  comments     Comment[]
 
   @@map("episodes")
 }
