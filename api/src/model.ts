@@ -57,7 +57,7 @@ export const sectionsSchema = z.array(sectionSchema);
 
 export type Sections = z.infer<typeof sectionsSchema>;
 
-export type Episode = Omit<EpisodePrisma, "sections"> & {
+export type Episode = Omit<WithSerializedDates<EpisodePrisma>, "sections"> & {
   sections: Sections;
 };
 
@@ -71,8 +71,30 @@ export const parseEpisode = (
 
 export type Podcast = WithSerializedDates<PodcastPrisma>;
 
+export const PodcastInputSchema = z.object({
+  icon: z.string().regex(/\p{Emoji_Presentation}/gu),
+  title: z.string(),
+  description: z.string().nullable(),
+});
+
+export type PodcastInput = z.infer<typeof PodcastInputSchema>;
+
 export type Comment = WithSerializedDates<CommentPrisma>;
+
+export const CommentInputSchema = z.object({
+  content: z.string(),
+});
+
+export type CommentInput = z.infer<typeof CommentInputSchema>;
 
 export type Script = Omit<ScriptPrisma, "template"> & {
   template: Record<string, unknown>;
 };
+
+export const ScriptInputSchema = z.object({
+  title: z.string(),
+  description: z.string().nullable(),
+  template: z.string(),
+});
+
+export type ScriptInput = z.infer<typeof ScriptInputSchema>;

@@ -1,52 +1,78 @@
-import { useRef, useState } from "react";
+import type { Episode } from "@/trpc";
+import { atom, useAtom } from "jotai";
+import { useRef } from "react";
 import ReactPlayer from "react-player";
 
+type PlayerState = {
+	episode: Episode | null;
+	seconds: number;
+	isPlaying: boolean;
+};
+
+const playerEpisodeAtom = atom<PlayerState>({
+	episode: null,
+	seconds: 0,
+	isPlaying: false,
+});
+
 export const usePlayer = () => {
+	const [state, setState] = useAtom(playerEpisodeAtom);
 	const ref = useRef<ReactPlayer>();
-	const [seconds, setSeconds] = useState(0);
-	const [isPlaying, setPlaying] = useState(false);
 
-	const seek = (seconds: number) => {
-		if (ref.current) {
-			ref.current.seekTo(seconds, "seconds");
-			setPlaying(true);
-		}
+	const setEpisode = (episode: Episode) => {
+		setState((state) => ({
+			...state,
+			episode,
+		}));
 	};
 
-	const play = () => {
-		setPlaying((playing) => !playing);
+	const playOrPause = () => {
+		setState((state) => ({
+			...state,
+			isPlaying: !state.isPlaying,
+		}));
 	};
 
-	const render = (url: string) => {
+	const seekTo = (seconds: number) => {
+		console.log(ref.current);
+		ref.current?.seekTo(seconds, "seconds");
+	};
+
+	const render = (url: string | null) => {
 		return (
-			<ReactPlayer
-				url={url}
-				playing={isPlaying}
-				config={{
-					file: {
-						forceAudio: true,
-					},
-				}}
-				width="100%"
-				height="100%"
-				ref={(player) => {
-					if (player) {
-						ref.current = player;
-					}
-				}}
-				progressInterval={300}
-				onProgress={({ playedSeconds }) => {
-					setSeconds(playedSeconds);
-				}}
-			/>
+			<>
+				<ReactPlayer
+					url={url ?? ""}
+					playing={state.isPlaying}
+					config={{
+						file: {
+							forceAudio: true,
+						},
+					}}
+					width="100%"
+					height="100%"
+					ref={(e) => {
+						if (e) {
+							ref.current = e;
+						}
+					}}
+					progressInterval={300}
+					onProgress={({ playedSeconds }) => {
+						setState({
+							...state,
+							seconds: playedSeconds,
+						});
+					}}
+				/>
+			</>
 		);
 	};
 
 	return {
-		isPlaying,
-		play,
-		seconds,
-		seek,
+		state,
+		setEpisode,
+		playOrPause,
+		seekTo,
 		render,
 	};
 };

@@ -9,6 +9,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { s3 } from "./presign.ts";
 import {
   parseEpisode,
+  PodcastInputSchema,
+  ScriptInputSchema,
   sectionsSchema,
   taskArgsSchema,
   withoutDates,
@@ -192,16 +194,14 @@ export const appRouter = t.router({
       },
     };
   }),
-  newPodcast: authProcedure.input(z.object({
-    title: z.string(),
-    icon: z.string().regex(/\p{Emoji_Presentation}/gu),
-  })).mutation(
+  newPodcast: authProcedure.input(PodcastInputSchema).mutation(
     async (
-      { ctx: { user }, input: { title, icon } },
+      { ctx: { user }, input: { title, description, icon } },
     ) => {
       const podcast = await prisma.podcast.create({
         data: {
           title,
+          description,
           icon,
           user_id: user.id,
           created_at: new Date().toISOString(),
@@ -213,12 +213,14 @@ export const appRouter = t.router({
   updatePodcast: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
+    description: z.string().optional(),
   })).mutation(
-    async ({ input: { id, title } }) => {
+    async ({ input: { id, title, description } }) => {
       const podcast = await prisma.podcast.update({
         where: { id },
         data: {
           title,
+          description,
         },
       });
       return { podcast };
@@ -237,11 +239,6 @@ export const appRouter = t.router({
       where: { id },
       include: {
         user: true,
-        comments: {
-          include: {
-            user: true,
-          },
-        },
       },
     });
     if (!episode) {
@@ -268,26 +265,36 @@ export const appRouter = t.router({
         });
       }
     }
-    const clientEpisode = parseEpisode(episode);
-    const comments = withoutDates(episode.comments);
     return {
-      episode: {
-        ...clientEpisode,
-        comments,
-      },
+      episode: parseEpisode(episode),
     };
+  }),
+  episodeComments: authProcedure.input(z.object({
+    episodeId: z.string(),
+  })).query(async ({ input: { episodeId } }) => {
+    const comments = await prisma.comment.findMany({
+      where: {
+        episode_id: episodeId,
+      },
+      include: {
+        user: true,
+      },
+    });
+    return { comments: withoutDates(comments) };
   }),
   newEpisode: authProcedure.input(z.object({
     podcastId: z.string(),
     title: z.string(),
+    description: z.string().optional(),
     sections: sectionsSchema,
   })).mutation(
     async (
-      { ctx: { user }, input: { podcastId, title, sections } },
+      { ctx: { user }, input: { podcastId, title, description, sections } },
     ) => {
       const episode = await prisma.episode.create({
         data: {
           title,
+          description,
           user_id: user.id,
           podcast_id: podcastId,
           sections,
@@ -300,10 +307,11 @@ export const appRouter = t.router({
   updateEpisode: authProcedure.input(z.object({
     id: z.string(),
     title: z.string(),
-  })).mutation(async ({ input: { id, title } }) => {
+    description: z.string().optional(),
+  })).mutation(async ({ input: { id, title, description } }) => {
     const episode = await prisma.episode.update({
       where: { id },
-      data: { title },
+      data: { title, description },
     });
     return {
       ...episode,
@@ -329,15 +337,13 @@ export const appRouter = t.router({
     }
     return { script: script as Script };
   }),
-  newScript: authProcedure.input(z.object({
-    title: z.string(),
-    template: z.string(),
-  })).mutation(
-    async ({ ctx: { user }, input: { title, template } }) => {
+  newScript: authProcedure.input(ScriptInputSchema).mutation(
+    async ({ ctx: { user }, input: { title, description, template } }) => {
       const templateJson = JSON.parse(template);
       const script = await prisma.script.create({
         data: {
           title,
+          description,
           template: templateJson,
           user_id: user.id,
         },
@@ -345,16 +351,15 @@ export const appRouter = t.router({
       return { script };
     },
   ),
-  updateScript: authProcedure.input(z.object({
+  updateScript: authProcedure.input(ScriptInputSchema.extend({
     id: z.string(),
-    title: z.string(),
-    template: z.string(),
-  })).mutation(async ({ input: { id, title, template } }) => {
+  })).mutation(async ({ input: { id, title, description, template } }) => {
     const templateJson = JSON.parse(template);
     await prisma.script.update({
       where: { id },
       data: {
         title,
+        description,
         template: templateJson,
       },
     });

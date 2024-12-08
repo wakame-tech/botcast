@@ -20,6 +20,8 @@ FAILED FAILED
   "episodes" {
     String id "🗝️"
     String title 
+    String description "❓"
+    Int duration_sec "❓"
     String audio_url "❓"
     Json sections 
     String srt_url "❓"
@@ -32,6 +34,7 @@ FAILED FAILED
   "podcasts" {
     String id "🗝️"
     String title 
+    String description "❓"
     String icon 
     String user_id "❓"
     DateTime created_at 
@@ -41,6 +44,7 @@ FAILED FAILED
   "scripts" {
     String id "🗝️"
     String title 
+    String description "❓"
     Json template 
     String user_id 
     }

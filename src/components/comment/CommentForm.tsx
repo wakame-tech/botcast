@@ -1,29 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { CommentInputSchema } from "@/trpc.ts";
+import type { CommentInput } from "@/trpc.ts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 interface CommentFormProps {
-	onSubmit: (values: CommentEditFormValues) => void;
+	onSubmit: (values: CommentInput) => void;
 }
 
-const commentEditFormSchema = z.object({
-	content: z.string(),
-});
-
-export type CommentEditFormValues = z.infer<typeof commentEditFormSchema>;
-
 export function CommentForm(props: CommentFormProps) {
-	const form = useForm<z.infer<typeof commentEditFormSchema>>({
-		resolver: zodResolver(commentEditFormSchema),
+	const form = useForm<CommentInput>({
+		resolver: zodResolver(CommentInputSchema),
 		defaultValues: {
 			content: "",
-		},
+		} satisfies CommentInput,
 	});
 
-	const onSubmit = (values: CommentEditFormValues) => {
+	const onSubmit = (values: CommentInput) => {
 		form.reset();
 		props.onSubmit(values);
 	};

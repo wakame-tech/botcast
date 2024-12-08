@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header.tsx";
+import { EpisodePlayer } from "@/components/episode/EpisodePlayer";
 import { useSession } from "@/hooks/useSession.ts";
 import { supabase } from "@/supabase.ts";
 import { trpc } from "@/trpc.ts";
@@ -54,6 +55,9 @@ export function App() {
 				<QueryClientProvider client={queryClient}>
 					<Header session={session} />
 					<Outlet />
+					<div className="mb-16">
+						<EpisodePlayer />
+					</div>
 				</QueryClientProvider>
 			</trpc.Provider>
 		</>

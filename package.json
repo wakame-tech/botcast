@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "check": "npm run lint && npm run format && npm run build",
+    "check": "tsc && npm run lint && npm run format",
     "build": "tsc && vite build",
     "lint": "npx @biomejs/biome lint --write src",
     "format": "npx @biomejs/biome format --write src && npx @biomejs/biome check --write src",
@@ -32,6 +32,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
+    "jotai": "^2.10.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.0",

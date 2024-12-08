@@ -8,31 +8,27 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ScriptInputSchema } from "@/trpc.ts";
+import type { ScriptInput } from "@/trpc.ts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 interface ScriptFormProps {
 	disabled?: boolean;
-	values?: ScriptEditFormValues;
-	onSubmit: (values: ScriptEditFormValues) => void;
-	onEvaluate?: (values: ScriptEditFormValues) => void;
+	values?: ScriptInput;
+	onSubmit: (values: ScriptInput) => void;
 }
 
-const scriptEditFormSchema = z.object({
-	title: z.string(),
-	template: z.string(),
-});
-
-export type ScriptEditFormValues = z.infer<typeof scriptEditFormSchema>;
-
 export function ScriptForm(props: ScriptFormProps) {
-	const form = useForm<z.infer<typeof scriptEditFormSchema>>({
-		resolver: zodResolver(scriptEditFormSchema),
-		defaultValues: props.values ?? {
-			title: "NewScript",
-			template: "",
-		},
+	const form = useForm<ScriptInput>({
+		resolver: zodResolver(ScriptInputSchema),
+		defaultValues:
+			props.values ??
+			({
+				title: "NewScript",
+				description: "",
+				template: "",
+			} satisfies ScriptInput),
 	});
 
 	return (
@@ -46,6 +42,23 @@ export function ScriptForm(props: ScriptFormProps) {
 							<FormLabel>タイトル</FormLabel>
 							<FormControl>
 								<Input placeholder="title" {...field} />
+							</FormControl>
+						</FormItem>
+					)}
+				/>
+
+				<FormField
+					control={form.control}
+					name="description"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>説明</FormLabel>
+							<FormControl>
+								<Input
+									placeholder="description"
+									{...field}
+									value={field.value ?? undefined}
+								/>
 							</FormControl>
 						</FormItem>
 					)}
