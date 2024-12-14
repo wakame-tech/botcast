@@ -2,17 +2,17 @@ import Form from "@rjsf/core";
 import type { RJSFSchema } from "@rjsf/utils";
 import validator from "@rjsf/validator-ajv8";
 
-interface SchemaFormProps {
+interface ArgumentsFormProps {
 	schema: RJSFSchema;
-	onSubmit?: (values: unknown) => void;
+	onChange?: (values: Record<string, unknown>) => void;
 }
 
-export function SchemaForm(props: SchemaFormProps) {
+export function ArgumentsForm(props: ArgumentsFormProps) {
 	return (
 		<Form
 			schema={props.schema}
 			validator={validator}
-			onSubmit={props.onSubmit}
+			onChange={(e) => props.onChange?.(e.formData as Record<string, unknown>)}
 		/>
 	);
 }

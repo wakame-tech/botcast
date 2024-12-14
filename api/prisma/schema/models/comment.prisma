@@ -1,11 +1,11 @@
 model Comment {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   content    String
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id    String   @db.Uuid
-  episode    Episode  @relation(fields: [episode_id], references: [id], onDelete: Cascade)
   episode_id String   @db.Uuid
   created_at DateTime @default(now()) @db.Timestamptz(3)
+  episode    Episode  @relation(fields: [episode_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("comments")
 }
