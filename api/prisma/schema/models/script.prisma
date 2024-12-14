@@ -1,10 +1,11 @@
 model Script {
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  template    Json
+  user_id     String  @db.Uuid
   title       String
   description String?
-  template    Json
+  arguments   Json    @default("{}")
   user        User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  user_id     String  @db.Uuid
 
   @@map("scripts")
 }

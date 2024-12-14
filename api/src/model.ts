@@ -27,7 +27,7 @@ export const taskArgsSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("evaluateTemplate"),
     template: z.any(),
-    context: z.record(z.any()),
+    parameters: z.record(z.any()),
   }),
 ]);
 
@@ -87,7 +87,8 @@ export const CommentInputSchema = z.object({
 
 export type CommentInput = z.infer<typeof CommentInputSchema>;
 
-export type Script = Omit<ScriptPrisma, "template"> & {
+export type Script = Omit<ScriptPrisma, "arguments" | "template"> & {
+  arguments: Record<string, unknown>;
   template: Record<string, unknown>;
 };
 

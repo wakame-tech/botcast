@@ -1,9 +1,10 @@
-import { SchemaForm } from "@/components/script/SchemaForm";
+import { ArgumentsForm } from "@/components/script/ArgumentsForm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useEvaluateScript } from "@/hooks/useEvaluateScript";
 import { trpc } from "@/trpc.ts";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 export const Route = createLazyFileRoute("/scripts/$scriptId")({
 	component: Script,
@@ -13,6 +14,7 @@ export function Script() {
 	const navigate = useNavigate();
 	const { scriptId } = Route.useParams();
 	const getScript = trpc.script.useQuery({ id: scriptId });
+	const [parameters, setParameters] = useState<Record<string, unknown>>({});
 	const { evaluate, running, taskResult } = useEvaluateScript();
 	const deleteScript = trpc.deleteScript.useMutation();
 
@@ -40,14 +42,17 @@ export function Script() {
 				<code>{JSON.stringify(script.template, null, 4)}</code>
 			</pre>
 
-			{script.template.parameters && (
-				<SchemaForm schema={script.template.parameters} />
+			{Object.keys(script.arguments).length !== 0 && (
+				<ArgumentsForm
+					schema={script.arguments}
+					onChange={(e) => setParameters(e)}
+				/>
 			)}
 
 			<Button
 				type="button"
 				disabled={running}
-				onClick={() => evaluate(script.template)}
+				onClick={() => evaluate(script.template, parameters)}
 			>
 				実行
 			</Button>

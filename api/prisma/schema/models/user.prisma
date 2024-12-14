@@ -3,11 +3,11 @@ model User {
   auth_id  String    @unique
   email    String    @unique
   name     String?
-  scripts  Script[]
-  podcasts Podcast[]
-  episodes Episode[]
-  tasks    Task[]
   comments Comment[]
+  episodes Episode[]
+  podcasts Podcast[]
+  scripts  Script[]
+  tasks    Task[]
 
   @@map("users")
 }

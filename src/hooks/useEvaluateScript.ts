@@ -34,13 +34,16 @@ export const useEvaluateScript = () => {
 		return () => clearInterval(id);
 	}, [taskId, getTask]);
 
-	const evaluate = async (template: Record<string, unknown>) => {
+	const evaluate = async (
+		template: Record<string, unknown>,
+		parameters: Record<string, unknown>,
+	) => {
 		const { task } = await addTask.mutateAsync({
 			cron: null,
 			args: {
 				type: "evaluateTemplate",
 				template: JSON.parse(JSON.stringify(template)),
-				context: {},
+				parameters: JSON.parse(JSON.stringify(parameters)),
 			},
 		});
 		setTaskId(task.id);
