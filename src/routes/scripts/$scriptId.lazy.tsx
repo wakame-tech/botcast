@@ -33,6 +33,8 @@ export function Script() {
 		<>
 			<h1>{script.title}</h1>
 
+			<p>{script.description}</p>
+
 			<Link to="/scripts/$scriptId/edit" params={{ scriptId }}>
 				<Button>edit</Button>
 			</Link>

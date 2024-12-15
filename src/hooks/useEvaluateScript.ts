@@ -34,25 +34,42 @@ export const useEvaluateScript = () => {
 		return () => clearInterval(id);
 	}, [taskId, getTask]);
 
+	const addEvaluateTemplateTask = (
+		cron: string | null,
+		template: Record<string, unknown>,
+		parameters: Record<string, unknown>,
+	) => {
+		return addTask.mutateAsync({
+			cron,
+			args: {
+				type: "evaluateTemplate",
+				template,
+				parameters,
+			},
+		});
+	};
+
 	const evaluate = async (
 		template: Record<string, unknown>,
 		parameters: Record<string, unknown>,
 	) => {
-		const { task } = await addTask.mutateAsync({
-			cron: null,
-			args: {
-				type: "evaluateTemplate",
-				template: JSON.parse(JSON.stringify(template)),
-				parameters: JSON.parse(JSON.stringify(parameters)),
-			},
-		});
+		const { task } = await addEvaluateTemplateTask(null, template, parameters);
 		setTaskId(task.id);
+	};
+
+	const addScheduledTask = async (
+		cron: string,
+		template: Record<string, unknown>,
+		parameters: Record<string, unknown>,
+	) => {
+		await addEvaluateTemplateTask(cron, template, parameters);
 	};
 
 	return {
 		taskId,
 		taskResult,
 		evaluate,
+		addScheduledTask,
 		running: taskId !== null,
 	};
 };

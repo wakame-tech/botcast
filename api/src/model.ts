@@ -26,7 +26,7 @@ export const taskArgsSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("evaluateTemplate"),
-    template: z.any(),
+    template: z.record(z.any()),
     parameters: z.record(z.any()),
   }),
 ]);
