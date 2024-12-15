@@ -1,3 +1,5 @@
+import Podcast from "@/components/podcast/PodcastList";
+import { trpc } from "@/trpc";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/")({
@@ -5,9 +7,12 @@ export const Route = createLazyFileRoute("/")({
 });
 
 function Index() {
+	const getTopPodcasts = trpc.topPodcasts.useQuery();
+	const podcasts = getTopPodcasts.data?.podcasts ?? [];
+
 	return (
-		<div className="p-2">
-			<h1>index</h1>
+		<div>
+			<Podcast.List podcasts={podcasts} />
 		</div>
 	);
 }

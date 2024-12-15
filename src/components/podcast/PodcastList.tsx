@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Podcast, User } from "@/trpc";
 import { Link } from "@tanstack/react-router";
-import { Button } from "../ui/button";
 import { UserIcon } from "../user/UserIcon";
 
 interface PodcastListProps {
@@ -11,12 +10,6 @@ interface PodcastListProps {
 function PodcastList(props: PodcastListProps) {
 	return (
 		<>
-			<div className="pb-2 flex items-center">
-				<div className="flex-grow" />
-				<Link to="/podcasts/new">
-					<Button>新規作成</Button>
-				</Link>
-			</div>
 			{props.podcasts.map((podcast) => (
 				<div key={podcast.id} className="p-2">
 					<PodcastListItem podcast={podcast} />
