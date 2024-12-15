@@ -1,5 +1,4 @@
 import Podcast from "@/components/podcast/PodcastList";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/trpc";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
@@ -13,14 +12,7 @@ export default function Podcasts() {
 
 	return (
 		<div>
-			<Card>
-				<CardHeader>
-					<CardTitle>ポッドキャスト</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<Podcast.List podcasts={podcasts} />
-				</CardContent>
-			</Card>
+			<Podcast.List podcasts={podcasts} />
 		</div>
 	);
 }

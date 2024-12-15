@@ -18,7 +18,9 @@ export default function EditPodcast() {
 	const handleSubmit = async (values: PodcastInput) => {
 		await updatePodcast.mutateAsync({
 			id: podcastId,
+			icon: values.icon,
 			title: values.title,
+			description: values.description,
 		});
 		navigate({ to: "/podcasts/$podcastId", params: { podcastId } });
 	};

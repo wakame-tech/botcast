@@ -4,7 +4,7 @@ import Avatar from "boring-avatars";
 interface UserIconProps {
 	size?: string;
 	userId: string;
-	label?: string;
+	label?: string | null;
 }
 
 export function UserIcon(props: UserIconProps) {

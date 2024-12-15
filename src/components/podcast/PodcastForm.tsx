@@ -54,6 +54,24 @@ export function PodcastForm(props: PodcastFormProps) {
 
 				<FormField
 					control={form.control}
+					name="icon"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>アイコン(絵文字1文字)</FormLabel>
+							<FormControl>
+								<Input
+									placeholder="icon"
+									{...field}
+									value={field.value ?? undefined}
+								/>
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+
+				<FormField
+					control={form.control}
 					name="description"
 					render={({ field }) => (
 						<FormItem>

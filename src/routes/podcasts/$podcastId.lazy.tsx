@@ -21,7 +21,7 @@ export function Podcast() {
 		<>
 			<Card>
 				<CardHeader>
-					<CardTitle className="flex-inline content-center gap-2">
+					<CardTitle className="flex-inline items-center gap-2">
 						<span className="bg-teal-300 w-16 h-16 rounded-xl flex items-center justify-center">
 							{podcast.icon}
 						</span>

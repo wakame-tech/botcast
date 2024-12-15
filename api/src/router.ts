@@ -212,6 +212,9 @@ export const appRouter = t.router({
       where: {
         user,
       },
+      include: {
+        user: true,
+      },
     });
     return { podcasts: withoutDates(podcasts) };
   }),
@@ -252,16 +255,17 @@ export const appRouter = t.router({
       return { podcast };
     },
   ),
-  updatePodcast: authProcedure.input(z.object({
-    id: z.string(),
-    title: z.string(),
-    description: z.string().optional(),
-  })).mutation(
-    async ({ input: { id, title, description } }) => {
+  updatePodcast: authProcedure.input(
+    z.object({
+      id: z.string(),
+    }).merge(PodcastInputSchema),
+  ).mutation(
+    async ({ input: { id, title, icon, description } }) => {
       const podcast = await prisma.podcast.update({
         where: { id },
         data: {
           title,
+          icon,
           description,
         },
       });
@@ -350,10 +354,11 @@ export const appRouter = t.router({
     id: z.string(),
     title: z.string(),
     description: z.string().optional(),
-  })).mutation(async ({ input: { id, title, description } }) => {
+    sections: sectionsSchema.optional(),
+  })).mutation(async ({ input: { id, title, description, sections } }) => {
     const episode = await prisma.episode.update({
       where: { id },
-      data: { title, description },
+      data: { title, description, sections },
     });
     return {
       ...episode,
