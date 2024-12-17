@@ -145,3 +145,33 @@ const template = let_in(
   - workerのトレースをOpenTelemetry CollectorにTraceを送信してJaegerで確認できるようになった。
 - 【スクリプト】環境変数を設定出来るようにする [#60](https://github.com/wakame-tech/botcast/issues/60)
 - 【スクリプト】コメント機能 [#42](https://github.com/wakame-tech/botcast-worker/issues/42)
+
+## Sprint 2024-12-04
+
+- fix: UIを整えた
+  - プレイヤーの状態管理に jotai を導入しました。
+
+![](https://private-user-images.githubusercontent.com/129728379/394549248-326accab-e9f3-4cdb-ac4f-5c00ee17a814.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MzQ0NTYwNTYsIm5iZiI6MTczNDQ1NTc1NiwicGF0aCI6Ii8xMjk3MjgzNzkvMzk0NTQ5MjQ4LTMyNmFjY2FiLWU5ZjMtNGNkYi1hYzRmLTVjMDBlZTE3YTgxNC5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjQxMjE3JTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI0MTIxN1QxNzE1NTZaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1mZmVlOThjYjBhNDc5MTdiOGZhYzFhMDI2NTM5Nzc5ZjM1MTc4MTEzY2U0ZTAxYmVlZGZlZDE0MGQzMDBhZmE5JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.RYlVO42r6gz3U_EjQjU7SkL3zdpBFS0Dha9ggBIh2aA)
+
+- fix: 定期実行機能をタスクに持たせるように
+- feat: 音声ファイルのサポート
+  - 合成音声に加えてジングル等のSEが流せるようになりました。BGMは流せません。
+  - 区間指定だけ出来ます。裏はffmpeg使っています。
+- fix: ポッドキャスト・エピソード・スクリプトにdescriptionを追加
+- feat: スクリプトの機能追加
+  - `function_calling(open_ai_api_key, prompt, function)`
+    - スクリプトにJSON schemaを保存しておき, この関数に渡す想定です。関数は1個に制限しています。
+
+## Sprint 2024-12-11
+
+- どのようにして番組デモ・お便りデモを作るか考えています
+  - コーナーのテンプレートを作って話題をプロンプトとして与える?
+    - <http://melody-flag.com/>
+    - パーソナリティ・リスナーに属性を設定して行動させたい
+      - 属性はデータとしてのスクリプトで設定する
+  - RSSフィードからランダムに選ぶ?
+    - RSSをパースする関数と乱数を追加したので `text(fetch(choice(rss(fetch('https://zenn.dev/feed')).items).link))` と書ける
+  - アニメ/音楽紹介番組
+    - アニメのあらすじ等をAPIで提供しているものがあまり見つからない...
+    - Spotifyで30秒のプレビューが取れなくなっている...
+- [Dify](https://docs.dify.ai/ja-jp) でエピソード投稿をするワークフローを作ろうとしています

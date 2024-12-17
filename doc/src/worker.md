@@ -13,9 +13,14 @@ nav_order: 3
 graph TD;
   worker --> script_runtime;
   worker --> repos;
-  worker --> readable_text;
+  worker --> audio_generator
+  worker --> api
+  script_runtime --> api;
   script_runtime --> script_http_client;
   script_runtime --> script_llm;
+  script_runtime --> readable_text;
+  cli --> api;
+  cli --> script_runtime;
 ```
 
 ## スクリプト評価
