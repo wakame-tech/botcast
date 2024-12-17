@@ -15,21 +15,25 @@ export function Header({ session }: { session: Session | null }) {
 				<Link to="/" className="font-bold text-teal-700 text-3xl no-underline">
 					Botcast
 				</Link>
-				<div className="pl-2">
-					<Link to="/podcasts" className="no-underline">
-						<span className="text-lg font-bold">ポッドキャスト</span>
-					</Link>
-				</div>
-				<div className="pl-2">
-					<Link to="/scripts" className="no-underline">
-						<span className="text-lg font-bold">スクリプト</span>
-					</Link>
-				</div>
-				<div className="pl-2">
-					<Link to="/tasks" className="no-underline">
-						<span className="text-lg font-bold">タスク</span>
-					</Link>
-				</div>
+				{session && (
+					<>
+						<div className="pl-2">
+							<Link to="/podcasts" className="no-underline">
+								<span className="text-lg font-bold">ポッドキャスト</span>
+							</Link>
+						</div>
+						<div className="pl-2">
+							<Link to="/scripts" className="no-underline">
+								<span className="text-lg font-bold">スクリプト</span>
+							</Link>
+						</div>
+						<div className="pl-2">
+							<Link to="/tasks" className="no-underline">
+								<span className="text-lg font-bold">タスク</span>
+							</Link>
+						</div>
+					</>
+				)}
 
 				<div className="flex-grow" />
 				<>

@@ -1,6 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "@prisma/client";
-import type { Script, Sections, Task } from "./model.ts";
+import type { Script, Sections, Task, TaskArgs } from "./model.ts";
 import { createSecret, deleteSecret, listSecrets } from "./vault.ts";
 import { z } from "zod";
 // @ts-ignore: cannot resolve deps from npm package
@@ -128,10 +128,16 @@ export const appRouter = t.router({
       input.deletionIds.map((id) => deleteSecret(prisma, user.id, id)),
     );
   }),
-  tasks: authProcedure.query(async ({ ctx: { user } }) => {
+  tasks: authProcedure.input(z.object({
+    includesCompleted: z.boolean().default(false),
+  })).query(async ({ ctx: { user }, input: { includesCompleted } }) => {
     const tasks = await prisma.task.findMany({
       where: {
         user,
+        status: includesCompleted ? undefined : "PENDING",
+      },
+      orderBy: {
+        executed_at: "desc",
       },
     });
     return { tasks: withoutDates(tasks as Task[]) };
@@ -165,10 +171,61 @@ export const appRouter = t.router({
       return { task };
     },
   ),
+  addEvaluateTemplateTaskById: authProcedure.input(z.object({
+    id: z.string(),
+    cron: z.string(),
+  })).mutation(async ({ ctx: { user }, input: { id, cron } }) => {
+    const script = await prisma.script.findUnique({
+      where: { id },
+    });
+    if (!script) {
+      throw not_found(id);
+    }
+    if (Object.keys(JSON.parse(JSON.stringify(script.arguments))).length > 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "evaluateTemplate task must not have arguments",
+      });
+    }
+    await prisma.task.create({
+      data: {
+        user_id: user.id,
+        cron,
+        status: "PENDING",
+        args: {
+          type: "evaluateTemplate",
+          template: JSON.parse(JSON.stringify(script.template)),
+          parameters: {},
+        } satisfies TaskArgs,
+      },
+    });
+    return;
+  }),
+  deleteTask: authProcedure.input(z.object({
+    id: z.string(),
+  })).mutation(async ({ input: { id } }) => {
+    await prisma.task.delete({ where: { id } });
+    return;
+  }),
+  topPodcasts: t.procedure.query(async () => {
+    const podcasts = await prisma.podcast.findMany({
+      include: {
+        user: true,
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+      take: 10,
+    });
+    return { podcasts: withoutDates(podcasts) };
+  }),
   podcasts: authProcedure.query(async ({ ctx: { user } }) => {
     const podcasts = await prisma.podcast.findMany({
       where: {
         user,
+      },
+      include: {
+        user: true,
       },
     });
     return { podcasts: withoutDates(podcasts) };
@@ -210,16 +267,17 @@ export const appRouter = t.router({
       return { podcast };
     },
   ),
-  updatePodcast: authProcedure.input(z.object({
-    id: z.string(),
-    title: z.string(),
-    description: z.string().optional(),
-  })).mutation(
-    async ({ input: { id, title, description } }) => {
+  updatePodcast: authProcedure.input(
+    z.object({
+      id: z.string(),
+    }).merge(PodcastInputSchema),
+  ).mutation(
+    async ({ input: { id, title, icon, description } }) => {
       const podcast = await prisma.podcast.update({
         where: { id },
         data: {
           title,
+          icon,
           description,
         },
       });
@@ -308,10 +366,11 @@ export const appRouter = t.router({
     id: z.string(),
     title: z.string(),
     description: z.string().optional(),
-  })).mutation(async ({ input: { id, title, description } }) => {
+    sections: sectionsSchema.optional(),
+  })).mutation(async ({ input: { id, title, description, sections } }) => {
     const episode = await prisma.episode.update({
       where: { id },
-      data: { title, description },
+      data: { title, description, sections },
     });
     return {
       ...episode,

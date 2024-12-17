@@ -1,22 +1,17 @@
-import type { Podcast } from "@/trpc";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Podcast, User } from "@/trpc";
 import { Link } from "@tanstack/react-router";
-import { Button } from "../ui/button";
+import { UserIcon } from "../user/UserIcon";
 
 interface PodcastListProps {
-	podcasts: Podcast[];
+	podcasts: (Podcast & { user: User | null })[];
 }
 
 function PodcastList(props: PodcastListProps) {
 	return (
 		<>
-			<div className="pb-2 flex items-center">
-				<div className="flex-grow" />
-				<Link to="/podcasts/new">
-					<Button>新規作成</Button>
-				</Link>
-			</div>
 			{props.podcasts.map((podcast) => (
-				<div key={podcast.id} className="p-2 bg-teal-50">
+				<div key={podcast.id} className="p-2">
 					<PodcastListItem podcast={podcast} />
 				</div>
 			))}
@@ -25,19 +20,40 @@ function PodcastList(props: PodcastListProps) {
 }
 
 interface PodcastListItemProps {
-	podcast: Podcast;
+	podcast: Podcast & { user: User | null };
 }
 
 function PodcastListItem(props: PodcastListItemProps) {
 	return (
 		<>
-			<Link
-				to="/podcasts/$podcastId"
-				params={{ podcastId: props.podcast.id }}
-				className="no-underline"
-			>
-				<span className="text-xl font-bold">{props.podcast.title}</span>
-			</Link>
+			<Card>
+				<CardHeader>
+					<CardTitle>
+						<div className="pb-2">
+							<UserIcon
+								size="1.5rem"
+								userId={props.podcast.user?.id ?? ""}
+								label={props.podcast.user?.name ?? ""}
+							/>
+						</div>
+						<div className="flex-inline items-center gap-2">
+							<span className="bg-teal-300 w-16 h-16 rounded-xl flex items-center justify-center">
+								{props.podcast.icon}
+							</span>
+							<Link
+								to="/podcasts/$podcastId"
+								params={{ podcastId: props.podcast.id }}
+								className="no-underline"
+							>
+								<span className="pl-2 text-xl font-bold">
+									{props.podcast.title}
+								</span>
+							</Link>
+						</div>
+					</CardTitle>
+				</CardHeader>
+				<CardContent>{props.podcast.description}</CardContent>
+			</Card>
 		</>
 	);
 }
