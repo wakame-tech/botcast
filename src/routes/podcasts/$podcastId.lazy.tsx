@@ -1,3 +1,4 @@
+import { CornerList } from "@/components/corner/CornerList.tsx";
 import Episode from "@/components/episode/EpisodeList.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserIcon } from "@/components/user/UserIcon";
@@ -45,6 +46,9 @@ export function Podcast() {
 						label={podcast.user.name ?? undefined}
 					/>
 					{podcast.description}
+
+					<h2>コーナー ({podcast.corners.length})</h2>
+					<CornerList corners={podcast.corners} />
 
 					<h2>エピソード ({podcast.episodes.length})</h2>
 					<Episode.List episodes={podcast.episodes} />

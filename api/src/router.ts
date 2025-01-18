@@ -15,6 +15,7 @@ import {
   taskArgsSchema,
   withoutDates,
 } from "./model.ts";
+// @ts-ignore: cannot resolve deps from npm package
 import { isValidSchema, validate } from "npm:jtd";
 
 const supabase = createClient(
@@ -532,7 +533,7 @@ export const appRouter = t.router({
         corner.mail_schema as object,
         body,
       );
-      if (errors) {
+      if (errors.length > 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: JSON.stringify(errors),
