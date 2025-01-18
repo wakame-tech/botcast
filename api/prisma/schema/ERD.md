@@ -84,7 +84,7 @@ FAILED FAILED
   
     "corners" o|--|| "users" : "user"
     "corners" o|--|| "podcasts" : "podcast"
-    "corners" o{--}o "mails" : "Mail"
+    "corners" o{--}o "mails" : "mails"
     "episodes" o|--|| "podcasts" : "podcast"
     "episodes" o|--|o "users" : "user"
     "mails" o|--|| "users" : "user"

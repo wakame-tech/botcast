@@ -9,13 +9,13 @@ interface CornerListProps {
 
 export function CornerList(props: CornerListProps) {
 	return (
-		<>
+		<div className="flex flex-wrap gap-4">
 			{props.corners.map((corner) => (
 				<div key={corner.id}>
 					<CornerListItem corner={corner} />
 				</div>
 			))}
-		</>
+		</div>
 	);
 }
 
@@ -43,6 +43,13 @@ function CornerListItem(props: CornerListItemProps) {
 								params={{ cornerId: props.corner.id }}
 							>
 								<Button>メールを送る</Button>
+							</Link>
+
+							<Link
+								to="/corners/$cornerId"
+								params={{ cornerId: props.corner.id }}
+							>
+								<Button>コーナー詳細</Button>
 							</Link>
 						</div>
 					)}

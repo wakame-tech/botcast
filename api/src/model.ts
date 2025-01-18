@@ -106,7 +106,7 @@ export const CornerInputSchema = z.object({
 
 export type CornerInput = z.infer<typeof CornerInputSchema>;
 
-export type Mail = Omit<WithSerializedDates<MailPrisma>, "body"> & {
+export type Mail = Omit<MailPrisma, "body"> & {
   body: Record<string, unknown>;
 };
 

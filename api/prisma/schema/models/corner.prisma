@@ -8,7 +8,7 @@ model Corner {
   user            User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   podcast_id      String  @db.Uuid
   podcast         Podcast @relation(fields: [podcast_id], references: [id], onDelete: Cascade)
-  Mail            Mail[]
+  mails           Mail[]
 
   @@map("corners")
 }

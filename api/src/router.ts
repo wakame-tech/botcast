@@ -1,6 +1,13 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "@prisma/client";
-import type { Corner, Script, Sections, Task, TaskArgs } from "./model.ts";
+import type {
+  Corner,
+  Mail,
+  Script,
+  Sections,
+  Task,
+  TaskArgs,
+} from "./model.ts";
 import { createSecret, deleteSecret, listSecrets } from "./vault.ts";
 import { z } from "zod";
 // @ts-ignore: cannot resolve deps from npm package
@@ -469,7 +476,7 @@ export const appRouter = t.router({
           title,
           description,
           user_id: user.id,
-          requesting_mail: !mail_schema,
+          requesting_mail: !!mail_schema,
           mail_schema: mail_schema ? JSON.parse(mail_schema) : null,
         },
       });
@@ -485,7 +492,9 @@ export const appRouter = t.router({
     if (!corner) {
       throw not_found(id);
     }
-    return { corner: corner as Corner };
+    return {
+      corner: corner as Corner,
+    };
   }),
   updateCorner: authProcedure.input(z.object({
     id: z.string(),
@@ -557,7 +566,7 @@ export const appRouter = t.router({
         corner_id: cornerId,
       },
     });
-    return { mails };
+    return { mails: withoutDates(mails as Mail[]) };
   }),
   deleteMail: authProcedure.input(z.object({
     id: z.string(),

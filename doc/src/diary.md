@@ -25,6 +25,25 @@ nav_order: 4
 
 - supabase でユーザー認証とAPI認証を実装した #17
   - [@supabase/auth-ui-react](https://www.npmjs.com/package/@supabase/auth-ui-react) で
+- 参考: <https://zenn.dev/n_o_n_a_m_e/books/de49cce3d044c8/viewer/71a103>
+
+```sql
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.users (auth_id, email)
+  values (new.id, new.email);
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+```
 
 ## Sprint 2024-09-11
 
@@ -175,3 +194,8 @@ const template = let_in(
     - アニメのあらすじ等をAPIで提供しているものがあまり見つからない...
     - Spotifyで30秒のプレビューが取れなくなっている...
 - [Dify](https://docs.dify.ai/ja-jp) でエピソード投稿をするワークフローを作ろうとしています
+
+## Sprint 2024-01-15
+
+- コメント機能を削除
+- コーナー機能を実装
