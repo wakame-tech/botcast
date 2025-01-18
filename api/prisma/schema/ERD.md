@@ -15,6 +15,7 @@ FAILED FAILED
     Boolean requesting_mail 
     Json mail_schema 
     String user_id 
+    String podcast_id 
     }
   
 
@@ -34,7 +35,6 @@ FAILED FAILED
 
   "mails" {
     String id "🗝️"
-    String name 
     Json body 
     String user_id 
     String corner_id 
@@ -83,7 +83,7 @@ FAILED FAILED
     }
   
     "corners" o|--|| "users" : "user"
-    "corners" o{--}o "podcasts" : "podcasts"
+    "corners" o|--|| "podcasts" : "podcast"
     "corners" o{--}o "mails" : "Mail"
     "episodes" o|--|| "podcasts" : "podcast"
     "episodes" o|--|o "users" : "user"

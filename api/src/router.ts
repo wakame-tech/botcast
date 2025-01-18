@@ -1,6 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "@prisma/client";
-import type { Script, Sections, Task, TaskArgs } from "./model.ts";
+import type { Corner, Script, Sections, Task, TaskArgs } from "./model.ts";
 import { createSecret, deleteSecret, listSecrets } from "./vault.ts";
 import { z } from "zod";
 // @ts-ignore: cannot resolve deps from npm package
@@ -15,6 +15,7 @@ import {
   taskArgsSchema,
   withoutDates,
 } from "./model.ts";
+import { isValidSchema, validate } from "npm:jtd";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -30,47 +31,60 @@ interface Context {
 
 const t = initTRPC.context<Context>().create();
 
-const authProcedure = t.procedure.use(
-  async ({ ctx: { accessToken }, next }) => {
-    if (!accessToken) {
-      throw unauthorized();
-    }
-    if (accessToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+const authProcedure = t.procedure
+  .use(async (opts) => {
+    const start = Date.now();
+
+    const result = await opts.next();
+
+    const durationMs = Date.now() - start;
+    const meta = { path: opts.path, type: opts.type, durationMs };
+
+    result.ok ? console.log("Ok", meta) : console.error("Error", meta, result);
+
+    return result;
+  })
+  .use(
+    async ({ ctx: { accessToken }, next }) => {
+      if (!accessToken) {
+        throw unauthorized();
+      }
+      if (accessToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+        const user = await prisma.user.findUnique({
+          where: {
+            auth_id: Deno.env.get("SUPABASE_SERVICE_ROLE_USER_ID"),
+          },
+        });
+        if (!user) {
+          throw unauthorized();
+        }
+        return next({
+          ctx: {
+            user,
+          },
+        });
+      }
+      const { data: { user: authUser } } = await supabase.auth.getUser(
+        accessToken,
+      );
+      if (!authUser) {
+        throw unauthorized();
+      }
       const user = await prisma.user.findUnique({
         where: {
-          auth_id: Deno.env.get("SUPABASE_SERVICE_ROLE_USER_ID"),
+          auth_id: authUser.id,
         },
       });
       if (!user) {
-        throw unauthorized();
+        throw unauthorized;
       }
       return next({
         ctx: {
           user,
         },
       });
-    }
-    const { data: { user: authUser } } = await supabase.auth.getUser(
-      accessToken,
-    );
-    if (!authUser) {
-      throw new Error("Invalid access token");
-    }
-    const user = await prisma.user.findUnique({
-      where: {
-        auth_id: authUser.id,
-      },
-    });
-    if (!user) {
-      throw unauthorized;
-    }
-    return next({
-      ctx: {
-        user,
-      },
-    });
-  },
-);
+    },
+  );
 
 const unauthorized = (e?: unknown) =>
   new TRPCError({
@@ -238,6 +252,7 @@ export const appRouter = t.router({
       include: {
         user: true,
         episodes: true,
+        corners: true,
       },
     });
     if (!podcast) {
@@ -248,6 +263,7 @@ export const appRouter = t.router({
         ...podcast,
         episodes: withoutDates(podcast.episodes),
         user: podcast.user,
+        corners: podcast.corners as Corner[],
       },
     };
   }),
@@ -421,6 +437,131 @@ export const appRouter = t.router({
     id: z.string(),
   })).mutation(async ({ input: { id } }) => {
     await prisma.episode.delete({ where: { id } });
+    return;
+  }),
+  newCorner: authProcedure.input(z.object({
+    podcastId: z.string(),
+    title: z.string(),
+    description: z.string(),
+    mail_schema: z.string().nullable(),
+  })).mutation(
+    async (
+      { ctx: { user }, input: { podcastId, title, description, mail_schema } },
+    ) => {
+      const podcast = await prisma.podcast.findUnique({
+        where: { id: podcastId },
+      });
+      if (!podcast) {
+        throw not_found(podcastId);
+      }
+
+      if (mail_schema && !isValidSchema(JSON.parse(mail_schema))) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid mail schema",
+        });
+      }
+
+      const corner = await prisma.corner.create({
+        data: {
+          podcast_id: podcastId,
+          title,
+          description,
+          user_id: user.id,
+          requesting_mail: !mail_schema,
+          mail_schema: mail_schema ? JSON.parse(mail_schema) : null,
+        },
+      });
+      return { corner };
+    },
+  ),
+  corner: authProcedure.input(z.object({
+    id: z.string(),
+  })).query(async ({ input: { id } }) => {
+    const corner = await prisma.corner.findUnique({
+      where: { id },
+    });
+    if (!corner) {
+      throw not_found(id);
+    }
+    return { corner: corner as Corner };
+  }),
+  updateCorner: authProcedure.input(z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string(),
+    mail_schema: z.string().nullable(),
+  })).mutation(
+    async ({ input: { id, title, description, mail_schema } }) => {
+      await prisma.corner.update({
+        where: { id },
+        data: {
+          title,
+          description,
+          requesting_mail: !mail_schema,
+          mail_schema: mail_schema ? JSON.parse(mail_schema) : null,
+        },
+      });
+      return;
+    },
+  ),
+  deleteCorner: authProcedure.input(z.object({
+    id: z.string(),
+  })).mutation(async ({ input: { id } }) => {
+    await prisma.corner.delete({ where: { id } });
+    return;
+  }),
+  newMail: authProcedure.input(z.object({
+    cornerId: z.string(),
+    body: z.record(z.unknown()),
+  })).mutation(
+    async ({ ctx: { user }, input: { cornerId, body } }) => {
+      const corner = await prisma.corner.findUnique({
+        where: { id: cornerId },
+      });
+      if (!corner) {
+        throw not_found(cornerId);
+      }
+      if (!corner.mail_schema) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This corner does not accept mail",
+        });
+      }
+      const errors = validate(
+        corner.mail_schema as object,
+        body,
+      );
+      if (errors) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: JSON.stringify(errors),
+        });
+      }
+      const mail = await prisma.mail.create({
+        data: {
+          body: JSON.parse(JSON.stringify(body)),
+          corner_id: cornerId,
+          user_id: user.id,
+        },
+      });
+      return { mail };
+    },
+  ),
+  mails: authProcedure.input(z.object({
+    cornerId: z.string(),
+  })).query(async ({ input: { cornerId } }) => {
+    const mails = await prisma.mail.findMany({
+      where: {
+        corner_id: cornerId,
+      },
+    });
+    return { mails };
+  }),
+  deleteMail: authProcedure.input(z.object({
+    id: z.string(),
+  })).mutation(async ({ input: { id } }) => {
+    await prisma.mail.delete({ where: { id } });
     return;
   }),
 });
