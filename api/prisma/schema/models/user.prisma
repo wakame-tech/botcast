@@ -3,7 +3,6 @@ model User {
   auth_id  String    @unique
   email    String    @unique
   name     String?
-  comments Comment[]
   episodes Episode[]
   podcasts Podcast[]
   scripts  Script[]
