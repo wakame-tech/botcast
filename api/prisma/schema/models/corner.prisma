@@ -1,0 +1,12 @@
+model Corner {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  description     String
+  requesting_mail Boolean
+  user_id         String    @db.Uuid
+  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  podcasts        Podcast[]
+  Mail            Mail[]
+
+  @@map("corners")
+}

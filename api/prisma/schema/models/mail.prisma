@@ -1,0 +1,12 @@
+model Mail {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  schema    Json
+  body      Json
+  user_id   String @db.Uuid
+  user      User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  corner_id String @db.Uuid
+  corner    Corner @relation(fields: [corner_id], references: [id], onDelete: Cascade)
+
+  @@map("mails")
+}
