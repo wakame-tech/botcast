@@ -13,6 +13,7 @@ FAILED FAILED
     String title 
     String description 
     Boolean requesting_mail 
+    Json mail_schema 
     String user_id 
     }
   
@@ -34,10 +35,10 @@ FAILED FAILED
   "mails" {
     String id "🗝️"
     String name 
-    Json schema 
     Json body 
     String user_id 
     String corner_id 
+    DateTime created_at 
     }
   
 

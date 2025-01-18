@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  Comment as CommentPrisma,
   Episode as EpisodePrisma,
   Podcast as PodcastPrisma,
   Script as ScriptPrisma,
@@ -78,14 +77,6 @@ export const PodcastInputSchema = z.object({
 });
 
 export type PodcastInput = z.infer<typeof PodcastInputSchema>;
-
-export type Comment = WithSerializedDates<CommentPrisma>;
-
-export const CommentInputSchema = z.object({
-  content: z.string(),
-});
-
-export type CommentInput = z.infer<typeof CommentInputSchema>;
 
 export type Script = Omit<ScriptPrisma, "arguments" | "template"> & {
   arguments: Record<string, unknown>;

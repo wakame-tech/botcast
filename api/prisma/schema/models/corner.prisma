@@ -3,6 +3,7 @@ model Corner {
   title           String
   description     String
   requesting_mail Boolean
+  mail_schema     Json
   user_id         String    @db.Uuid
   user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   podcasts        Podcast[]

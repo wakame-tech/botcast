@@ -327,19 +327,6 @@ export const appRouter = t.router({
       episode: parseEpisode(episode),
     };
   }),
-  episodeComments: authProcedure.input(z.object({
-    episodeId: z.string(),
-  })).query(async ({ input: { episodeId } }) => {
-    const comments = await prisma.comment.findMany({
-      where: {
-        episode_id: episodeId,
-      },
-      include: {
-        user: true,
-      },
-    });
-    return { comments: withoutDates(comments) };
-  }),
   newEpisode: authProcedure.input(z.object({
     podcastId: z.string(),
     title: z.string(),
@@ -435,24 +422,6 @@ export const appRouter = t.router({
   })).mutation(async ({ input: { id } }) => {
     await prisma.episode.delete({ where: { id } });
     return;
-  }),
-  newComment: authProcedure.input(z.object({
-    episodeId: z.string(),
-    content: z.string(),
-  })).mutation(async ({ ctx: { user }, input: { episodeId, content } }) => {
-    await prisma.comment.create({
-      data: {
-        content,
-        user_id: user.id,
-        episode_id: episodeId,
-        created_at: new Date().toISOString(),
-      },
-    });
-  }),
-  deleteComment: authProcedure.input(z.object({
-    id: z.string(),
-  })).mutation(async ({ input: { id } }) => {
-    await prisma.comment.delete({ where: { id } });
   }),
 });
 export type AppRouter = typeof appRouter;
