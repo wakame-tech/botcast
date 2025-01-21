@@ -18,6 +18,8 @@
     "npm:@supabase/realtime-js@2.10.2": "2.10.2",
     "npm:@supabase/storage-js@2.7.0": "2.7.0",
     "npm:@types/node@*": "22.4.2",
+    "npm:jtd@*": "0.1.1",
+    "npm:jtd@~0.1.1": "0.1.1",
     "npm:prisma-erd-generator@*": "1.11.2_@prisma+client@5.19.0__prisma@5.18.0_prisma@5.18.0",
     "npm:prisma-erd-generator@^1.11.2": "1.11.2_@prisma+client@5.19.0__prisma@5.18.0_prisma@5.18.0",
     "npm:prisma@*": "5.18.0"
@@ -1047,6 +1049,9 @@
         "graceful-fs",
         "universalify"
       ]
+    },
+    "jtd@0.1.1": {
+      "integrity": "sha512-D1unKfAE0A/sVLqJZs8mCSW812w651GJuV94WcXRAbx0Xv2j2yjW8qeO5pugXbTMX4k2/ojIH8kQ06LGj9QcaA=="
     },
     "katex@0.16.11": {
       "integrity": "sha512-RQrI8rlHY92OLf3rho/Ts8i/XvjgguEjOkO1BEXcU3N8BqPpSzBNwV/G0Ukr+P/l3ivvJUE/Fa/CwbS6HesGNQ==",
@@ -2251,6 +2256,7 @@
       "jsr:@std/io@0.225",
       "npm:@mermaid-js/mermaid-cli@^11.2.1",
       "npm:@prisma/generator-helper@^5.21.1",
+      "npm:jtd@~0.1.1",
       "npm:prisma-erd-generator@^1.11.2"
     ]
   }

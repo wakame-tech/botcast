@@ -8,12 +8,14 @@ COMPLETED COMPLETED
 FAILED FAILED
         }
     
-  "comments" {
+  "corners" {
     String id "🗝️"
-    String content 
+    String title 
+    String description 
+    Boolean requesting_mail 
+    Json mail_schema 
     String user_id 
-    String episode_id 
-    DateTime created_at 
+    String podcast_id 
     }
   
 
@@ -28,6 +30,15 @@ FAILED FAILED
     Json sections 
     String description "❓"
     Int duration_sec "❓"
+    }
+  
+
+  "mails" {
+    String id "🗝️"
+    Json body 
+    String user_id 
+    String corner_id 
+    DateTime created_at 
     }
   
 
@@ -71,19 +82,23 @@ FAILED FAILED
     String name "❓"
     }
   
-    "comments" o|--|| "episodes" : "episode"
-    "comments" o|--|| "users" : "user"
-    "episodes" o{--}o "comments" : "comments"
+    "corners" o|--|| "users" : "user"
+    "corners" o|--|| "podcasts" : "podcast"
+    "corners" o{--}o "mails" : "mails"
     "episodes" o|--|| "podcasts" : "podcast"
     "episodes" o|--|o "users" : "user"
+    "mails" o|--|| "users" : "user"
+    "mails" o|--|| "corners" : "corner"
     "podcasts" o{--}o "episodes" : "episodes"
+    "podcasts" o{--}o "corners" : "corners"
     "podcasts" o|--|o "users" : "user"
     "scripts" o|--|| "users" : "user"
     "tasks" o|--|| "TaskStatus" : "enum:status"
     "tasks" o|--|o "users" : "user"
-    "users" o{--}o "comments" : "comments"
     "users" o{--}o "episodes" : "episodes"
     "users" o{--}o "podcasts" : "podcasts"
     "users" o{--}o "scripts" : "scripts"
     "users" o{--}o "tasks" : "tasks"
+    "users" o{--}o "corners" : "corners"
+    "users" o{--}o "mails" : "mails"
 ```

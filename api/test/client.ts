@@ -6,7 +6,7 @@ const url = "http://localhost:1234/trpc";
 
 let token = "";
 
-const _client = createTRPCProxyClient<AppRouter>({
+const client = createTRPCProxyClient<AppRouter>({
   links: [
     httpLink({
       url,
@@ -17,5 +17,8 @@ const _client = createTRPCProxyClient<AppRouter>({
   ],
 });
 
-// const tasks = await client.tasks.query();
-// console.log(JSON.stringify(tasks));
+const res = await client.signIn.query({
+  email: "",
+  password: "",
+});
+token = res;

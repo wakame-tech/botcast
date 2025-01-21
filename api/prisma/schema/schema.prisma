@@ -7,8 +7,8 @@ generator client {
 generator erd {
   provider                  = "npx prisma-erd-generator"
   output                    = "ERD.md"
-  includeRelationFromFields = "true"
   theme                     = "forest"
+  includeRelationFromFields = "true"
 }
 
 datasource db {

@@ -1,4 +1,4 @@
-import { ArgumentsForm } from "@/components/script/ArgumentsForm";
+import { JsonSchemaForm } from "@/components/JsonSchemaForm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useEvaluateScript } from "@/hooks/useEvaluateScript";
@@ -45,7 +45,7 @@ export function Script() {
 			</pre>
 
 			{Object.keys(script.arguments).length !== 0 && (
-				<ArgumentsForm
+				<JsonSchemaForm
 					schema={script.arguments}
 					onChange={(e) => setParameters(e)}
 				/>

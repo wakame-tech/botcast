@@ -1,7 +1,8 @@
 import { z } from "zod";
 import {
-  Comment as CommentPrisma,
+  Corner as CornerPrisma,
   Episode as EpisodePrisma,
+  Mail as MailPrisma,
   Podcast as PodcastPrisma,
   Script as ScriptPrisma,
   Task as TaskPrisma,
@@ -79,14 +80,6 @@ export const PodcastInputSchema = z.object({
 
 export type PodcastInput = z.infer<typeof PodcastInputSchema>;
 
-export type Comment = WithSerializedDates<CommentPrisma>;
-
-export const CommentInputSchema = z.object({
-  content: z.string(),
-});
-
-export type CommentInput = z.infer<typeof CommentInputSchema>;
-
 export type Script = Omit<ScriptPrisma, "arguments" | "template"> & {
   arguments: Record<string, unknown>;
   template: Record<string, unknown>;
@@ -99,3 +92,26 @@ export const ScriptInputSchema = z.object({
 });
 
 export type ScriptInput = z.infer<typeof ScriptInputSchema>;
+
+export type Corner = Omit<CornerPrisma, "mail_schema"> & {
+  mail_schema: Record<string, unknown>;
+};
+
+export const CornerInputSchema = z.object({
+  title: z.string(),
+  description: z.string().nullable(),
+  requesting_mail: z.boolean(),
+  mail_schema: z.string(),
+});
+
+export type CornerInput = z.infer<typeof CornerInputSchema>;
+
+export type Mail = Omit<MailPrisma, "body"> & {
+  body: Record<string, unknown>;
+};
+
+export const MailInputSchema = z.object({
+  body: z.record(z.unknown()),
+});
+
+export type MailInput = z.infer<typeof MailInputSchema>;

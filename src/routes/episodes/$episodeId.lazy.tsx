@@ -1,4 +1,3 @@
-import { EpisodeComments } from "@/components/episode/EpisodeComments";
 import { SectionsComponent } from "@/components/episode/Sections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,8 +101,6 @@ function Episode() {
 					</div>
 				</CardContent>
 			</Card>
-
-			<EpisodeComments episodeId={episodeId} />
 		</>
 	);
 }
