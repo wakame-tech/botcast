@@ -246,18 +246,17 @@ export const appRouter = t.router({
     await prisma.task.delete({ where: { id } });
     return;
   }),
-  topPodcasts: t.procedure.query(() => {
-    return { podcasts: [] };
-    // const podcasts = await prisma.podcast.findMany({
-    //   include: {
-    //     user: true,
-    //   },
-    //   orderBy: {
-    //     created_at: "desc",
-    //   },
-    //   take: 10,
-    // });
-    // return { podcasts: withoutDates(podcasts) };
+  topPodcasts: t.procedure.query(async () => {
+    const podcasts = await prisma.podcast.findMany({
+      include: {
+        user: true,
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+      take: 10,
+    });
+    return { podcasts: withoutDates(podcasts) };
   }),
   podcasts: authProcedure.query(async ({ ctx: { user } }) => {
     const podcasts = await prisma.podcast.findMany({
