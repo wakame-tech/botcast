@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "@prisma/client";
+// @ts-ignore: cannot resolve deps from npm package
 import { withAccelerate } from "@prisma/extension-accelerate";
 import type {
   Corner,
