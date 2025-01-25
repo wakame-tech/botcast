@@ -24,6 +24,6 @@
     "format": "deno run -A npm:prisma@5 format",
     "push": "deno run -A npm:prisma@5 db push",
     "pull": "deno run -A npm:prisma@5 db pull",
-    "generate": "deno run -A npm:prisma@5 generate --accelerate"
+    "generate": "deno run -A npm:prisma@5 generate --no-engine"
   }
 }
