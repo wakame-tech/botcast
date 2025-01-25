@@ -4,6 +4,7 @@
     "@hono/trpc-server": "https://esm.sh/@hono/trpc-server@0.3.2",
     "@mermaid-js/mermaid-cli": "npm:@mermaid-js/mermaid-cli@^11.2.1",
     "@prisma/client": "./prisma/client/deno/edge.ts",
+    "@prisma/extension-accelerate": "npm:@prisma/extension-accelerate@^1.2.1",
     "@prisma/generator-helper": "npm:@prisma/generator-helper@^5.22.0",
     "@std/io": "jsr:@std/io@^0.225.0",
     "@trpc/client": "https://esm.sh/@trpc/client@10.45.2",

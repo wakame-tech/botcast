@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "@prisma/client";
+import { withAccelerate } from "@prisma/extension-accelerate";
 import type {
   Corner,
   Mail,
@@ -30,7 +31,8 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_ANON_KEY")!,
 );
 
-export const prisma = new PrismaClient();
+export const prisma = new PrismaClient()
+  .$extends(withAccelerate());
 
 interface Context {
   accessToken: string | null;
@@ -126,6 +128,7 @@ export const appRouter = t.router({
     return { user };
   }),
   secrets: authProcedure.query(async ({ ctx: { user } }) => {
+    // @ts-ignore: PrismaClient with extension
     const secrets = await listSecrets(prisma, user.id);
     return {
       secrets: secrets.map((s) => ({
@@ -143,11 +146,24 @@ export const appRouter = t.router({
   })).mutation(async ({ ctx: { user }, input }) => {
     await Promise.all(
       input.news.map((secret) =>
-        createSecret(prisma, user.id, secret.value, secret.name)
+        createSecret(
+          // @ts-ignore: PrismaClient with extension
+          prisma,
+          user.id,
+          secret.value,
+          secret.name,
+        )
       ),
     );
     await Promise.all(
-      input.deletionIds.map((id) => deleteSecret(prisma, user.id, id)),
+      input.deletionIds.map((id) =>
+        deleteSecret(
+          // @ts-ignore: PrismaClient with extension
+          prisma,
+          user.id,
+          id,
+        )
+      ),
     );
   }),
   tasks: authProcedure.input(z.object({
