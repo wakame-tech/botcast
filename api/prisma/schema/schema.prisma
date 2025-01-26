@@ -4,13 +4,6 @@ generator client {
   previewFeatures = ["deno", "prismaSchemaFolder"]
 }
 
-generator erd {
-  provider                  = "npx prisma-erd-generator"
-  output                    = "ERD.md"
-  theme                     = "forest"
-  includeRelationFromFields = "true"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

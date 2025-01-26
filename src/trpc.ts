@@ -1,6 +1,6 @@
 import { createTRPCReact } from "@trpc/react-query";
 import type { AppRouter } from "../api/src/router";
-export type { User } from "@prisma/client";
+export type { User } from "prisma_client";
 export {
 	MailInputSchema,
 	PodcastInputSchema,

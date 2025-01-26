@@ -5,7 +5,7 @@
 		"lib": ["ESNext", "DOM", "DOM.Iterable"],
 		"paths": {
 			"@/*": ["./src/*"],
-			"@prisma/client": ["./api/prisma/client"]
+			"prisma_client": ["./api/prisma/client"]
 		},
 		"module": "ESNext",
 		"skipLibCheck": true,
