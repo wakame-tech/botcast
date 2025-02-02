@@ -13,7 +13,7 @@ import type {
 import { createSecret, deleteSecret, listSecrets } from "./vault.ts";
 import { z } from "zod";
 // @ts-ignore: cannot resolve deps from npm package
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "supabase";
 // @ts-ignore: cannot resolve deps from npm package
 import { s3 } from "./presign.ts";
 import {
