@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "prisma_client";
 
 interface CreateSecretResponse {
   // UUID of the created secret

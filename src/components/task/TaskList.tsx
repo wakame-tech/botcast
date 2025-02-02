@@ -5,8 +5,8 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Task, WithSerializedDates } from "@/trpc";
-import type { TaskStatus } from "@prisma/client";
 import dayjs from "dayjs";
+import type { TaskStatus } from "prisma_client";
 
 function TaskStatusIcon({ status }: { status: TaskStatus }) {
 	const icons: Record<TaskStatus, string> = {

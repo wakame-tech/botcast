@@ -9,7 +9,7 @@ const app = new Hono();
 app.use(cors());
 app.use(
   "/trpc/*",
-  // @ts-ignore: TS2339
+  // @ts-ignore: TS2769
   trpcServer({
     router: appRouter,
     createContext: (opts) => {

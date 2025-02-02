@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { PrismaClient, User } from "@prisma/client";
+import { PrismaClient, User } from "prisma_client";
 import type {
   Corner,
   Mail,
@@ -11,7 +11,7 @@ import type {
 import { createSecret, deleteSecret, listSecrets } from "./vault.ts";
 import { z } from "zod";
 // @ts-ignore: cannot resolve deps from npm package
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "supabase";
 // @ts-ignore: cannot resolve deps from npm package
 import { s3 } from "./presign.ts";
 import {
@@ -126,6 +126,7 @@ export const appRouter = t.router({
     return { user };
   }),
   secrets: authProcedure.query(async ({ ctx: { user } }) => {
+    // @ts-ignore: PrismaClient with extension
     const secrets = await listSecrets(prisma, user.id);
     return {
       secrets: secrets.map((s) => ({
@@ -143,11 +144,24 @@ export const appRouter = t.router({
   })).mutation(async ({ ctx: { user }, input }) => {
     await Promise.all(
       input.news.map((secret) =>
-        createSecret(prisma, user.id, secret.value, secret.name)
+        createSecret(
+          // @ts-ignore: PrismaClient with extension
+          prisma,
+          user.id,
+          secret.value,
+          secret.name,
+        )
       ),
     );
     await Promise.all(
-      input.deletionIds.map((id) => deleteSecret(prisma, user.id, id)),
+      input.deletionIds.map((id) =>
+        deleteSecret(
+          // @ts-ignore: PrismaClient with extension
+          prisma,
+          user.id,
+          id,
+        )
+      ),
     );
   }),
   tasks: authProcedure.input(z.object({

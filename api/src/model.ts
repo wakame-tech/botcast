@@ -6,7 +6,7 @@ import {
   Podcast as PodcastPrisma,
   Script as ScriptPrisma,
   Task as TaskPrisma,
-} from "@prisma/client";
+} from "prisma_client";
 
 // Workaround for https://github.com/prisma/prisma/discussions/5522
 export type WithSerializedDates<Type> = {
