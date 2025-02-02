@@ -465,10 +465,10 @@ export const appRouter = t.router({
     podcastId: z.string(),
     title: z.string(),
     description: z.string(),
-    mail_schema: z.string().nullable(),
+    mailSchema: z.string().nullable(),
   })).mutation(
     async (
-      { ctx: { user }, input: { podcastId, title, description, mail_schema } },
+      { ctx: { user }, input: { podcastId, title, description, mailSchema } },
     ) => {
       const podcast = await prisma.podcast.findUnique({
         where: { id: podcastId },
@@ -477,7 +477,7 @@ export const appRouter = t.router({
         throw not_found(podcastId);
       }
 
-      if (mail_schema && !isValidSchema(JSON.parse(mail_schema))) {
+      if (mailSchema && !isValidSchema(JSON.parse(mailSchema))) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Invalid mail schema",
@@ -490,8 +490,8 @@ export const appRouter = t.router({
           title,
           description,
           user_id: user.id,
-          requesting_mail: !!mail_schema,
-          mail_schema: mail_schema ? JSON.parse(mail_schema) : null,
+          requesting_mail: !!mailSchema,
+          mail_schema: mailSchema ? JSON.parse(mailSchema) : null,
         },
       });
       return { corner };
@@ -514,16 +514,16 @@ export const appRouter = t.router({
     id: z.string(),
     title: z.string(),
     description: z.string(),
-    mail_schema: z.string().nullable(),
+    mailSchema: z.string().nullable(),
   })).mutation(
-    async ({ input: { id, title, description, mail_schema } }) => {
+    async ({ input: { id, title, description, mailSchema } }) => {
       await prisma.corner.update({
         where: { id },
         data: {
           title,
           description,
-          requesting_mail: !mail_schema,
-          mail_schema: mail_schema ? JSON.parse(mail_schema) : null,
+          requesting_mail: !mailSchema,
+          mail_schema: mailSchema ? JSON.parse(mailSchema) : null,
         },
       });
       return;
