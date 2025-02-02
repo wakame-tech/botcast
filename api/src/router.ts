@@ -1,7 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { PrismaClient, User } from "prisma_client";
-// @ts-ignore: cannot resolve deps from npm package
-import { withAccelerate } from "@prisma/extension-accelerate";
 import type {
   Corner,
   Mail,
@@ -32,8 +30,7 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_ANON_KEY")!,
 );
 
-export const prisma = new PrismaClient()
-  .$extends(withAccelerate());
+export const prisma = new PrismaClient();
 
 interface Context {
   accessToken: string | null;

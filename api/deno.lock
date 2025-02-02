@@ -2,7 +2,7 @@
   "version": "4",
   "specifiers": {
     "jsr:@bradenmacdonald/s3-lite-client@~0.7.6": "0.7.6",
-    "jsr:@hono/hono@^4.4.9": "4.6.20",
+    "jsr:@hono/hono@^4.6.20": "4.6.20",
     "jsr:@std/bytes@^1.0.2": "1.0.5",
     "jsr:@std/bytes@^1.0.5": "1.0.5",
     "jsr:@std/io@0.224": "0.224.9",
@@ -10,7 +10,6 @@
     "jsr:@supabase/supabase-js@^2.44.2": "2.48.1",
     "npm:@mermaid-js/mermaid-cli@^11.2.1": "11.4.2_puppeteer@23.11.1__devtools-protocol@0.0.1367902_mermaid@11.4.1__cytoscape@3.31.0",
     "npm:@prisma/client@^5.22.0": "5.22.0_prisma@5.22.0",
-    "npm:@prisma/extension-accelerate@^1.2.1": "1.2.1_@prisma+client@5.22.0__prisma@5.22.0_prisma@5.22.0",
     "npm:@prisma/generator-helper@^5.22.0": "5.22.0",
     "npm:@supabase/auth-js@2.67.3": "2.67.3",
     "npm:@supabase/functions-js@2.4.4": "2.4.4",
@@ -18,6 +17,8 @@
     "npm:@supabase/postgrest-js@1.18.1": "1.18.1",
     "npm:@supabase/realtime-js@2.11.2": "2.11.2",
     "npm:@supabase/storage-js@2.7.1": "2.7.1",
+    "npm:@trpc/client@^11.0.0-rc.730": "11.0.0-rc.730_@trpc+server@11.0.0-rc.730__typescript@5.7.3_typescript@5.7.3",
+    "npm:@trpc/server@^11.0.0-rc.730": "11.0.0-rc.730_typescript@5.7.3",
     "npm:@types/node@*": "22.5.4",
     "npm:jtd@*": "0.1.1",
     "npm:jtd@~0.1.1": "0.1.1",
@@ -292,12 +293,6 @@
         "@prisma/get-platform"
       ]
     },
-    "@prisma/extension-accelerate@1.2.1_@prisma+client@5.22.0__prisma@5.22.0_prisma@5.22.0": {
-      "integrity": "sha512-QicnMeyqL226ilT3vvRsFAqPeIdqHGKR4c25CoK5zZ1tNIv8egfgpD1gCKqOGmfAz0pIKQnMuJU3eNg9KItC7A==",
-      "dependencies": [
-        "@prisma/client"
-      ]
-    },
     "@prisma/fetch-engine@5.22.0": {
       "integrity": "sha512-bkrD/Mc2fSvkQBV5EpoFcZ87AvOgDxbG99488a5cexp5Ccny+UM6MAe/UFkUC0wLYD9+9befNOqGiIJhhq+HbA==",
       "dependencies": [
@@ -382,6 +377,19 @@
     },
     "@tootallnate/quickjs-emscripten@0.23.0": {
       "integrity": "sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA=="
+    },
+    "@trpc/client@11.0.0-rc.730_@trpc+server@11.0.0-rc.730__typescript@5.7.3_typescript@5.7.3": {
+      "integrity": "sha512-OFt98CtSq9KCiD7odFYP92MMVhgT4NCAy50gvsd8syVXAtKgyo6itmUuq5fcxwUYjiDwHOQvlWgA0IIQWSvLxQ==",
+      "dependencies": [
+        "@trpc/server",
+        "typescript"
+      ]
+    },
+    "@trpc/server@11.0.0-rc.730_typescript@5.7.3": {
+      "integrity": "sha512-pRdPGqU1LkIq6kZ1ST9fmFaFnsl7IZ6h3eEIG6cbAkUHha/oTlmDXZZAIpunBPQ1ugi5uwFClvfTY8ZapemBKA==",
+      "dependencies": [
+        "typescript"
+      ]
     },
     "@types/assert@1.5.11": {
       "integrity": "sha512-FjS1mxq2dlGr9N4z72/DO+XmyRS3ZZIoVn998MEopAN/OmyN28F4yumRL5pOw2z+hbFLuWGYuF2rrw5p11xM5A=="
@@ -2193,6 +2201,9 @@
     "typed-query-selector@2.12.0": {
       "integrity": "sha512-SbklCd1F0EiZOyPiW192rrHZzZ5sBijB6xM+cpmrwDqObvdtunOHHIk9fCGsoK5JVIYXoyEp4iEdE3upFH3PAg=="
     },
+    "typescript@5.7.3": {
+      "integrity": "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="
+    },
     "ufo@1.5.4": {
       "integrity": "sha512-UsUk3byDzKd04EyoZ7U4DOlxQaD14JUKQl6/P7wiX4FNvUfm3XL246n9W5AmqwW5RSFJ27NAuM0iLscAOYUiGQ=="
     },
@@ -2331,7 +2342,8 @@
     }
   },
   "redirects": {
-    "https://esm.sh/@trpc/server@^11.0.0-rc.708/adapters/fetch?target=denonext": "https://esm.sh/@trpc/server@11.0.0-rc.730/adapters/fetch?target=denonext"
+    "https://esm.sh/@trpc/server@^11.0.0-rc.708/adapters/fetch?target=denonext": "https://esm.sh/@trpc/server@11.0.0-rc.730/adapters/fetch?target=denonext",
+    "https://esm.sh/@trpc/server@^11.0.0-rc.730/adapters/fetch?target=denonext": "https://esm.sh/@trpc/server@11.0.0-rc.730/adapters/fetch?target=denonext"
   },
   "remote": {
     "https://deno.land/x/zod@v3.23.8/ZodError.ts": "528da200fbe995157b9ae91498b103c4ef482217a5c086249507ac850bd78f52",
@@ -2349,6 +2361,8 @@
     "https://deno.land/x/zod@v3.23.8/types.ts": "1b172c90782b1eaa837100ebb6abd726d79d6c1ec336350c8e851e0fd706bf5c",
     "https://esm.sh/@hono/trpc-server@0.3.2": "944b23ce80c088632c7ad7392111e19cfed49f709004f3c383ba8a44f34a4f6a",
     "https://esm.sh/@hono/trpc-server@0.3.2/denonext/trpc-server.mjs": "90d1dce65a57debe8ee1458b0225e99703c4beed69dc4e8a6724597b1bd7fbd6",
+    "https://esm.sh/@hono/trpc-server@0.3.4": "4989698ef533992c7db706613346155e5c80a7637b1f3ac81f54a9bb291a3bab",
+    "https://esm.sh/@hono/trpc-server@0.3.4/denonext/trpc-server.mjs": "6f43e6f9f73d07f1111a9504288656074d74edc5c135530c1f9dc224fd0a99e4",
     "https://esm.sh/@trpc/client@10.45.2": "9cddb76657e0d54a58f75d17c375451bb05b75dc78d7414dc618a20bfa55a22e",
     "https://esm.sh/@trpc/client@10.45.2/denonext/client.mjs": "c4eaf7bfb89590e62b7a13f686b8511d1570c5b17df4299ec1f4fab0c5aa753c",
     "https://esm.sh/@trpc/client@10.45.2/denonext/dist/TRPCClientError-38f9a32a.mjs": "565155f7e262d8ba58d3914776a2a4880d6531d854aebfd6ed5cfb226038ba4e",
@@ -2397,13 +2411,14 @@
   "workspace": {
     "dependencies": [
       "jsr:@bradenmacdonald/s3-lite-client@~0.7.6",
-      "jsr:@hono/hono@^4.4.9",
+      "jsr:@hono/hono@^4.6.20",
       "jsr:@std/io@0.225",
       "jsr:@supabase/supabase-js@^2.44.2",
       "npm:@mermaid-js/mermaid-cli@^11.2.1",
       "npm:@prisma/client@^5.22.0",
-      "npm:@prisma/extension-accelerate@^1.2.1",
       "npm:@prisma/generator-helper@^5.22.0",
+      "npm:@trpc/client@^11.0.0-rc.730",
+      "npm:@trpc/server@^11.0.0-rc.730",
       "npm:jtd@~0.1.1",
       "npm:prisma@^5.22.0"
     ]
