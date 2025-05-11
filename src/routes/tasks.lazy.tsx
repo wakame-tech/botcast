@@ -1,7 +1,5 @@
-import { EvaluateScriptForm } from "@/components/task/EvaluateScriptForm";
-import type { EvaluateScriptInput } from "@/components/task/EvaluateScriptForm";
 import { TaskList } from "@/components/task/TaskList.tsx";
-import { trpc } from "@/trpc.ts";
+import { $api } from "@/lib/api_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -12,27 +10,16 @@ export const Route = createLazyFileRoute("/tasks")({
 function Tasks() {
 	const [includesCompleted, setIncludesCompleted] = useState(true);
 	const [includesResult, setIncludesResult] = useState(false);
-	const getTasks = trpc.tasks.useQuery({ includesCompleted });
-	const deleteTask = trpc.deleteTask.useMutation();
-	const addEvaluateTemplateTaskById =
-		trpc.addEvaluateTemplateTaskById.useMutation();
-
-	const onSubmit = async (values: EvaluateScriptInput) => {
-		await addEvaluateTemplateTaskById.mutateAsync({
-			id: values.scriptId,
-			cron: values.cron,
-		});
-	};
+	const getTasks = $api.useQuery("get", "/tasks");
+	const deleteTask = $api.useMutation("delete", "/tasks/{taskId}");
 
 	const onClickDelete = async (taskId: string) => {
-		await deleteTask.mutateAsync({ id: taskId });
+		await deleteTask.mutateAsync({ params: { path: { taskId } } });
 		getTasks.refetch();
 	};
 
 	return (
 		<div>
-			<EvaluateScriptForm onSubmit={onSubmit} />
-
 			<div className="grid grid-cols-1 gap-2">
 				<label>
 					<input
@@ -55,7 +42,7 @@ function Tasks() {
 			<TaskList
 				onClickDelete={onClickDelete}
 				includesResult={includesResult}
-				tasks={getTasks.data?.tasks ?? []}
+				tasks={getTasks.data ?? []}
 			/>
 		</div>
 	);

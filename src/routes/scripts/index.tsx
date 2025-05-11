@@ -1,4 +1,4 @@
-import { trpc } from "@/trpc.ts";
+import { $api } from "@/lib/api_client";
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/scripts/")({
@@ -6,13 +6,13 @@ export const Route = createFileRoute("/scripts/")({
 });
 
 export function Scripts() {
-	const getScripts = trpc.scripts.useQuery();
+	const getScripts = $api.useQuery("get", "/scripts");
 
 	if (!getScripts.data) {
 		return null;
 	}
 
-	const scripts = getScripts.data.scripts;
+	const scripts = getScripts.data;
 
 	return (
 		<>

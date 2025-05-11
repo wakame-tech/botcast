@@ -1,7 +1,7 @@
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { SecretList } from "@/components/user/SecretsList";
 import type { NewSecret } from "@/components/user/SecretsList";
-import { trpc } from "@/trpc.ts";
+import { $api } from "@/lib/api_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/users/$userId")({
@@ -9,11 +9,16 @@ export const Route = createLazyFileRoute("/users/$userId")({
 });
 
 function User() {
-	const secretsQuery = trpc.secrets.useQuery();
-	const updateSecrets = trpc.updateSecrets.useMutation();
+	const secretsQuery = $api.useQuery("get", "/secrets");
+	const updateSecrets = $api.useMutation("post", "/secrets");
 
 	const onSubmit = async (news: NewSecret[], deletionIds: string[]) => {
-		await updateSecrets.mutateAsync({ news, deletionIds });
+		await updateSecrets.mutateAsync({
+			body: {
+				news,
+				deletionIds,
+			},
+		});
 		secretsQuery.refetch();
 	};
 
@@ -21,7 +26,7 @@ function User() {
 		return null;
 	}
 
-	const secrets = secretsQuery.data.secrets;
+	const secrets = secretsQuery.data;
 
 	return (
 		<>

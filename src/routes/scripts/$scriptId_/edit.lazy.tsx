@@ -1,6 +1,5 @@
 import { ScriptForm } from "@/components/script/ScriptForm";
-import { trpc } from "@/trpc.ts";
-import type { ScriptInput } from "@/trpc.ts";
+import { $api, type ScriptInput } from "@/lib/api_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/scripts/$scriptId/edit")({
@@ -10,15 +9,21 @@ export const Route = createLazyFileRoute("/scripts/$scriptId/edit")({
 export function EditScript() {
 	const { scriptId } = Route.useParams();
 	const navigate = Route.useNavigate();
-	const getScript = trpc.script.useQuery({ id: scriptId });
-	const updateScript = trpc.updateScript.useMutation();
+	const getScript = $api.useQuery("get", "/scripts/{scriptId}", {
+		params: { path: { scriptId } },
+	});
+	const updateScript = $api.useMutation("put", "/scripts/{scriptId}");
 
 	const handleSubmit = async (values: ScriptInput) => {
 		await updateScript.mutateAsync({
-			id: scriptId,
-			title: values.title,
-			description: values.description,
-			template: values.template,
+			params: {
+				path: { scriptId },
+			},
+			body: {
+				title: values.title,
+				description: values.description,
+				template: JSON.parse(values.template),
+			},
 		});
 		navigate({ to: "/scripts/$scriptId", params: { scriptId } });
 	};
@@ -27,7 +32,7 @@ export function EditScript() {
 		return null;
 	}
 
-	const script = getScript.data.script;
+	const script = getScript.data;
 
 	return (
 		<>

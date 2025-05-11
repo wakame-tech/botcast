@@ -8,8 +8,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { PodcastInputSchema } from "@/trpc.ts";
-import type { PodcastInput } from "@/trpc.ts";
+import { type PodcastInput, PodcastInputSchema } from "@/lib/api_client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 

@@ -6,6 +6,12 @@ export const useSession = () => {
 	const [session, setSession] = useState<Session | null>(null);
 
 	useEffect(() => {
+		supabase.auth.onAuthStateChange((event, session) => {
+			if (event === "SIGNED_IN" && session !== null) {
+				supabase.auth.setSession(session);
+			}
+		});
+
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			session?.access_token;
 			setSession(session);

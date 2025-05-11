@@ -1,6 +1,5 @@
 import { JsonSchemaForm } from "@/components/JsonSchemaForm";
-import { MailInputSchema } from "@/trpc.ts";
-import type { MailInput } from "@/trpc.ts";
+import { type MailInput, MailInputSchema } from "@/lib/api_client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 

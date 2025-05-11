@@ -9,7 +9,7 @@ export const Route = createLazyFileRoute("/podcasts/")({
 });
 
 export default function Podcasts() {
-	const { data: podcasts } = $api.useQuery("get", "/podcasts")
+	const { data: podcasts } = $api.useQuery("get", "/podcasts");
 
 	return (
 		<div>

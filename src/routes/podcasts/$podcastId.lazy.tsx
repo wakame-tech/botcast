@@ -11,8 +11,8 @@ export const Route = createLazyFileRoute("/podcasts/$podcastId")({
 
 export function Podcast() {
 	const { podcastId } = Route.useParams();
-	const getPodcast = $api.useQuery('get', '/podcast/{podcastId}', {
-		params: { path: { podcastId } }
+	const getPodcast = $api.useQuery("get", "/podcast/{podcastId}", {
+		params: { path: { podcastId } },
 	});
 
 	if (!getPodcast.data) {
@@ -54,7 +54,7 @@ export function Podcast() {
 					<CornerList corners={corners} />
 
 					<h2>エピソード ({episodes.length})</h2>
-					<Episode.List episodes={episodes} />
+					<Episode.List podcastId={podcast.id} episodes={episodes} />
 				</CardContent>
 			</Card>
 		</>

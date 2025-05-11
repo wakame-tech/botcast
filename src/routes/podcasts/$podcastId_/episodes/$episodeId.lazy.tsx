@@ -2,13 +2,15 @@ import { SectionsComponent } from "@/components/episode/Sections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
-import { trpc } from "@/trpc.ts";
+import { $api } from "@/lib/api_client";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
 
-export const Route = createLazyFileRoute("/episodes/$episodeId")({
+export const Route = createLazyFileRoute(
+	"/podcasts/$podcastId/episodes/$episodeId",
+)({
 	component: Episode,
 });
 
@@ -24,36 +26,38 @@ const fetchSrt = async (url: string): Promise<Line[]> => {
 
 function Episode() {
 	const navigate = useNavigate();
-	const { episodeId } = Route.useParams();
-	const getEpisode = trpc.episode.useQuery({ id: episodeId });
+	const { podcastId, episodeId } = Route.useParams();
+	const getEpisode = $api.useQuery("get", "/episodes/{episodeId}", {
+		params: { path: { episodeId } },
+	});
 	const { data } = useQuery({
 		queryKey: ["lines"],
 		queryFn: () => {
-			const url = getEpisode.data?.episode.srt_url;
+			const url = getEpisode.data?.srt_url;
 			if (url) {
 				return fetchSrt(url);
 			}
 		},
-		enabled: !!getEpisode.data?.episode.srt_url,
+		enabled: !!getEpisode.data?.srt_url,
 	});
 	const lines = data ?? [];
 
-	const deleteEpisode = trpc.deleteEpisode.useMutation();
+	const deleteEpisode = $api.useMutation("delete", "/episodes/{episodeId}");
 
 	const { state, setEpisode, playOrPause, seekTo } = usePlayer();
 
 	if (!getEpisode.data || getEpisode.error) {
-		return <div>{getEpisode.error?.message}</div>;
+		return <div>error</div>;
 	}
 
-	const episode = getEpisode.data.episode;
+	const episode = getEpisode.data;
 	const isPlayingEpisode = state.isPlaying && episode.id === state.episode?.id;
 
 	const handleDelete = async () => {
-		await deleteEpisode.mutateAsync({ id: episodeId });
+		await deleteEpisode.mutateAsync({ params: { path: { episodeId } } });
 		navigate({
 			to: "/podcasts/$podcastId",
-			params: { podcastId: episode.podcast_id },
+			params: { podcastId },
 		});
 	};
 

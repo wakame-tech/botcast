@@ -1,7 +1,7 @@
-import type { Mail, WithSerializedDates } from "@/trpc";
+import type { Mail } from "@/lib/api_client";
 
 interface MailListProps {
-	mails: WithSerializedDates<Mail>[];
+	mails: Mail[];
 }
 
 export function MailList(props: MailListProps) {
@@ -17,7 +17,7 @@ export function MailList(props: MailListProps) {
 }
 
 interface MailListItemProps {
-	mail: WithSerializedDates<Mail>;
+	mail: Mail;
 }
 
 function MailListItem(props: MailListItemProps) {

@@ -1,5 +1,5 @@
 import { MailList } from "@/components/mail/MailList";
-import { trpc } from "@/trpc";
+import { $api } from "@/lib/api_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/corners/$cornerId")({
@@ -8,10 +8,14 @@ export const Route = createLazyFileRoute("/corners/$cornerId")({
 
 export default function Corner() {
 	const { cornerId } = Route.useParams();
-	const getCorner = trpc.corner.useQuery({ id: cornerId });
-	const corner = getCorner.data?.corner;
-	const getMails = trpc.mails.useQuery({ cornerId });
-	const mails = getMails.data?.mails ?? [];
+	const getCorner = $api.useQuery("get", "/corners/{cornerId}", {
+		params: { path: { cornerId } },
+	});
+	const corner = getCorner.data;
+	const getMails = $api.useQuery("get", "/corners/{cornerId}/mails", {
+		params: { path: { cornerId } },
+	});
+	const mails = getMails.data ?? [];
 
 	if (!corner) {
 		return <div>not found</div>;

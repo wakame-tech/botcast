@@ -1,7 +1,6 @@
 import { PodcastForm } from "@/components/podcast/PodcastForm";
 import { Button } from "@/components/ui/button";
-import type { PodcastInput } from "@/trpc.ts";
-import { trpc } from "@/trpc.ts";
+import { $api, type PodcastInput } from "@/lib/api_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId/edit")({
@@ -11,22 +10,28 @@ export const Route = createLazyFileRoute("/podcasts/$podcastId/edit")({
 export default function EditPodcast() {
 	const { podcastId } = Route.useParams();
 	const navigate = Route.useNavigate();
-	const getPodcast = trpc.podcast.useQuery({ id: podcastId });
-	const updatePodcast = trpc.updatePodcast.useMutation();
-	const deletePodcast = trpc.deletePodcast.useMutation();
+	const getPodcast = $api.useQuery("get", "/podcast/{podcastId}", {
+		params: { path: { podcastId } },
+	});
+	const updatePodcast = $api.useMutation("put", "/podcast/{podcastId}");
+	const deletePodcast = $api.useMutation("delete", "/podcast/{podcastId}");
 
 	const handleSubmit = async (values: PodcastInput) => {
 		await updatePodcast.mutateAsync({
-			id: podcastId,
-			icon: values.icon,
-			title: values.title,
-			description: values.description,
+			params: {
+				path: { podcastId },
+			},
+			body: {
+				icon: values.icon,
+				title: values.title,
+				description: values.description,
+			},
 		});
 		navigate({ to: "/podcasts/$podcastId", params: { podcastId } });
 	};
 
 	const handleDelete = async () => {
-		await deletePodcast.mutateAsync({ id: podcastId });
+		await deletePodcast.mutateAsync({ params: { path: { podcastId } } });
 		navigate({ to: "/podcasts" });
 	};
 

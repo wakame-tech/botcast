@@ -4,9 +4,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Task, WithSerializedDates } from "@/trpc";
+import type { Task, TaskStatus } from "@/lib/api_client";
 import dayjs from "dayjs";
-import type { TaskStatus } from "prisma_client";
 
 function TaskStatusIcon({ status }: { status: TaskStatus }) {
 	const icons: Record<TaskStatus, string> = {
@@ -21,7 +20,7 @@ function TaskStatusIcon({ status }: { status: TaskStatus }) {
 
 interface TaskItemProps {
 	includesResult?: boolean;
-	task: WithSerializedDates<Task>;
+	task: Task;
 	onClickDelete: (taskId: string) => void;
 }
 
@@ -32,7 +31,7 @@ export function TaskItem(props: TaskItemProps) {
 				<span className="">
 					<TaskStatusIcon status={props.task.status} />
 				</span>
-				<span className="pr-2 font-bold">{props.task.args.type}</span>
+				<span className="pr-2 font-bold">{props.task.args.type as string}</span>
 				<span className="pr-2 text-sm text-gray">
 					{props.task.id.substring(0, 7)}
 				</span>
@@ -82,7 +81,7 @@ export function TaskItem(props: TaskItemProps) {
 
 interface TaskListProps {
 	includesResult?: boolean;
-	tasks: WithSerializedDates<Task>[];
+	tasks: Task[];
 	onClickDelete: (taskId: string) => void;
 }
 
