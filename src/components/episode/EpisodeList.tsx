@@ -1,14 +1,9 @@
-import type { Episode, WithSerializedDates } from "@/trpc";
+import type { Episode } from "@/lib/api_client";
 import { Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 
-type EpisodeDigest = Pick<
-	WithSerializedDates<Episode>,
-	"id" | "title" | "description" | "duration_sec" | "created_at"
->;
-
 interface EpisodeListProps {
-	episodes: EpisodeDigest[];
+	episodes: Episode[];
 }
 
 function EpisodeList(props: EpisodeListProps) {
@@ -30,7 +25,7 @@ export const formatMmss = (duration_sec: number | null): string => {
 };
 
 interface EpisodeListItemProps {
-	episode: EpisodeDigest;
+	episode: Episode;
 }
 
 function EpisodeListItem(props: EpisodeListItemProps) {
@@ -51,7 +46,7 @@ function EpisodeListItem(props: EpisodeListItemProps) {
 						{dayjs(props.episode.created_at).format("YYYY-MM-DD HH:mm")}
 					</span>
 					<span className="font-bold">
-						{formatMmss(props.episode.duration_sec)}
+						{props.episode.duration_sec ? formatMmss(props.episode.duration_sec) : "--:--"}
 					</span>
 				</div>
 			</div>

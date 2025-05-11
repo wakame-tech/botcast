@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Podcast, User } from "@/trpc";
+import type { Podcast, User } from "@/lib/api_client";
 import { Link } from "@tanstack/react-router";
 import { UserIcon } from "../user/UserIcon";
 

@@ -268,7 +268,11 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Podcast"];
+                        "application/json": {
+                            podcast: components["schemas"]["Podcast"];
+                            episodes: components["schemas"]["Episode"][];
+                            corners: components["schemas"]["Corner"][];
+                        };
                     };
                 };
             };
@@ -811,7 +815,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
-            auth_id?: string;
+            auth_id: string;
             /** Format: email */
             email: string;
             name: string;
@@ -834,6 +838,7 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             description: string;
+            duration_sec?: number;
         };
         Corner: {
             /** Format: uuid */

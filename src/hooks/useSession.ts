@@ -7,6 +7,7 @@ export const useSession = () => {
 
 	useEffect(() => {
 		supabase.auth.getSession().then(({ data: { session } }) => {
+			session?.access_token;
 			setSession(session);
 		});
 	}, []);
