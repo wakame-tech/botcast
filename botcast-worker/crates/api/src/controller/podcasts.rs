@@ -27,7 +27,7 @@ fn into_podcast_model(podcast: (Podcast, Option<User>)) -> models::Podcast {
                 id: user.id,
                 auth_id: user.auth_id.parse().unwrap(),
                 email: user.email,
-                name: user.name.unwrap(),
+                name: user.name.unwrap_or_default(),
             })
             .unwrap(),
     }

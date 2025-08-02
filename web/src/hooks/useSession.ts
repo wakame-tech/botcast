@@ -6,16 +6,21 @@ export const useSession = () => {
 	const [session, setSession] = useState<Session | null>(null);
 
 	useEffect(() => {
-		supabase.auth.onAuthStateChange((event, session) => {
-			if (event === "SIGNED_IN" && session !== null) {
-				supabase.auth.setSession(session);
-			}
-		});
+		// 初期セッションを取得
+		const getInitialSession = async () => {
+			const { data: { session } } = await supabase.auth.getSession();
+			setSession(session);
+		};
 
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			session?.access_token;
+		getInitialSession();
+
+		// 認証状態の変更を監視
+		const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
 			setSession(session);
 		});
+
+		// クリーンアップ関数でリスナーを削除
+		return () => subscription.unsubscribe();
 	}, []);
 
 	return {
