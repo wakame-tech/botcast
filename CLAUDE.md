@@ -24,10 +24,17 @@ just
 # or explicitly:
 RUST_BACKTRACE=1 cargo run -p worker
 
-# Run the API server only
+# Run the API server only (starts on port 1234)
 just api
 # or:
 cargo run -p api
+
+# IMPORTANT: Always use `just api` instead of direct `cargo run -p api`
+# The Justfile automatically loads environment variables from .env file
+# Direct cargo run will fail with "environment variable not found" error
+
+# To run API server in background:
+just api &
 
 # Type checking
 cargo check
