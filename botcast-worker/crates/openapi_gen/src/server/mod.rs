@@ -59,6 +59,9 @@ where
         .route("/signIn",
             post(sign_in_post::<I, A, E, C>)
         )
+        .route("/signUp",
+            post(sign_up_post::<I, A, E, C>)
+        )
         .route("/tasks",
             get(tasks_get::<I, A, E, C>).post(tasks_post::<I, A, E, C>)
         )
@@ -184,15 +187,15 @@ where
     #[allow(dead_code)]
     struct SignInPostBodyValidator<'a> {
             #[validate(nested)]
-          body: &'a models::SignInPostRequest,
+          body: &'a models::SignInRequest,
     }
 
 
 #[tracing::instrument(skip_all)]
 fn sign_in_post_validation(
-        body: models::SignInPostRequest,
+        body: models::SignInRequest,
 ) -> std::result::Result<(
-        models::SignInPostRequest,
+        models::SignInRequest,
 ), ValidationErrors>
 {
               let b = SignInPostBodyValidator { body: &body };
@@ -209,7 +212,7 @@ async fn sign_in_post<I, A, E, C>(
   host: Host,
   cookies: CookieJar,
  State(api_impl): State<I>,
-          Json(body): Json<models::SignInPostRequest>,
+          Json(body): Json<models::SignInRequest>,
 ) -> Result<Response, StatusCode>
 where
     I: AsRef<A> + Send + Sync,
@@ -267,6 +270,136 @@ where
                                                     (body)
                                                 => {
                                                   let mut response = response.status(404);
+                                                  {
+                                                    let mut response_headers = response.headers_mut().unwrap();
+                                                    response_headers.insert(
+                                                        CONTENT_TYPE,
+                                                        HeaderValue::from_str("application/json").map_err(|e| { error!(error = ?e); StatusCode::INTERNAL_SERVER_ERROR })?);
+                                                  }
+
+                                                  let body_content =  tokio::task::spawn_blocking(move ||
+                                                      serde_json::to_vec(&body).map_err(|e| {
+                                                        error!(error = ?e);
+                                                        StatusCode::INTERNAL_SERVER_ERROR
+                                                      })).await.unwrap()?;
+                                                  response.body(Body::from(body_content))
+                                                },
+                                            },
+                                            Err(why) => {
+                                                // Application code returned an error. This should not happen, as the implementation should
+                                                // return a valid response.
+                                                return api_impl.as_ref().handle_error(&method, &host, &cookies, why).await;
+                                            },
+                                        };
+
+                                        resp.map_err(|e| { error!(error = ?e); StatusCode::INTERNAL_SERVER_ERROR })
+}
+
+    #[derive(validator::Validate)]
+    #[allow(dead_code)]
+    struct SignUpPostBodyValidator<'a> {
+            #[validate(nested)]
+          body: &'a models::SignUpRequest,
+    }
+
+
+#[tracing::instrument(skip_all)]
+fn sign_up_post_validation(
+        body: models::SignUpRequest,
+) -> std::result::Result<(
+        models::SignUpRequest,
+), ValidationErrors>
+{
+              let b = SignUpPostBodyValidator { body: &body };
+              b.validate()?;
+
+Ok((
+    body,
+))
+}
+/// SignUpPost - POST /signUp
+#[tracing::instrument(skip_all)]
+async fn sign_up_post<I, A, E, C>(
+  method: Method,
+  host: Host,
+  cookies: CookieJar,
+ State(api_impl): State<I>,
+          Json(body): Json<models::SignUpRequest>,
+) -> Result<Response, StatusCode>
+where
+    I: AsRef<A> + Send + Sync,
+    A: apis::auth::Auth<E, Claims = C> + Send + Sync,
+    E: std::fmt::Debug + Send + Sync + 'static,
+        {
+
+
+      #[allow(clippy::redundant_closure)]
+      let validation = tokio::task::spawn_blocking(move ||
+    sign_up_post_validation(
+          body,
+    )
+  ).await.unwrap();
+
+  let Ok((
+      body,
+  )) = validation else {
+    return Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(Body::from(validation.unwrap_err().to_string()))
+            .map_err(|_| StatusCode::BAD_REQUEST);
+  };
+
+  let result = api_impl.as_ref().sign_up_post(
+      &method,
+      &host,
+      &cookies,
+              &body,
+  ).await;
+
+  let mut response = Response::builder();
+
+  let resp = match result {
+                                            Ok(rsp) => match rsp {
+                                                apis::auth::SignUpPostResponse::Status200_OK
+                                                    (body)
+                                                => {
+                                                  let mut response = response.status(200);
+                                                  {
+                                                    let mut response_headers = response.headers_mut().unwrap();
+                                                    response_headers.insert(
+                                                        CONTENT_TYPE,
+                                                        HeaderValue::from_str("application/json").map_err(|e| { error!(error = ?e); StatusCode::INTERNAL_SERVER_ERROR })?);
+                                                  }
+
+                                                  let body_content =  tokio::task::spawn_blocking(move ||
+                                                      serde_json::to_vec(&body).map_err(|e| {
+                                                        error!(error = ?e);
+                                                        StatusCode::INTERNAL_SERVER_ERROR
+                                                      })).await.unwrap()?;
+                                                  response.body(Body::from(body_content))
+                                                },
+                                                apis::auth::SignUpPostResponse::Status400_BadRequest
+                                                    (body)
+                                                => {
+                                                  let mut response = response.status(400);
+                                                  {
+                                                    let mut response_headers = response.headers_mut().unwrap();
+                                                    response_headers.insert(
+                                                        CONTENT_TYPE,
+                                                        HeaderValue::from_str("application/json").map_err(|e| { error!(error = ?e); StatusCode::INTERNAL_SERVER_ERROR })?);
+                                                  }
+
+                                                  let body_content =  tokio::task::spawn_blocking(move ||
+                                                      serde_json::to_vec(&body).map_err(|e| {
+                                                        error!(error = ?e);
+                                                        StatusCode::INTERNAL_SERVER_ERROR
+                                                      })).await.unwrap()?;
+                                                  response.body(Body::from(body_content))
+                                                },
+                                                apis::auth::SignUpPostResponse::Status409_Conflict
+                                                    (body)
+                                                => {
+                                                  let mut response = response.status(409);
                                                   {
                                                     let mut response_headers = response.headers_mut().unwrap();
                                                     response_headers.insert(

@@ -4,6 +4,74 @@
  */
 
 export interface paths {
+	"/signUp": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Sign up */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** Format: email */
+						email: string;
+						password: string;
+					};
+				};
+			};
+			responses: {
+				/** @description OK */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							accessToken: string;
+						};
+					};
+				};
+				/** @description Bad Request */
+				400: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							message?: string;
+						};
+					};
+				};
+				/** @description Conflict */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							message?: string;
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/signIn": {
 		parameters: {
 			query?: never;
@@ -42,6 +110,17 @@ export interface paths {
 						};
 					};
 				};
+				/** @description Not Found */
+				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							message?: string;
+						};
+					};
+				};
 			};
 		};
 		delete?: never;
@@ -73,6 +152,17 @@ export interface paths {
 					};
 					content: {
 						"application/json": components["schemas"]["User"];
+					};
+				};
+				/** @description Not Found */
+				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							message?: string;
+						};
 					};
 				};
 			};

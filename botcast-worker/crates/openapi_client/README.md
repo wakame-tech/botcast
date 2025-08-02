@@ -28,6 +28,7 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *AuthApi* | [**me_get**](docs/AuthApi.md#me_get) | **GET** /me | 
 *AuthApi* | [**sign_in_post**](docs/AuthApi.md#sign_in_post) | **POST** /signIn | Sign in
+*AuthApi* | [**sign_up_post**](docs/AuthApi.md#sign_up_post) | **POST** /signUp | Sign up
 *CornersApi* | [**corners_corner_id_delete**](docs/CornersApi.md#corners_corner_id_delete) | **DELETE** /corners/{cornerId} | 
 *CornersApi* | [**corners_corner_id_get**](docs/CornersApi.md#corners_corner_id_get) | **GET** /corners/{cornerId} | 
 *CornersApi* | [**corners_corner_id_put**](docs/CornersApi.md#corners_corner_id_put) | **PUT** /corners/{cornerId} | 
@@ -67,6 +68,7 @@ Class | Method | HTTP request | Description
  - [EpisodesEpisodeIdPutRequest](docs/EpisodesEpisodeIdPutRequest.md)
  - [EpisodesPostRequest](docs/EpisodesPostRequest.md)
  - [Mail](docs/Mail.md)
+ - [MeGet404Response](docs/MeGet404Response.md)
  - [Podcast](docs/Podcast.md)
  - [PodcastPodcastIdGet200Response](docs/PodcastPodcastIdGet200Response.md)
  - [PodcastsPostRequest](docs/PodcastsPostRequest.md)
@@ -78,9 +80,12 @@ Class | Method | HTTP request | Description
  - [SecretsPostRequestNewsInner](docs/SecretsPostRequestNewsInner.md)
  - [Section](docs/Section.md)
  - [SerifSection](docs/SerifSection.md)
- - [SignInPost200Response](docs/SignInPost200Response.md)
- - [SignInPost404Response](docs/SignInPost404Response.md)
- - [SignInPostRequest](docs/SignInPostRequest.md)
+ - [SignInErrorResponse](docs/SignInErrorResponse.md)
+ - [SignInRequest](docs/SignInRequest.md)
+ - [SignInResponse](docs/SignInResponse.md)
+ - [SignUpErrorResponse](docs/SignUpErrorResponse.md)
+ - [SignUpRequest](docs/SignUpRequest.md)
+ - [SignUpResponse](docs/SignUpResponse.md)
  - [Task](docs/Task.md)
  - [TaskStatus](docs/TaskStatus.md)
  - [TasksPostRequest](docs/TasksPostRequest.md)

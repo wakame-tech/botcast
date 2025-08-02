@@ -1,0 +1,5 @@
+cargo run -p api
+   Compiling api v0.1.0 (/home/kmt/Documents/botcast/botcast-worker/crates/api)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 23.34s
+     Running `target/debug/api`
+[2m2025-08-02T09:00:37.346350Z[0m [31mERROR[0m [1msign_in_post[0m[2m:[0m [2mapi::controller::auth[0m[2m:[0m sign_in_post: Error: 400 Bad Request: Invalid login credentials
