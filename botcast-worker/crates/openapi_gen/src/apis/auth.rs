@@ -17,7 +17,7 @@ pub enum MeGetResponse {
     ,
     /// Not Found
     Status404_NotFound
-    (models::SignInPost404Response)
+    (models::SignUpPost400Response)
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -26,11 +26,28 @@ pub enum MeGetResponse {
 pub enum SignInPostResponse {
     /// OK
     Status200_OK
-    (models::SignInPost200Response)
+    (models::SignUpPost200Response)
     ,
     /// Not Found
     Status404_NotFound
-    (models::SignInPost404Response)
+    (models::SignUpPost400Response)
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[must_use]
+#[allow(clippy::large_enum_variant)]
+pub enum SignUpPostResponse {
+    /// OK
+    Status200_OK
+    (models::SignUpPost200Response)
+    ,
+    /// Bad Request
+    Status400_BadRequest
+    (models::SignUpPost400Response)
+    ,
+    /// Conflict
+    Status409_Conflict
+    (models::SignUpPost400Response)
 }
 
 
@@ -57,6 +74,17 @@ pub trait Auth<E: std::fmt::Debug + Send + Sync + 'static = ()>: super::ErrorHan
     method: &Method,
     host: &Host,
     cookies: &CookieJar,
-            body: &models::SignInPostRequest,
+            body: &models::SignUpPostRequest,
     ) -> Result<SignInPostResponse, E>;
+
+    /// Sign up.
+    ///
+    /// SignUpPost - POST /signUp
+    async fn sign_up_post(
+    &self,
+    method: &Method,
+    host: &Host,
+    cookies: &CookieJar,
+            body: &models::SignUpPostRequest,
+    ) -> Result<SignUpPostResponse, E>;
 }

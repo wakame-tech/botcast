@@ -10,6 +10,7 @@ use crate::{models, types::*};
       
       
       
+      
     #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
     #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
     pub struct CornersCornerIdDeletePathParams {
@@ -3014,7 +3015,7 @@ impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SerifSection
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignInPost200Response {
+pub struct SignUpPost200Response {
     #[serde(rename = "accessToken")]
     pub access_token: String,
 
@@ -3024,19 +3025,19 @@ pub struct SignInPost200Response {
 
 
 
-impl SignInPost200Response {
+impl SignUpPost200Response {
     #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(access_token: String, ) -> SignInPost200Response {
-        SignInPost200Response {
+    pub fn new(access_token: String, ) -> SignUpPost200Response {
+        SignUpPost200Response {
             access_token,
         }
     }
 }
 
-/// Converts the SignInPost200Response value to the Query Parameters representation (style=form, explode=false)
+/// Converts the SignUpPost200Response value to the Query Parameters representation (style=form, explode=false)
 /// specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde serializer
-impl std::fmt::Display for SignInPost200Response {
+impl std::fmt::Display for SignUpPost200Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let params: Vec<Option<String>> = vec![
 
@@ -3049,10 +3050,10 @@ impl std::fmt::Display for SignInPost200Response {
     }
 }
 
-/// Converts Query Parameters representation (style=form, explode=false) to a SignInPost200Response value
+/// Converts Query Parameters representation (style=form, explode=false) to a SignUpPost200Response value
 /// as specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignInPost200Response {
+impl std::str::FromStr for SignUpPost200Response {
     type Err = String;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
@@ -3072,7 +3073,7 @@ impl std::str::FromStr for SignInPost200Response {
         while key_result.is_some() {
             let val = match string_iter.next() {
                 Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignInPost200Response".to_string())
+                None => return std::result::Result::Err("Missing value while parsing SignUpPost200Response".to_string())
             };
 
             if let Some(key) = key_result {
@@ -3080,7 +3081,7 @@ impl std::str::FromStr for SignInPost200Response {
                 match key {
                     #[allow(clippy::redundant_clone)]
                     "accessToken" => intermediate_rep.access_token.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignInPost200Response".to_string())
+                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpPost200Response".to_string())
                 }
             }
 
@@ -3089,40 +3090,40 @@ impl std::str::FromStr for SignInPost200Response {
         }
 
         // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignInPost200Response {
-            access_token: intermediate_rep.access_token.into_iter().next().ok_or_else(|| "accessToken missing in SignInPost200Response".to_string())?,
+        std::result::Result::Ok(SignUpPost200Response {
+            access_token: intermediate_rep.access_token.into_iter().next().ok_or_else(|| "accessToken missing in SignUpPost200Response".to_string())?,
         })
     }
 }
 
-// Methods for converting between header::IntoHeaderValue<SignInPost200Response> and HeaderValue
+// Methods for converting between header::IntoHeaderValue<SignUpPost200Response> and HeaderValue
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignInPost200Response>> for HeaderValue {
+impl std::convert::TryFrom<header::IntoHeaderValue<SignUpPost200Response>> for HeaderValue {
     type Error = String;
 
-    fn try_from(hdr_value: header::IntoHeaderValue<SignInPost200Response>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(hdr_value: header::IntoHeaderValue<SignUpPost200Response>) -> std::result::Result<Self, Self::Error> {
         let hdr_value = hdr_value.to_string();
         match HeaderValue::from_str(&hdr_value) {
              std::result::Result::Ok(value) => std::result::Result::Ok(value),
              std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignInPost200Response - value: {} is invalid {}",
+                 format!("Invalid header value for SignUpPost200Response - value: {} is invalid {}",
                      hdr_value, e))
         }
     }
 }
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInPost200Response> {
+impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpPost200Response> {
     type Error = String;
 
     fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
         match hdr_value.to_str() {
              std::result::Result::Ok(value) => {
-                    match <SignInPost200Response as std::str::FromStr>::from_str(value) {
+                    match <SignUpPost200Response as std::str::FromStr>::from_str(value) {
                         std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
                         std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignInPost200Response - {}",
+                            format!("Unable to convert header value '{}' into SignUpPost200Response - {}",
                                 value, err))
                     }
              },
@@ -3138,7 +3139,7 @@ impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInPost20
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignInPost404Response {
+pub struct SignUpPost400Response {
     #[serde(rename = "message")]
     #[serde(skip_serializing_if="Option::is_none")]
     pub message: Option<String>,
@@ -3149,19 +3150,19 @@ pub struct SignInPost404Response {
 
 
 
-impl SignInPost404Response {
+impl SignUpPost400Response {
     #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new() -> SignInPost404Response {
-        SignInPost404Response {
+    pub fn new() -> SignUpPost400Response {
+        SignUpPost400Response {
             message: None,
         }
     }
 }
 
-/// Converts the SignInPost404Response value to the Query Parameters representation (style=form, explode=false)
+/// Converts the SignUpPost400Response value to the Query Parameters representation (style=form, explode=false)
 /// specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde serializer
-impl std::fmt::Display for SignInPost404Response {
+impl std::fmt::Display for SignUpPost400Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let params: Vec<Option<String>> = vec![
 
@@ -3178,10 +3179,10 @@ impl std::fmt::Display for SignInPost404Response {
     }
 }
 
-/// Converts Query Parameters representation (style=form, explode=false) to a SignInPost404Response value
+/// Converts Query Parameters representation (style=form, explode=false) to a SignUpPost400Response value
 /// as specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignInPost404Response {
+impl std::str::FromStr for SignUpPost400Response {
     type Err = String;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
@@ -3201,7 +3202,7 @@ impl std::str::FromStr for SignInPost404Response {
         while key_result.is_some() {
             let val = match string_iter.next() {
                 Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignInPost404Response".to_string())
+                None => return std::result::Result::Err("Missing value while parsing SignUpPost400Response".to_string())
             };
 
             if let Some(key) = key_result {
@@ -3209,7 +3210,7 @@ impl std::str::FromStr for SignInPost404Response {
                 match key {
                     #[allow(clippy::redundant_clone)]
                     "message" => intermediate_rep.message.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignInPost404Response".to_string())
+                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpPost400Response".to_string())
                 }
             }
 
@@ -3218,40 +3219,40 @@ impl std::str::FromStr for SignInPost404Response {
         }
 
         // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignInPost404Response {
+        std::result::Result::Ok(SignUpPost400Response {
             message: intermediate_rep.message.into_iter().next(),
         })
     }
 }
 
-// Methods for converting between header::IntoHeaderValue<SignInPost404Response> and HeaderValue
+// Methods for converting between header::IntoHeaderValue<SignUpPost400Response> and HeaderValue
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignInPost404Response>> for HeaderValue {
+impl std::convert::TryFrom<header::IntoHeaderValue<SignUpPost400Response>> for HeaderValue {
     type Error = String;
 
-    fn try_from(hdr_value: header::IntoHeaderValue<SignInPost404Response>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(hdr_value: header::IntoHeaderValue<SignUpPost400Response>) -> std::result::Result<Self, Self::Error> {
         let hdr_value = hdr_value.to_string();
         match HeaderValue::from_str(&hdr_value) {
              std::result::Result::Ok(value) => std::result::Result::Ok(value),
              std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignInPost404Response - value: {} is invalid {}",
+                 format!("Invalid header value for SignUpPost400Response - value: {} is invalid {}",
                      hdr_value, e))
         }
     }
 }
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInPost404Response> {
+impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpPost400Response> {
     type Error = String;
 
     fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
         match hdr_value.to_str() {
              std::result::Result::Ok(value) => {
-                    match <SignInPost404Response as std::str::FromStr>::from_str(value) {
+                    match <SignUpPost400Response as std::str::FromStr>::from_str(value) {
                         std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
                         std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignInPost404Response - {}",
+                            format!("Unable to convert header value '{}' into SignUpPost400Response - {}",
                                 value, err))
                     }
              },
@@ -3267,7 +3268,7 @@ impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInPost40
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignInPostRequest {
+pub struct SignUpPostRequest {
     #[serde(rename = "email")]
     pub email: String,
 
@@ -3280,20 +3281,20 @@ pub struct SignInPostRequest {
 
 
 
-impl SignInPostRequest {
+impl SignUpPostRequest {
     #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(email: String, password: String, ) -> SignInPostRequest {
-        SignInPostRequest {
+    pub fn new(email: String, password: String, ) -> SignUpPostRequest {
+        SignUpPostRequest {
             email,
             password,
         }
     }
 }
 
-/// Converts the SignInPostRequest value to the Query Parameters representation (style=form, explode=false)
+/// Converts the SignUpPostRequest value to the Query Parameters representation (style=form, explode=false)
 /// specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde serializer
-impl std::fmt::Display for SignInPostRequest {
+impl std::fmt::Display for SignUpPostRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let params: Vec<Option<String>> = vec![
 
@@ -3310,10 +3311,10 @@ impl std::fmt::Display for SignInPostRequest {
     }
 }
 
-/// Converts Query Parameters representation (style=form, explode=false) to a SignInPostRequest value
+/// Converts Query Parameters representation (style=form, explode=false) to a SignUpPostRequest value
 /// as specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignInPostRequest {
+impl std::str::FromStr for SignUpPostRequest {
     type Err = String;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
@@ -3334,7 +3335,7 @@ impl std::str::FromStr for SignInPostRequest {
         while key_result.is_some() {
             let val = match string_iter.next() {
                 Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignInPostRequest".to_string())
+                None => return std::result::Result::Err("Missing value while parsing SignUpPostRequest".to_string())
             };
 
             if let Some(key) = key_result {
@@ -3344,7 +3345,7 @@ impl std::str::FromStr for SignInPostRequest {
                     "email" => intermediate_rep.email.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
                     #[allow(clippy::redundant_clone)]
                     "password" => intermediate_rep.password.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignInPostRequest".to_string())
+                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpPostRequest".to_string())
                 }
             }
 
@@ -3353,41 +3354,41 @@ impl std::str::FromStr for SignInPostRequest {
         }
 
         // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignInPostRequest {
-            email: intermediate_rep.email.into_iter().next().ok_or_else(|| "email missing in SignInPostRequest".to_string())?,
-            password: intermediate_rep.password.into_iter().next().ok_or_else(|| "password missing in SignInPostRequest".to_string())?,
+        std::result::Result::Ok(SignUpPostRequest {
+            email: intermediate_rep.email.into_iter().next().ok_or_else(|| "email missing in SignUpPostRequest".to_string())?,
+            password: intermediate_rep.password.into_iter().next().ok_or_else(|| "password missing in SignUpPostRequest".to_string())?,
         })
     }
 }
 
-// Methods for converting between header::IntoHeaderValue<SignInPostRequest> and HeaderValue
+// Methods for converting between header::IntoHeaderValue<SignUpPostRequest> and HeaderValue
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignInPostRequest>> for HeaderValue {
+impl std::convert::TryFrom<header::IntoHeaderValue<SignUpPostRequest>> for HeaderValue {
     type Error = String;
 
-    fn try_from(hdr_value: header::IntoHeaderValue<SignInPostRequest>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(hdr_value: header::IntoHeaderValue<SignUpPostRequest>) -> std::result::Result<Self, Self::Error> {
         let hdr_value = hdr_value.to_string();
         match HeaderValue::from_str(&hdr_value) {
              std::result::Result::Ok(value) => std::result::Result::Ok(value),
              std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignInPostRequest - value: {} is invalid {}",
+                 format!("Invalid header value for SignUpPostRequest - value: {} is invalid {}",
                      hdr_value, e))
         }
     }
 }
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInPostRequest> {
+impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpPostRequest> {
     type Error = String;
 
     fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
         match hdr_value.to_str() {
              std::result::Result::Ok(value) => {
-                    match <SignInPostRequest as std::str::FromStr>::from_str(value) {
+                    match <SignUpPostRequest as std::str::FromStr>::from_str(value) {
                         std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
                         std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignInPostRequest - {}",
+                            format!("Unable to convert header value '{}' into SignUpPostRequest - {}",
                                 value, err))
                     }
              },

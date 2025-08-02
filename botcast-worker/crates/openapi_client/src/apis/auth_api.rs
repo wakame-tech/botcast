@@ -19,7 +19,7 @@ use super::{Error, configuration, ContentType};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MeGetError {
-    Status404(models::SignInPost404Response),
+    Status404(models::SignUpPost400Response),
     UnknownValue(serde_json::Value),
 }
 
@@ -27,7 +27,16 @@ pub enum MeGetError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum SignInPostError {
-    Status404(models::SignInPost404Response),
+    Status404(models::SignUpPost400Response),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`sign_up_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SignUpPostError {
+    Status400(models::SignUpPost400Response),
+    Status409(models::SignUpPost400Response),
     UnknownValue(serde_json::Value),
 }
 
@@ -69,9 +78,9 @@ pub async fn me_get(configuration: &configuration::Configuration, ) -> Result<mo
     }
 }
 
-pub async fn sign_in_post(configuration: &configuration::Configuration, sign_in_post_request: models::SignInPostRequest) -> Result<models::SignInPost200Response, Error<SignInPostError>> {
+pub async fn sign_in_post(configuration: &configuration::Configuration, sign_up_post_request: models::SignUpPostRequest) -> Result<models::SignUpPost200Response, Error<SignInPostError>> {
     // add a prefix to parameters to efficiently prevent name collisions
-    let p_sign_in_post_request = sign_in_post_request;
+    let p_sign_up_post_request = sign_up_post_request;
 
     let uri_str = format!("{}/signIn", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
@@ -79,7 +88,7 @@ pub async fn sign_in_post(configuration: &configuration::Configuration, sign_in_
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
     }
-    req_builder = req_builder.json(&p_sign_in_post_request);
+    req_builder = req_builder.json(&p_sign_up_post_request);
 
     let req = req_builder.build()?;
     let resp = configuration.client.execute(req).await?;
@@ -96,12 +105,49 @@ pub async fn sign_in_post(configuration: &configuration::Configuration, sign_in_
         let content = resp.text().await?;
         match content_type {
             ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::SignInPost200Response`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::SignInPost200Response`")))),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::SignUpPost200Response`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::SignUpPost200Response`")))),
         }
     } else {
         let content = resp.text().await?;
         let entity: Option<SignInPostError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+pub async fn sign_up_post(configuration: &configuration::Configuration, sign_up_post_request: models::SignUpPostRequest) -> Result<models::SignUpPost200Response, Error<SignUpPostError>> {
+    // add a prefix to parameters to efficiently prevent name collisions
+    let p_sign_up_post_request = sign_up_post_request;
+
+    let uri_str = format!("{}/signUp", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&p_sign_up_post_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::SignUpPost200Response`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::SignUpPost200Response`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SignUpPostError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }

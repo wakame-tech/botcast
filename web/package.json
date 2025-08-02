@@ -7,7 +7,7 @@
     "dev": "vite",
     "check": "tsc && npm run lint && npm run format",
     "build": "tsc && vite build",
-    "generate": "npx openapi-typescript ../botcast-worker/spec.yml -o ./src/lib/api.d.ts",
+    "generate": "npx openapi-typescript ../doc/spec.yml -o ./src/lib/api.d.ts",
     "lint": "npx @biomejs/biome lint --write src",
     "format": "npx @biomejs/biome format --write src && npx @biomejs/biome check --write src",
     "preview": "vite preview"

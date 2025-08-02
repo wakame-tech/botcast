@@ -28,9 +28,9 @@ docs/SecretsPostRequest.md
 docs/SecretsPostRequestNewsInner.md
 docs/Section.md
 docs/SerifSection.md
-docs/SignInPost200Response.md
-docs/SignInPost404Response.md
-docs/SignInPostRequest.md
+docs/SignUpPost200Response.md
+docs/SignUpPost400Response.md
+docs/SignUpPostRequest.md
 docs/Task.md
 docs/TaskStatus.md
 docs/TasksApi.md
@@ -59,9 +59,9 @@ src/models/_scripts__script_id__put_request.rs
 src/models/_scripts_post_request.rs
 src/models/_secrets_post_request.rs
 src/models/_secrets_post_request_news_inner.rs
-src/models/_sign_in_post_200_response.rs
-src/models/_sign_in_post_404_response.rs
-src/models/_sign_in_post_request.rs
+src/models/_sign_up_post_200_response.rs
+src/models/_sign_up_post_400_response.rs
+src/models/_sign_up_post_request.rs
 src/models/_tasks__task_id__put_request.rs
 src/models/_tasks_post_request.rs
 src/models/audio_section.rs
