@@ -149,3 +149,78 @@ Frontend uses Vite for development with hot reload and TypeScript checking.
 
 - Rust: Standard `cargo test` for unit tests
 - Frontend: No specific test runner configured - check if tests exist before assuming testing approach
+
+## Common Issues and Solutions
+
+### OpenAPI Code Generation Issues
+
+**Problem**: When adding new endpoints to OpenAPI spec, the generated types may be inconsistent or share the same type between different endpoints.
+
+**Root Cause**: Using inline schemas in OpenAPI paths instead of defining explicit schemas in `components/schemas`.
+
+**Solution**:
+1. Always define explicit schemas in `components/schemas` section for request/response types
+2. Use `$ref` references in paths instead of inline type definitions
+3. Ensure each endpoint has its own dedicated types (e.g., `SignInRequest` vs `SignUpRequest`)
+
+**Example**:
+```yaml
+# ❌ Bad: Inline schema causes type generation issues
+paths:
+  /signUp:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+
+# ✅ Good: Explicit schema with $ref
+paths:
+  /signUp:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+
+components:
+  schemas:
+    SignUpRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+```
+
+**Regeneration Steps**:
+1. Update `doc/spec.yml` with proper schemas
+2. Run `just generate` in `botcast-worker/`
+3. Run `npm run generate` in `web/`
+4. Update Rust controller imports and implementations to use correct types
+
+### Package.json Path Issues
+
+**Problem**: Frontend code generation fails with "spec.yml not found" errors.
+
+**Solution**: Ensure `web/package.json` references the correct path to OpenAPI spec:
+```json
+{
+  "scripts": {
+    "generate": "npx openapi-typescript ../doc/spec.yml -o ./src/lib/api.d.ts"
+  }
+}
+```
+
+### Directory Context Issues
+
+**Problem**: Commands fail when run from wrong directory context.
+
+**Solution**: Always be explicit about working directories:
+- Use `cd /absolute/path && command` for commands that need specific context
+- Use `just` commands from `botcast-worker/` directory
+- Use `npm run` commands from `web/` directory
