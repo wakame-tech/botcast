@@ -187,15 +187,15 @@ where
     #[allow(dead_code)]
     struct SignInPostBodyValidator<'a> {
             #[validate(nested)]
-          body: &'a models::SignUpPostRequest,
+          body: &'a models::SignInRequest,
     }
 
 
 #[tracing::instrument(skip_all)]
 fn sign_in_post_validation(
-        body: models::SignUpPostRequest,
+        body: models::SignInRequest,
 ) -> std::result::Result<(
-        models::SignUpPostRequest,
+        models::SignInRequest,
 ), ValidationErrors>
 {
               let b = SignInPostBodyValidator { body: &body };
@@ -212,7 +212,7 @@ async fn sign_in_post<I, A, E, C>(
   host: Host,
   cookies: CookieJar,
  State(api_impl): State<I>,
-          Json(body): Json<models::SignUpPostRequest>,
+          Json(body): Json<models::SignInRequest>,
 ) -> Result<Response, StatusCode>
 where
     I: AsRef<A> + Send + Sync,
@@ -299,15 +299,15 @@ where
     #[allow(dead_code)]
     struct SignUpPostBodyValidator<'a> {
             #[validate(nested)]
-          body: &'a models::SignUpPostRequest,
+          body: &'a models::SignUpRequest,
     }
 
 
 #[tracing::instrument(skip_all)]
 fn sign_up_post_validation(
-        body: models::SignUpPostRequest,
+        body: models::SignUpRequest,
 ) -> std::result::Result<(
-        models::SignUpPostRequest,
+        models::SignUpRequest,
 ), ValidationErrors>
 {
               let b = SignUpPostBodyValidator { body: &body };
@@ -324,7 +324,7 @@ async fn sign_up_post<I, A, E, C>(
   host: Host,
   cookies: CookieJar,
  State(api_impl): State<I>,
-          Json(body): Json<models::SignUpPostRequest>,
+          Json(body): Json<models::SignUpRequest>,
 ) -> Result<Response, StatusCode>
 where
     I: AsRef<A> + Send + Sync,

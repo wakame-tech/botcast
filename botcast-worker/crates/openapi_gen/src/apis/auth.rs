@@ -17,7 +17,7 @@ pub enum MeGetResponse {
     ,
     /// Not Found
     Status404_NotFound
-    (models::SignUpPost400Response)
+    (models::MeGet404Response)
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -26,11 +26,11 @@ pub enum MeGetResponse {
 pub enum SignInPostResponse {
     /// OK
     Status200_OK
-    (models::SignUpPost200Response)
+    (models::SignInResponse)
     ,
     /// Not Found
     Status404_NotFound
-    (models::SignUpPost400Response)
+    (models::SignInErrorResponse)
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -39,15 +39,15 @@ pub enum SignInPostResponse {
 pub enum SignUpPostResponse {
     /// OK
     Status200_OK
-    (models::SignUpPost200Response)
+    (models::SignUpResponse)
     ,
     /// Bad Request
     Status400_BadRequest
-    (models::SignUpPost400Response)
+    (models::SignUpErrorResponse)
     ,
     /// Conflict
     Status409_Conflict
-    (models::SignUpPost400Response)
+    (models::SignUpErrorResponse)
 }
 
 
@@ -74,7 +74,7 @@ pub trait Auth<E: std::fmt::Debug + Send + Sync + 'static = ()>: super::ErrorHan
     method: &Method,
     host: &Host,
     cookies: &CookieJar,
-            body: &models::SignUpPostRequest,
+            body: &models::SignInRequest,
     ) -> Result<SignInPostResponse, E>;
 
     /// Sign up.
@@ -85,6 +85,6 @@ pub trait Auth<E: std::fmt::Debug + Send + Sync + 'static = ()>: super::ErrorHan
     method: &Method,
     host: &Host,
     cookies: &CookieJar,
-            body: &models::SignUpPostRequest,
+            body: &models::SignUpRequest,
     ) -> Result<SignUpPostResponse, E>;
 }

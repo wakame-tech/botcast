@@ -37,7 +37,7 @@ This endpoint does not need any parameter.
 
 ## sign_in_post
 
-> models::SignUpPost200Response sign_in_post(sign_up_post_request)
+> models::SignInResponse sign_in_post(sign_in_request)
 Sign in
 
 ### Parameters
@@ -45,11 +45,11 @@ Sign in
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**sign_up_post_request** | [**SignUpPostRequest**](SignUpPostRequest.md) |  | [required] |
+**sign_in_request** | [**SignInRequest**](SignInRequest.md) |  | [required] |
 
 ### Return type
 
-[**models::SignUpPost200Response**](_signUp_post_200_response.md)
+[**models::SignInResponse**](SignInResponse.md)
 
 ### Authorization
 
@@ -65,7 +65,7 @@ No authorization required
 
 ## sign_up_post
 
-> models::SignUpPost200Response sign_up_post(sign_up_post_request)
+> models::SignUpResponse sign_up_post(sign_up_request)
 Sign up
 
 ### Parameters
@@ -73,11 +73,11 @@ Sign up
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**sign_up_post_request** | [**SignUpPostRequest**](SignUpPostRequest.md) |  | [required] |
+**sign_up_request** | [**SignUpRequest**](SignUpRequest.md) |  | [required] |
 
 ### Return type
 
-[**models::SignUpPost200Response**](_signUp_post_200_response.md)
+[**models::SignUpResponse**](SignUpResponse.md)
 
 ### Authorization
 
