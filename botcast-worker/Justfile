@@ -1,0 +1,21 @@
+set dotenv-filename := ".env"
+
+default:
+    # docker compose up -d voicevox_engine
+    RUST_BACKTRACE=1 cargo run -p worker
+
+check:
+    cargo check
+
+api:
+    cargo run -p api
+
+generate_openapi_server:
+    openapi-generator-cli generate -i spec.yml -g rust-axum -o ./crates/openapi_gen
+
+generate_openapi_client:
+    openapi-generator-cli generate -i spec.yml -g rust -o ./crates/openapi_client --additional-properties=packageName=openapi_client
+
+generate:
+    just generate_openapi_server
+    just generate_openapi_client
