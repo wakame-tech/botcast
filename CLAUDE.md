@@ -125,6 +125,26 @@ The backend requires:
 
 Frontend uses Vite for development with hot reload and TypeScript checking.
 
+### Local Development Environment
+
+**Database Setup with SeaORM:**
+- SeaORM CLI is required for database migrations: `cargo install sea-orm-cli`
+- Migration files are in `migration/` directory (part of workspace)
+- Initialize migrations: `sea-orm-cli migrate init`
+- Apply migrations: `sea-orm-cli migrate up -u "DATABASE_URL"`
+- Database schema must be created before API server can start
+
+**Environment Variables:**
+- Use Justfile commands (`just api`) for automatic .env loading instead of raw `cargo run`
+- Justfile automatically loads `.env` file with `set dotenv-filename := ".env"`
+- Avoids environment variable not found errors when running Rust binaries
+
+**Local Development Setup:**
+1. Create `compose-dev.yaml` for local services (PostgreSQL + VoiceVox)
+2. Use different port (e.g., 5435) to avoid conflicts with system PostgreSQL
+3. Run database migrations before starting API server
+4. Use `just api` to start API server with proper environment loading
+
 ## Testing
 
 - Rust: Standard `cargo test` for unit tests
