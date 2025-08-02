@@ -8,8 +8,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ScriptInputSchema } from "@/trpc.ts";
-import type { ScriptInput } from "@/trpc.ts";
+import { type ScriptInput, ScriptInputSchema } from "@/lib/api_client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 

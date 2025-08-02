@@ -1,5 +1,5 @@
 import { MailForm } from "@/components/mail/MailForm";
-import { type MailInput, trpc } from "@/trpc";
+import { $api, type MailInput } from "@/lib/api_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/corners/$cornerId/newMail")({
@@ -8,16 +8,25 @@ export const Route = createLazyFileRoute("/corners/$cornerId/newMail")({
 
 export default function NewMail() {
 	const { cornerId } = Route.useParams();
-	const getCorner = trpc.corner.useQuery({ id: cornerId });
-	const newMail = trpc.newMail.useMutation();
+	const getCorner = $api.useQuery("get", "/corners/{cornerId}", {
+		params: { path: { cornerId } },
+	});
+	const newMail = $api.useMutation("post", "/corners/{cornerId}/mails");
 	const onSubmit = (values: MailInput) => {
-		newMail.mutate({ cornerId, body: values.body });
+		newMail.mutate({
+			params: {
+				path: { cornerId },
+			},
+			body: {
+				body: values.body,
+			},
+		});
 	};
 
 	if (!getCorner.data) {
 		return null;
 	}
-	const corner = getCorner.data.corner;
+	const corner = getCorner.data;
 
 	return (
 		<MailForm

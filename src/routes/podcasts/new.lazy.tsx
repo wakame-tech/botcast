@@ -1,6 +1,5 @@
 import { PodcastForm } from "@/components/podcast/PodcastForm";
-import { trpc } from "@/trpc.ts";
-import type { PodcastInput } from "@/trpc.ts";
+import { $api, type PodcastInput } from "@/lib/api_client";
 import { useNavigate } from "@tanstack/react-router";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
@@ -10,15 +9,17 @@ export const Route = createLazyFileRoute("/podcasts/new")({
 
 export function NewPodcast() {
 	const navigate = useNavigate();
-	const newPodcast = trpc.newPodcast.useMutation();
+	const newPodcast = $api.useMutation("post", "/podcasts");
 
 	const handleSubmit = async (values: PodcastInput) => {
-		const { podcast } = await newPodcast.mutateAsync({
-			title: values.title,
-			description: values.description,
-			icon: "🎧",
+		await newPodcast.mutateAsync({
+			body: {
+				title: values.title,
+				description: values.description,
+				icon: "🎧",
+			},
 		});
-		navigate({ to: "/podcasts/$podcastId", params: { podcastId: podcast.id } });
+		navigate({ to: "/podcasts" });
 	};
 
 	return (

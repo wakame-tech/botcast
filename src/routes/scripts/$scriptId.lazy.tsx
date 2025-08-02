@@ -1,8 +1,6 @@
 import { JsonSchemaForm } from "@/components/JsonSchemaForm";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useEvaluateScript } from "@/hooks/useEvaluateScript";
-import { trpc } from "@/trpc.ts";
+import { $api } from "@/lib/api_client";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -13,21 +11,22 @@ export const Route = createLazyFileRoute("/scripts/$scriptId")({
 export function Script() {
 	const navigate = useNavigate();
 	const { scriptId } = Route.useParams();
-	const getScript = trpc.script.useQuery({ id: scriptId });
-	const [parameters, setParameters] = useState<Record<string, unknown>>({});
-	const { evaluate, running, taskResult } = useEvaluateScript();
-	const deleteScript = trpc.deleteScript.useMutation();
+	const getScript = $api.useQuery("get", "/scripts/{scriptId}", {
+		params: { path: { scriptId } },
+	});
+	const [_, setParameters] = useState<Record<string, unknown>>({});
+	const deleteScript = $api.useMutation("delete", "/scripts/{scriptId}");
 
 	if (!getScript.data) {
 		return null;
 	}
 
 	const handleDelete = async () => {
-		await deleteScript.mutateAsync({ id: scriptId });
+		await deleteScript.mutateAsync({ params: { path: { scriptId } } });
 		navigate({ to: "/scripts" });
 	};
 
-	const script = getScript.data.script;
+	const script = getScript.data;
 
 	return (
 		<>
@@ -50,21 +49,6 @@ export function Script() {
 					onChange={(e) => setParameters(e)}
 				/>
 			)}
-
-			<Button
-				type="button"
-				disabled={running}
-				onClick={() => evaluate(script.template, parameters)}
-			>
-				実行
-			</Button>
-
-			<h2>実行結果</h2>
-			<Textarea
-				rows={10}
-				value={JSON.stringify(taskResult, null, 4)}
-				readOnly
-			/>
 		</>
 	);
 }

@@ -1,4 +1,4 @@
-import type { Sections } from "@/trpc";
+import type { Section } from "@/lib/api_client";
 import type { Line } from "srt-parser-2";
 
 interface ScriptLinesProps {
@@ -28,7 +28,7 @@ interface SectionsComponentProps {
 	isPlayingEpisode: boolean;
 	seconds: number;
 	lines: Line[];
-	sections: Sections;
+	sections: Section[];
 	onClickLine: (seconds: number) => void;
 }
 

@@ -4,8 +4,7 @@
 		"useDefineForClassFields": true,
 		"lib": ["ESNext", "DOM", "DOM.Iterable"],
 		"paths": {
-			"@/*": ["./src/*"],
-			"prisma_client": ["./api/prisma/client"]
+			"@/*": ["./src/*"]
 		},
 		"module": "ESNext",
 		"skipLibCheck": true,
@@ -21,9 +20,9 @@
 		"strict": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"noFallthroughCasesInSwitch": true
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true
 	},
 	"include": ["src"],
-	"exclude": ["api"],
 	"references": [{ "path": "./tsconfig.node.json" }]
 }

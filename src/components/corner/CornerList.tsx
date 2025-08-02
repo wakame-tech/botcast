@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Corner } from "@/trpc";
+import type { Corner } from "@/lib/api_client";
 import { Link } from "@tanstack/react-router";
 import { Button } from "../ui/button";
 

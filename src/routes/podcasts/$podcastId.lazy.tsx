@@ -2,7 +2,7 @@ import { CornerList } from "@/components/corner/CornerList.tsx";
 import Episode from "@/components/episode/EpisodeList.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserIcon } from "@/components/user/UserIcon";
-import { trpc } from "@/trpc.ts";
+import { $api } from "@/lib/api_client";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId")({
@@ -11,12 +11,15 @@ export const Route = createLazyFileRoute("/podcasts/$podcastId")({
 
 export function Podcast() {
 	const { podcastId } = Route.useParams();
-	const getPodcast = trpc.podcast.useQuery({ id: podcastId });
-	const podcast = getPodcast.data?.podcast;
+	const getPodcast = $api.useQuery("get", "/podcast/{podcastId}", {
+		params: { path: { podcastId } },
+	});
 
-	if (!podcast || !podcast.user) {
+	if (!getPodcast.data) {
 		return <div>not found</div>;
 	}
+
+	const { podcast, episodes, corners } = getPodcast.data;
 
 	return (
 		<>
@@ -47,11 +50,11 @@ export function Podcast() {
 					/>
 					{podcast.description}
 
-					<h2>コーナー ({podcast.corners.length})</h2>
-					<CornerList corners={podcast.corners} />
+					<h2>コーナー ({corners.length})</h2>
+					<CornerList corners={corners} />
 
-					<h2>エピソード ({podcast.episodes.length})</h2>
-					<Episode.List episodes={podcast.episodes} />
+					<h2>エピソード ({episodes.length})</h2>
+					<Episode.List podcastId={podcast.id} episodes={episodes} />
 				</CardContent>
 			</Card>
 		</>

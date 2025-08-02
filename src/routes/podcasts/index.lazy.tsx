@@ -1,6 +1,6 @@
 import Podcast from "@/components/podcast/PodcastList";
 import { Button } from "@/components/ui/button";
-import { trpc } from "@/trpc";
+import { $api } from "@/lib/api_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 
@@ -9,8 +9,7 @@ export const Route = createLazyFileRoute("/podcasts/")({
 });
 
 export default function Podcasts() {
-	const getPodcasts = trpc.podcasts.useQuery();
-	const podcasts = getPodcasts.data?.podcasts ?? [];
+	const { data: podcasts } = $api.useQuery("get", "/podcasts");
 
 	return (
 		<div>
@@ -21,7 +20,7 @@ export default function Podcasts() {
 				</Link>
 			</div>
 
-			<Podcast.List podcasts={podcasts} />
+			<Podcast.List podcasts={podcasts ?? []} />
 		</div>
 	);
 }

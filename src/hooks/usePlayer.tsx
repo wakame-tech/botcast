@@ -1,4 +1,4 @@
-import type { Episode } from "@/trpc";
+import type { Episode } from "@/lib/api_client";
 import { atom, useAtom } from "jotai";
 import { useRef } from "react";
 import ReactPlayer from "react-player";
