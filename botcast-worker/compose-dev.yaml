@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: botcast-postgres-dev
+    environment:
+      POSTGRES_DB: botcast_dev
+      POSTGRES_USER: botcast_user
+      POSTGRES_PASSWORD: botcast_password
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - botcast-dev-network
+
+# voicevox_engine:
+#   image: voicevox/voicevox_engine:nvidia-ubuntu20.04-latest
+#   container_name: botcast-voicevox-dev
+#   ports:
+#     - "50021:50021"
+#   tty: true
+#   deploy:
+#     resources:
+#       reservations:
+#         devices:
+#           - capabilities: [gpu]
+#   networks:
+#     - botcast-dev-network
+
+volumes:
+  postgres_data_dev:
+
+networks:
+  botcast-dev-network:
+    driver: bridge
