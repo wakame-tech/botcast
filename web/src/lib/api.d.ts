@@ -23,11 +23,7 @@ export interface paths {
 			};
 			requestBody: {
 				content: {
-					"application/json": {
-						/** Format: email */
-						email: string;
-						password: string;
-					};
+					"application/json": components["schemas"]["SignUpRequest"];
 				};
 			};
 			responses: {
@@ -37,9 +33,7 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							accessToken: string;
-						};
+						"application/json": components["schemas"]["SignUpResponse"];
 					};
 				};
 				/** @description Bad Request */
@@ -48,9 +42,7 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							message?: string;
-						};
+						"application/json": components["schemas"]["SignUpErrorResponse"];
 					};
 				};
 				/** @description Conflict */
@@ -59,9 +51,7 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							message?: string;
-						};
+						"application/json": components["schemas"]["SignUpErrorResponse"];
 					};
 				};
 			};
@@ -91,11 +81,7 @@ export interface paths {
 			};
 			requestBody: {
 				content: {
-					"application/json": {
-						/** Format: email */
-						email: string;
-						password: string;
-					};
+					"application/json": components["schemas"]["SignInRequest"];
 				};
 			};
 			responses: {
@@ -105,9 +91,7 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							accessToken: string;
-						};
+						"application/json": components["schemas"]["SignInResponse"];
 					};
 				};
 				/** @description Not Found */
@@ -116,9 +100,7 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							message?: string;
-						};
+						"application/json": components["schemas"]["SignInErrorResponse"];
 					};
 				};
 			};
@@ -1024,6 +1006,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
+		SignInRequest: {
+			/** Format: email */
+			email: string;
+			password: string;
+		};
+		SignInResponse: {
+			accessToken: string;
+		};
+		SignInErrorResponse: {
+			message?: string;
+		};
+		SignUpRequest: {
+			/** Format: email */
+			email: string;
+			password: string;
+		};
+		SignUpResponse: {
+			accessToken: string;
+		};
+		SignUpErrorResponse: {
+			message?: string;
+		};
 		Secret: {
 			/** Format: uuid */
 			id: string;
