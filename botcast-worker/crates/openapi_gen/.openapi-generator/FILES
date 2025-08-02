@@ -1,0 +1,17 @@
+.gitignore
+Cargo.toml
+README.md
+src/apis/auth.rs
+src/apis/corners.rs
+src/apis/episodes.rs
+src/apis/mails.rs
+src/apis/mod.rs
+src/apis/podcasts.rs
+src/apis/scripts.rs
+src/apis/secrets.rs
+src/apis/tasks.rs
+src/header.rs
+src/lib.rs
+src/models.rs
+src/server/mod.rs
+src/types.rs

@@ -1,0 +1,842 @@
+openapi: '3.1.1'
+info:
+  title: botcast API
+  version: '1.0'
+servers:
+  - url: http://localhost:1234
+paths:
+  /signIn:
+    post:
+      tags:
+        - Auth
+      summary: Sign in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                required:
+                  - accessToken
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /me:
+    get:
+      tags:
+        - Auth
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /secrets:
+    get:
+      tags:
+        - Secrets
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Secret'
+    post:
+      tags:
+        - Secrets
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                news:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
+                    required:
+                      - name
+                      - value
+                deletionIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: OK
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+    post:
+      tags:
+        - Tasks
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                args:
+                  type: object
+                  additionalProperties: true
+                cron:
+                  type: string
+              required:
+                - id
+                - args
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}:
+    parameters:
+      - in: path
+        name: taskId
+        schema:
+          type: string
+          format: uuid
+        required: true
+    delete:
+      tags:
+        - Tasks
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+    put:
+      tags:
+        - Tasks
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/TaskStatus'
+                args:
+                  type: object
+                  additionalProperties: true
+              required:
+                - status
+                - args
+      responses:
+        '200':
+          description: OK
+  /topPodcasts:
+    get:
+      tags:
+        - Podcasts
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Podcast'
+  /podcasts:
+    get:
+      tags:
+        - Podcasts
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Podcast'
+    post:
+      tags:
+        - Podcasts
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                icon:
+                  type: string
+              required:
+                - title
+                - description
+                - icon
+      responses:
+        '200':
+          description: OK
+  /podcast/{podcastId}:
+    parameters:
+        - in: path
+          name: podcastId
+          schema:
+            type: string
+          required: true
+    get:
+      tags:
+        - Podcasts
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  podcast:
+                    $ref: '#/components/schemas/Podcast'
+                  episodes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Episode'
+                  corners:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Corner'
+                required:
+                  - podcast
+                  - episodes
+                  - corners
+    put:
+      tags:
+        - Podcasts
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                icon:
+                  type: string
+                description:
+                  type: string
+              required:
+                - title
+                - icon
+                - description
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - Podcasts
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+  /episodes:
+    post:
+      tags:
+        - Episodes
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                podcast_id:
+                  type: string
+                title:
+                  type: string
+                description:
+                  type: string
+                sections:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Section'
+              required:
+                - podcast_id
+                - title
+      responses:
+        '200':
+          description: OK
+  /episodes/{episodeId}:
+    parameters:
+      - in: path
+        name: episodeId
+        schema:
+          type: string
+        required: true
+    get:
+      tags:
+        - Episodes
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Episode'
+    put:
+      tags:
+        - Episodes
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                sections:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Section'
+              required:
+                - title
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - Episodes
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+  /scripts:
+    get:
+      tags:
+        - Scripts
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Script'
+    post:
+      tags:
+        - Scripts
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                template:
+                  type: object
+                  additionalProperties: true
+                arguments:
+                  type: object
+                  additionalProperties: true
+              required:
+                - title
+                - description
+                - template
+                - arguments
+      responses:
+        '200':
+          description: OK
+  /scripts/{scriptId}:
+    parameters:
+    - in: path
+      name: scriptId
+      schema:
+        type: string
+      required: true
+    get:
+      tags:
+        - Scripts
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Script'
+    put:
+      tags:
+        - Scripts
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                template:
+                  type: object
+                  additionalProperties: true
+              required:
+                - title
+                - description
+                - template
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - Scripts
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+  /corners/{cornerId}:
+    parameters:
+      - in: path
+        name: cornerId
+        schema:
+          type: string
+        required: true
+    get:
+      tags:
+        - Corners
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Corner'
+    put:
+      tags:
+        - Corners
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                mail_schema:
+                  type: object
+                  additionalProperties: true
+              required:
+                - title
+                - description
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - Corners
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+  /corners/{cornerId}/mails:
+    parameters:
+      - in: path
+        name: cornerId
+        schema:
+          type: string
+        required: true
+    get:
+      tags:
+        - Mails
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Mail'
+    post:
+      tags:
+        - Mails
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: object
+                  additionalProperties: true
+              required:
+                - body
+      responses:
+        '200':
+          description: OK
+  /corners/{cornerId}/mails/{mailId}:
+    parameters:
+      - in: path
+        name: cornerId
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: mailId
+        schema:
+          type: string
+        required: true
+    delete:
+      tags:
+        - Mails
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: OK
+components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+  schemas:
+    Secret:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+        - id
+        - name
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        auth_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+      required:
+        - id
+        - auth_id
+        - email
+        - name
+    Podcast:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        icon:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        description:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - id
+        - title
+        - user_id
+        - icon
+        - created_at
+        - description
+        - user
+    Episode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Section'
+        audio_url:
+          type: string
+        srt_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        description:
+          type: string
+        duration_sec:
+          type: number
+      required:
+        - id
+        - title
+        - sections
+        - created_at
+        - description
+    Corner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        requesting_mail:
+          type: boolean
+        mail_schema:
+          type: object
+          additionalProperties: true
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - id
+        - title
+        - description
+        - user
+    SerifSection:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - Serif
+        speaker:
+          type: string
+        text:
+          type: string
+      required:
+        - type
+        - speaker
+        - text
+    AudioSection:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - Audio
+        url:
+          type: string
+        from:
+          type: number
+        to:
+          type: number
+      required:
+        - type
+        - url
+    Section:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SerifSection'
+        - $ref: '#/components/schemas/AudioSection'
+    Script:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        template:
+          type: object
+          additionalProperties: true
+        title:
+          type: string
+        description:
+          type: string
+        arguments:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - template
+        - title
+        - description
+        - arguments
+    Mail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        body:
+          type: object
+          additionalProperties: true
+        user:
+          $ref: '#/components/schemas/User'
+        corner:
+          $ref: '#/components/schemas/Corner'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - body
+        - user
+        - corner
+        - created_at
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        args:
+          type: object
+          additionalProperties: true
+        user_id:
+          type: string
+          format: uuid
+        execute_after:
+          type: string
+          format: date-time
+        executed_at:
+          type: string
+          format: date-time
+        executed_finished_at:
+          type: string
+          format: date-time
+        result:
+          type: object
+          additionalProperties: true
+        cron:
+          type: string
+      required:
+        - id
+        - status
+        - args
+        - execute_after
+    TaskStatus:
+      type: string
+      enum:
+        - PENDING
+        - RUNNING
+        - COMPLETED
+        - FAILED
