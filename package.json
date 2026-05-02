@@ -1,0 +1,16 @@
+{
+  "name": "botcast",
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3"
+  },
+  "lint-staged": {
+    "web/src/**/*.{ts,tsx}": [
+      "npx @biomejs/biome check --write"
+    ]
+  }
+}
