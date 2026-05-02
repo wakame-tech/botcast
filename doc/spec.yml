@@ -118,52 +118,6 @@ paths:
                 properties:
                   message:
                     type: string
-  /secrets:
-    get:
-      tags:
-        - Secrets
-      security:
-        - Bearer: []
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Secret'
-    post:
-      tags:
-        - Secrets
-      security:
-        - Bearer: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                news:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      name:
-                        type: string
-                      value:
-                        type: string
-                    required:
-                      - name
-                      - value
-                deletionIds:
-                  type: array
-                  items:
-                    type: string
-      responses:
-        '200':
-          description: OK
   /tasks:
     get:
       tags:
@@ -325,14 +279,9 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Episode'
-                  corners:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Corner'
                 required:
                   - podcast
                   - episodes
-                  - corners
     put:
       tags:
         - Podcasts
@@ -545,75 +494,12 @@ paths:
       responses:
         '200':
           description: OK
-  /corners/{cornerId}:
-    parameters:
-      - in: path
-        name: cornerId
-        schema:
-          type: string
-        required: true
-    get:
-      tags:
-        - Corners
-      security:
-        - Bearer: []
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Corner'
-    put:
-      tags:
-        - Corners
-      security:
-        - Bearer: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                description:
-                  type: string
-                mail_schema:
-                  type: object
-                  additionalProperties: true
-              required:
-                - title
-                - description
-      responses:
-        '200':
-          description: OK
-    delete:
-      tags:
-        - Corners
-      security:
-        - Bearer: []
-      responses:
-        '200':
-          description: OK
 components:
   securitySchemes:
     Bearer:
       type: http
       scheme: bearer
   schemas:
-    Secret:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-      required:
-        - id
-        - name
     User:
       type: object
       properties:
@@ -687,30 +573,6 @@ components:
         - sections
         - created_at
         - description
-    Corner:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        title:
-          type: string
-        description:
-          type: string
-        requesting_mail:
-          type: boolean
-        mail_schema:
-          type: object
-          additionalProperties: true
-        cms_collection_id:
-          type: string
-        user:
-          $ref: '#/components/schemas/User'
-      required:
-        - id
-        - title
-        - description
-        - user
     SerifSection:
       type: object
       properties:
