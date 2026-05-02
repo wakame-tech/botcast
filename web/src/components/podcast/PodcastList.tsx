@@ -1,10 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Podcast, User } from "@/lib/api_client";
+import type { Podcast } from "@/lib/cms_client";
 import { Link } from "@tanstack/react-router";
-import { UserIcon } from "../user/UserIcon";
 
 interface PodcastListProps {
-	podcasts: (Podcast & { user: User | null })[];
+	podcasts: Podcast[];
 }
 
 function PodcastList(props: PodcastListProps) {
@@ -20,7 +19,7 @@ function PodcastList(props: PodcastListProps) {
 }
 
 interface PodcastListItemProps {
-	podcast: Podcast & { user: User | null };
+	podcast: Podcast;
 }
 
 function PodcastListItem(props: PodcastListItemProps) {
@@ -29,13 +28,6 @@ function PodcastListItem(props: PodcastListItemProps) {
 			<Card>
 				<CardHeader>
 					<CardTitle>
-						<div className="pb-2">
-							<UserIcon
-								size="1.5rem"
-								userId={props.podcast.user?.id ?? ""}
-								label={props.podcast.user?.name ?? ""}
-							/>
-						</div>
 						<div className="flex-inline items-center gap-2">
 							<span className="bg-teal-300 w-16 h-16 rounded-xl flex items-center justify-center">
 								{props.podcast.icon}

@@ -1,4 +1,4 @@
-import type { Episode } from "@/lib/api_client";
+import type { Episode } from "@/lib/cms_client";
 import { Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 
@@ -43,10 +43,7 @@ function EpisodeListItem(props: EpisodeListItemProps) {
 						{props.episode.title}
 					</Link>
 				</div>
-				<div className="grid grid-cols-2 justify-items-end gap-2">
-					<span className="text-sm text-gray">
-						{dayjs(props.episode.created_at).format("YYYY-MM-DD HH:mm")}
-					</span>
+				<div className="grid grid-cols-1 justify-items-end gap-2">
 					<span className="font-bold">
 						{props.episode.duration_sec
 							? formatMmss(props.episode.duration_sec)

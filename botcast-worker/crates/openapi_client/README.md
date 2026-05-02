@@ -29,21 +29,6 @@ Class | Method | HTTP request | Description
 *AuthApi* | [**me_get**](docs/AuthApi.md#me_get) | **GET** /me | 
 *AuthApi* | [**sign_in_post**](docs/AuthApi.md#sign_in_post) | **POST** /signIn | Sign in
 *AuthApi* | [**sign_up_post**](docs/AuthApi.md#sign_up_post) | **POST** /signUp | Sign up
-*EpisodesApi* | [**episodes_episode_id_delete**](docs/EpisodesApi.md#episodes_episode_id_delete) | **DELETE** /episodes/{episodeId} | 
-*EpisodesApi* | [**episodes_episode_id_get**](docs/EpisodesApi.md#episodes_episode_id_get) | **GET** /episodes/{episodeId} | 
-*EpisodesApi* | [**episodes_episode_id_put**](docs/EpisodesApi.md#episodes_episode_id_put) | **PUT** /episodes/{episodeId} | 
-*EpisodesApi* | [**episodes_post**](docs/EpisodesApi.md#episodes_post) | **POST** /episodes | 
-*PodcastsApi* | [**podcast_podcast_id_delete**](docs/PodcastsApi.md#podcast_podcast_id_delete) | **DELETE** /podcast/{podcastId} | 
-*PodcastsApi* | [**podcast_podcast_id_get**](docs/PodcastsApi.md#podcast_podcast_id_get) | **GET** /podcast/{podcastId} | 
-*PodcastsApi* | [**podcast_podcast_id_put**](docs/PodcastsApi.md#podcast_podcast_id_put) | **PUT** /podcast/{podcastId} | 
-*PodcastsApi* | [**podcasts_get**](docs/PodcastsApi.md#podcasts_get) | **GET** /podcasts | 
-*PodcastsApi* | [**podcasts_post**](docs/PodcastsApi.md#podcasts_post) | **POST** /podcasts | 
-*PodcastsApi* | [**top_podcasts_get**](docs/PodcastsApi.md#top_podcasts_get) | **GET** /topPodcasts | 
-*ScriptsApi* | [**scripts_get**](docs/ScriptsApi.md#scripts_get) | **GET** /scripts | 
-*ScriptsApi* | [**scripts_post**](docs/ScriptsApi.md#scripts_post) | **POST** /scripts | 
-*ScriptsApi* | [**scripts_script_id_delete**](docs/ScriptsApi.md#scripts_script_id_delete) | **DELETE** /scripts/{scriptId} | 
-*ScriptsApi* | [**scripts_script_id_get**](docs/ScriptsApi.md#scripts_script_id_get) | **GET** /scripts/{scriptId} | 
-*ScriptsApi* | [**scripts_script_id_put**](docs/ScriptsApi.md#scripts_script_id_put) | **PUT** /scripts/{scriptId} | 
 *TasksApi* | [**tasks_get**](docs/TasksApi.md#tasks_get) | **GET** /tasks | 
 *TasksApi* | [**tasks_post**](docs/TasksApi.md#tasks_post) | **POST** /tasks | 
 *TasksApi* | [**tasks_task_id_delete**](docs/TasksApi.md#tasks_task_id_delete) | **DELETE** /tasks/{taskId} | 
@@ -53,15 +38,6 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [AudioSection](docs/AudioSection.md)
- - [Episode](docs/Episode.md)
- - [EpisodesEpisodeIdPutRequest](docs/EpisodesEpisodeIdPutRequest.md)
- - [EpisodesPostRequest](docs/EpisodesPostRequest.md)
- - [Podcast](docs/Podcast.md)
- - [PodcastPodcastIdGet200Response](docs/PodcastPodcastIdGet200Response.md)
- - [PodcastsPostRequest](docs/PodcastsPostRequest.md)
- - [Script](docs/Script.md)
- - [ScriptsPostRequest](docs/ScriptsPostRequest.md)
- - [ScriptsScriptIdPutRequest](docs/ScriptsScriptIdPutRequest.md)
  - [Section](docs/Section.md)
  - [SerifSection](docs/SerifSection.md)
  - [SignUpPost200Response](docs/SignUpPost200Response.md)

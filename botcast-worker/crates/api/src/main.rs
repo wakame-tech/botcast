@@ -4,10 +4,7 @@ use controller::ApiImpl;
 use openapi::server::new;
 use repos::{
     Database,
-    postgres::{
-        PostgresEpisodeRepo, PostgresPodcastRepo, PostgresScriptRepo, PostgresTaskRepo,
-        PostgresUserRepo,
-    },
+    postgres::{PostgresTaskRepo, PostgresUserRepo},
     r2_storage::R2Storage,
 };
 use std::sync::Arc;
@@ -26,9 +23,6 @@ async fn main() -> anyhow::Result<()> {
         auth_client: AuthClient::new_from_env()?,
         storage: Arc::new(R2Storage::new()?),
         user_repo: Arc::new(PostgresUserRepo::new(db.clone())),
-        podcast_repo: Arc::new(PostgresPodcastRepo::new(db.clone())),
-        episode_repo: Arc::new(PostgresEpisodeRepo::new(db.clone())),
-        script_repo: Arc::new(PostgresScriptRepo::new(db.clone())),
         task_repo: Arc::new(PostgresTaskRepo::new(db.clone())),
     };
     let router = new(api).layer(CorsLayer::permissive());

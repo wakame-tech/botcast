@@ -1,4 +1,4 @@
-import { $api } from "@/lib/api_client";
+import { $cms, recordToScript } from "@/lib/cms_client";
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/scripts/")({
@@ -6,13 +6,10 @@ export const Route = createFileRoute("/scripts/")({
 });
 
 export function Scripts() {
-	const getScripts = $api.useQuery("get", "/scripts");
-
-	if (!getScripts.data) {
-		return null;
-	}
-
-	const scripts = getScripts.data;
+	const { data: records } = $cms.useQuery("get", "/records/{collectionId}", {
+		params: { path: { collectionId: "scripts" } },
+	});
+	const scripts = (records ?? []).map(recordToScript);
 
 	return (
 		<>

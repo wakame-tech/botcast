@@ -1,7 +1,4 @@
 mod auth;
-mod episodes;
-mod podcasts;
-mod scripts;
 mod tasks;
 
 use anyhow::Result;
@@ -14,10 +11,7 @@ use openapi::{
 };
 use repos::{
     entities::users::Model as User,
-    postgres::{
-        PostgresEpisodeRepo, PostgresPodcastRepo, PostgresScriptRepo, PostgresTaskRepo,
-        PostgresUserRepo,
-    },
+    postgres::{PostgresTaskRepo, PostgresUserRepo},
     r2_storage::R2Storage,
     repo::UserRepo,
 };
@@ -29,9 +23,6 @@ pub(crate) struct ApiImpl {
     pub(crate) auth_client: AuthClient,
     pub(crate) storage: Arc<R2Storage>,
     pub(crate) user_repo: Arc<PostgresUserRepo>,
-    pub(crate) podcast_repo: Arc<PostgresPodcastRepo>,
-    pub(crate) episode_repo: Arc<PostgresEpisodeRepo>,
-    pub(crate) script_repo: Arc<PostgresScriptRepo>,
     pub(crate) task_repo: Arc<PostgresTaskRepo>,
 }
 

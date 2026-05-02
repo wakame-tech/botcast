@@ -1,6 +1,6 @@
 import { JsonSchemaForm } from "@/components/JsonSchemaForm";
 import { Button } from "@/components/ui/button";
-import { $api } from "@/lib/api_client";
+import { $cms, recordToScript } from "@/lib/cms_client";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -11,22 +11,29 @@ export const Route = createLazyFileRoute("/scripts/$scriptId")({
 export function Script() {
 	const navigate = useNavigate();
 	const { scriptId } = Route.useParams();
-	const getScript = $api.useQuery("get", "/scripts/{scriptId}", {
-		params: { path: { scriptId } },
-	});
+	const { data: scriptRecord } = $cms.useQuery(
+		"get",
+		"/records/{collectionId}/{recordId}",
+		{ params: { path: { collectionId: "scripts", recordId: scriptId } } },
+	);
 	const [_, setParameters] = useState<Record<string, unknown>>({});
-	const deleteScript = $api.useMutation("delete", "/scripts/{scriptId}");
+	const deleteScript = $cms.useMutation(
+		"delete",
+		"/records/{collectionId}/{recordId}",
+	);
 
-	if (!getScript.data) {
+	if (!scriptRecord) {
 		return null;
 	}
 
 	const handleDelete = async () => {
-		await deleteScript.mutateAsync({ params: { path: { scriptId } } });
+		await deleteScript.mutateAsync({
+			params: { path: { collectionId: "scripts", recordId: scriptId } },
+		});
 		navigate({ to: "/scripts" });
 	};
 
-	const script = getScript.data;
+	const script = recordToScript(scriptRecord);
 
 	return (
 		<>
@@ -40,7 +47,7 @@ export function Script() {
 			<Button onClick={handleDelete}>delete</Button>
 
 			<pre className="p-2 text-sm bg-gray-1">
-				<code>{JSON.stringify(script.template, null, 4)}</code>
+				<code>{script.template}</code>
 			</pre>
 
 			{Object.keys(script.arguments).length !== 0 && (

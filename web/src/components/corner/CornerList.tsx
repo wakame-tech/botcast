@@ -1,7 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Corner } from "@/lib/api_client";
-import { Link } from "@tanstack/react-router";
-import { Button } from "../ui/button";
+
+interface Corner {
+	id: string;
+	title: string;
+	description?: string | null;
+	requesting_mail?: boolean;
+	cms_collection_id?: string | null;
+}
 
 interface CornerListProps {
 	corners: Corner[];
@@ -34,26 +39,7 @@ function CornerListItem(props: CornerListItemProps) {
 						</div>
 					</CardTitle>
 				</CardHeader>
-				<CardContent>
-					{props.corner.description}
-					{props.corner.requesting_mail && (
-						<div>
-							<Link
-								to="/corners/$cornerId/newMail"
-								params={{ cornerId: props.corner.id }}
-							>
-								<Button>メールを送る</Button>
-							</Link>
-
-							<Link
-								to="/corners/$cornerId"
-								params={{ cornerId: props.corner.id }}
-							>
-								<Button>コーナー詳細</Button>
-							</Link>
-						</div>
-					)}
-				</CardContent>
+				<CardContent>{props.corner.description}</CardContent>
 			</Card>
 		</>
 	);
