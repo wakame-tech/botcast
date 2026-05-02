@@ -1,8 +1,6 @@
-import { CornerList } from "@/components/corner/CornerList.tsx";
 import Episode from "@/components/episode/EpisodeList.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserIcon } from "@/components/user/UserIcon";
-import { $api } from "@/lib/api_client";
+import { $cms, recordToEpisode, recordToPodcast } from "@/lib/cms_client";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId")({
@@ -11,15 +9,25 @@ export const Route = createLazyFileRoute("/podcasts/$podcastId")({
 
 export function Podcast() {
 	const { podcastId } = Route.useParams();
-	const getPodcast = $api.useQuery("get", "/podcast/{podcastId}", {
-		params: { path: { podcastId } },
-	});
+	const { data: podcastRecord } = $cms.useQuery(
+		"get",
+		"/records/{collectionId}/{recordId}",
+		{ params: { path: { collectionId: "podcasts", recordId: podcastId } } },
+	);
+	const { data: episodeRecords } = $cms.useQuery(
+		"get",
+		"/records/{collectionId}",
+		{ params: { path: { collectionId: "episodes" } } },
+	);
 
-	if (!getPodcast.data) {
+	if (!podcastRecord) {
 		return <div>not found</div>;
 	}
 
-	const { podcast, episodes, corners } = getPodcast.data;
+	const podcast = recordToPodcast(podcastRecord);
+	const episodes = (episodeRecords ?? [])
+		.map(recordToEpisode)
+		.filter((e) => e.podcast_id === podcastId);
 
 	return (
 		<>
@@ -43,15 +51,7 @@ export function Podcast() {
 				</CardHeader>
 				<CardContent>
 					<h2>概要</h2>
-					<UserIcon
-						userId={podcast.user.auth_id}
-						size="2rem"
-						label={podcast.user.name ?? undefined}
-					/>
 					{podcast.description}
-
-					<h2>コーナー ({corners.length})</h2>
-					<CornerList corners={corners} />
 
 					<h2>エピソード ({episodes.length})</h2>
 					<Episode.List podcastId={podcast.id} episodes={episodes} />

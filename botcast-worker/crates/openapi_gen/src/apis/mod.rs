@@ -1,7 +1,4 @@
 pub mod auth;
-pub mod episodes;
-pub mod podcasts;
-pub mod scripts;
 pub mod tasks;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

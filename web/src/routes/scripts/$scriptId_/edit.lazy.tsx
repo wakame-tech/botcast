@@ -1,5 +1,6 @@
 import { ScriptForm } from "@/components/script/ScriptForm";
-import { $api, type ScriptInput } from "@/lib/api_client";
+import type { ScriptInput } from "@/lib/api_client";
+import { $cms, recordToScript, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/scripts/$scriptId/edit")({
@@ -9,30 +10,35 @@ export const Route = createLazyFileRoute("/scripts/$scriptId/edit")({
 export function EditScript() {
 	const { scriptId } = Route.useParams();
 	const navigate = Route.useNavigate();
-	const getScript = $api.useQuery("get", "/scripts/{scriptId}", {
-		params: { path: { scriptId } },
-	});
-	const updateScript = $api.useMutation("put", "/scripts/{scriptId}");
+	const { data: scriptRecord } = $cms.useQuery(
+		"get",
+		"/records/{collectionId}/{recordId}",
+		{ params: { path: { collectionId: "scripts", recordId: scriptId } } },
+	);
+	const updateScript = $cms.useMutation(
+		"put",
+		"/records/{collectionId}/{recordId}",
+	);
 
 	const handleSubmit = async (values: ScriptInput) => {
 		await updateScript.mutateAsync({
-			params: {
-				path: { scriptId },
-			},
+			params: { path: { collectionId: "scripts", recordId: scriptId } },
 			body: {
-				title: values.title,
-				description: values.description,
-				template: JSON.parse(values.template),
+				data: toRecordData({
+					title: values.title,
+					description: values.description,
+					template: values.template,
+				}),
 			},
 		});
 		navigate({ to: "/scripts/$scriptId", params: { scriptId } });
 	};
 
-	if (!getScript.data) {
+	if (!scriptRecord) {
 		return null;
 	}
 
-	const script = getScript.data;
+	const script = recordToScript(scriptRecord);
 
 	return (
 		<>
@@ -40,7 +46,7 @@ export function EditScript() {
 				values={{
 					title: script.title,
 					description: script.description,
-					template: JSON.stringify(script.template, null, 4),
+					template: script.template,
 				}}
 				onSubmit={handleSubmit}
 			/>

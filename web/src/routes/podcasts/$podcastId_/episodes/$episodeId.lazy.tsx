@@ -2,7 +2,7 @@ import { SectionsComponent } from "@/components/episode/Sections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
-import { $api } from "@/lib/api_client";
+import { $cms, recordToEpisode } from "@/lib/cms_client";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import Parser from "srt-parser-2";
@@ -27,34 +27,44 @@ const fetchSrt = async (url: string): Promise<Line[]> => {
 function Episode() {
 	const navigate = useNavigate();
 	const { podcastId, episodeId } = Route.useParams();
-	const getEpisode = $api.useQuery("get", "/episodes/{episodeId}", {
-		params: { path: { episodeId } },
-	});
+	const { data: episodeRecord } = $cms.useQuery(
+		"get",
+		"/records/{collectionId}/{recordId}",
+		{
+			params: { path: { collectionId: "episodes", recordId: episodeId } },
+		},
+	);
+	const episode = episodeRecord ? recordToEpisode(episodeRecord) : null;
+
 	const { data } = useQuery({
 		queryKey: ["lines"],
 		queryFn: () => {
-			const url = getEpisode.data?.srt_url;
+			const url = episode?.srt_url;
 			if (url) {
 				return fetchSrt(url);
 			}
 		},
-		enabled: !!getEpisode.data?.srt_url,
+		enabled: !!episode?.srt_url,
 	});
 	const lines = data ?? [];
 
-	const deleteEpisode = $api.useMutation("delete", "/episodes/{episodeId}");
+	const deleteEpisode = $cms.useMutation(
+		"delete",
+		"/records/{collectionId}/{recordId}",
+	);
 
 	const { state, setEpisode, playOrPause, seekTo } = usePlayer();
 
-	if (!getEpisode.data || getEpisode.error) {
+	if (!episode) {
 		return <div>error</div>;
 	}
 
-	const episode = getEpisode.data;
 	const isPlayingEpisode = state.isPlaying && episode.id === state.episode?.id;
 
 	const handleDelete = async () => {
-		await deleteEpisode.mutateAsync({ params: { path: { episodeId } } });
+		await deleteEpisode.mutateAsync({
+			params: { path: { collectionId: "episodes", recordId: episodeId } },
+		});
 		navigate({
 			to: "/podcasts/$podcastId",
 			params: { podcastId },

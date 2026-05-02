@@ -9,8 +9,6 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct Provider {
-    pub(crate) provide_podcast_repo: Arc<dyn ProvidePodcastRepo>,
-    pub(crate) provide_episode_repo: Arc<dyn ProvideEpisodeRepo>,
     pub(crate) provide_task_repo: Arc<dyn ProvideTaskRepo>,
     pub(crate) provide_script_repo: Arc<dyn ProvideScriptRepo>,
     pub(crate) provide_storage: Arc<dyn ProvideStorage>,
@@ -23,8 +21,6 @@ impl Provider {
     pub fn new(db: DatabaseConnection, kafru_queue: Arc<Queue<'static>>) -> Self {
         let provider = DefaultProvider::new(db);
         Self {
-            provide_podcast_repo: Arc::new(provider.clone()),
-            provide_episode_repo: Arc::new(provider.clone()),
             provide_task_repo: Arc::new(provider.clone()),
             provide_script_repo: Arc::new(provider.clone()),
             provide_storage: Arc::new(provider.clone()),
@@ -45,10 +41,7 @@ impl Provider {
     }
 
     pub(crate) fn episode_service(&self) -> EpisodeService {
-        EpisodeService::new(
-            self.provide_episode_repo.episode_repo(),
-            self.provide_storage.storage(),
-        )
+        EpisodeService::new(self.provide_storage.storage())
     }
 
     pub(crate) fn script_service(&self) -> ScriptService {

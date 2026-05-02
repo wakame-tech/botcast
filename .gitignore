@@ -1,3 +1,4 @@
 # Serena local configuration and cache
 .serena/
 node_modules/
+.env

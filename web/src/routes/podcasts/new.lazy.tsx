@@ -1,5 +1,6 @@
 import { PodcastForm } from "@/components/podcast/PodcastForm";
 import { $api, type PodcastInput } from "@/lib/api_client";
+import { $cms, toRecordData } from "@/lib/cms_client";
 import { useNavigate } from "@tanstack/react-router";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
@@ -9,14 +10,19 @@ export const Route = createLazyFileRoute("/podcasts/new")({
 
 export function NewPodcast() {
 	const navigate = useNavigate();
-	const newPodcast = $api.useMutation("post", "/podcasts");
+	const { data: me } = $api.useQuery("get", "/me");
+	const newPodcast = $cms.useMutation("post", "/records/{collectionId}");
 
 	const handleSubmit = async (values: PodcastInput) => {
 		await newPodcast.mutateAsync({
+			params: { path: { collectionId: "podcasts" } },
 			body: {
-				title: values.title,
-				description: values.description,
-				icon: "🎧",
+				data: toRecordData({
+					title: values.title,
+					description: values.description,
+					icon: values.icon,
+					user_id: me?.id ?? "",
+				}),
 			},
 		});
 		navigate({ to: "/podcasts" });

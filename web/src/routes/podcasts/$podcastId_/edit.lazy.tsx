@@ -1,6 +1,7 @@
 import { PodcastForm } from "@/components/podcast/PodcastForm";
 import { Button } from "@/components/ui/button";
-import { $api, type PodcastInput } from "@/lib/api_client";
+import type { PodcastInput } from "@/lib/api_client";
+import { $cms, recordToPodcast, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId/edit")({
@@ -10,36 +11,46 @@ export const Route = createLazyFileRoute("/podcasts/$podcastId/edit")({
 export default function EditPodcast() {
 	const { podcastId } = Route.useParams();
 	const navigate = Route.useNavigate();
-	const getPodcast = $api.useQuery("get", "/podcast/{podcastId}", {
-		params: { path: { podcastId } },
-	});
-	const updatePodcast = $api.useMutation("put", "/podcast/{podcastId}");
-	const deletePodcast = $api.useMutation("delete", "/podcast/{podcastId}");
+	const { data: podcastRecord } = $cms.useQuery(
+		"get",
+		"/records/{collectionId}/{recordId}",
+		{ params: { path: { collectionId: "podcasts", recordId: podcastId } } },
+	);
+	const updatePodcast = $cms.useMutation(
+		"put",
+		"/records/{collectionId}/{recordId}",
+	);
+	const deletePodcast = $cms.useMutation(
+		"delete",
+		"/records/{collectionId}/{recordId}",
+	);
 
 	const handleSubmit = async (values: PodcastInput) => {
 		await updatePodcast.mutateAsync({
-			params: {
-				path: { podcastId },
-			},
+			params: { path: { collectionId: "podcasts", recordId: podcastId } },
 			body: {
-				icon: values.icon,
-				title: values.title,
-				description: values.description,
+				data: toRecordData({
+					icon: values.icon,
+					title: values.title,
+					description: values.description,
+				}),
 			},
 		});
 		navigate({ to: "/podcasts/$podcastId", params: { podcastId } });
 	};
 
 	const handleDelete = async () => {
-		await deletePodcast.mutateAsync({ params: { path: { podcastId } } });
+		await deletePodcast.mutateAsync({
+			params: { path: { collectionId: "podcasts", recordId: podcastId } },
+		});
 		navigate({ to: "/podcasts" });
 	};
 
-	if (!getPodcast.data) {
+	if (!podcastRecord) {
 		return null;
 	}
 
-	const podcast = getPodcast.data.podcast;
+	const podcast = recordToPodcast(podcastRecord);
 
 	return (
 		<>

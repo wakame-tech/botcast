@@ -112,9 +112,6 @@ impl From<&str> for ContentType {
 }
 
 pub mod auth_api;
-pub mod episodes_api;
-pub mod podcasts_api;
-pub mod scripts_api;
 pub mod tasks_api;
 
 pub mod configuration;

@@ -2,10 +2,7 @@
 Cargo.toml
 README.md
 src/apis/auth.rs
-src/apis/episodes.rs
 src/apis/mod.rs
-src/apis/podcasts.rs
-src/apis/scripts.rs
 src/apis/tasks.rs
 src/header.rs
 src/lib.rs

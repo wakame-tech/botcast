@@ -8,14 +8,18 @@ export const useSession = () => {
 	useEffect(() => {
 		// 初期セッションを取得
 		const getInitialSession = async () => {
-			const { data: { session } } = await supabase.auth.getSession();
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
 			setSession(session);
 		};
 
 		getInitialSession();
 
 		// 認証状態の変更を監視
-		const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+		const {
+			data: { subscription },
+		} = supabase.auth.onAuthStateChange((_event, session) => {
 			setSession(session);
 		});
 
