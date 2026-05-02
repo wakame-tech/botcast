@@ -15,7 +15,9 @@ fi
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep "^web/src/.*\.\(ts\|tsx\)$" || true)
 if [ -n "$STAGED_TS" ]; then
   echo "Running biome check on staged files..."
-  cd web && npx @biomejs/biome check $STAGED_TS 2>&1
+  # strip "web/" prefix since we cd into web/
+  STAGED_TS_REL=$(echo "$STAGED_TS" | sed 's|^web/||')
+  cd web && npx @biomejs/biome check $STAGED_TS_REL 2>&1
   BIOME_STATUS=$?
   cd ..
   if [ $BIOME_STATUS -ne 0 ]; then

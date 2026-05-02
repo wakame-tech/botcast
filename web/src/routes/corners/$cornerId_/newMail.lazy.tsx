@@ -1,5 +1,7 @@
 import { MailForm } from "@/components/mail/MailForm";
-import { $api, type MailInput } from "@/lib/api_client";
+import type { MailInput } from "@/lib/api_client";
+import { $api } from "@/lib/api_client";
+import { $cms } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/corners/$cornerId/newMail")({
@@ -11,22 +13,21 @@ export default function NewMail() {
 	const getCorner = $api.useQuery("get", "/corners/{cornerId}", {
 		params: { path: { cornerId } },
 	});
-	const newMail = $api.useMutation("post", "/corners/{cornerId}/mails");
+	const corner = getCorner.data;
+	const collectionId = corner?.cms_collection_id ?? "";
+
+	const createRecord = $cms.useMutation("post", "/records/{collectionId}");
 	const onSubmit = (values: MailInput) => {
-		newMail.mutate({
-			params: {
-				path: { cornerId },
-			},
-			body: {
-				body: values.body,
-			},
+		if (!collectionId) return;
+		createRecord.mutate({
+			params: { path: { collectionId } },
+			body: { data: values.body as Record<string, never> },
 		});
 	};
 
-	if (!getCorner.data) {
+	if (!corner) {
 		return null;
 	}
-	const corner = getCorner.data;
 
 	return (
 		<MailForm
