@@ -2,6 +2,7 @@ use super::{
     episode_service::EpisodeService, script_service::ScriptService, task_service::TaskService,
     ProvideApiClient, UserApiClientProvider,
 };
+use kafru::queue::Queue;
 use repos::provider::*;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
@@ -15,10 +16,11 @@ pub struct Provider {
     pub(crate) provide_storage: Arc<dyn ProvideStorage>,
     pub(crate) provide_secret_repo: Arc<dyn ProvideSecretRepo>,
     pub(crate) provide_api_client: Arc<dyn ProvideApiClient>,
+    pub(crate) kafru_queue: Arc<Queue<'static>>,
 }
 
 impl Provider {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: DatabaseConnection, kafru_queue: Arc<Queue<'static>>) -> Self {
         let provider = DefaultProvider::new(db);
         Self {
             provide_podcast_repo: Arc::new(provider.clone()),
@@ -28,6 +30,7 @@ impl Provider {
             provide_storage: Arc::new(provider.clone()),
             provide_secret_repo: Arc::new(provider.clone()),
             provide_api_client: Arc::new(UserApiClientProvider::default()),
+            kafru_queue,
         }
     }
 
@@ -37,6 +40,7 @@ impl Provider {
             self.provide_api_client.api_client(),
             self.episode_service(),
             self.script_service(),
+            self.kafru_queue.clone(),
         )
     }
 
