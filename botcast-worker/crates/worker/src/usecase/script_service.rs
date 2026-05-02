@@ -5,16 +5,28 @@ use repos::{
     id::ScriptId,
     repo::{ScriptRepo, SecretRepo},
 };
-use script_runtime::{plugins::botcast_api::BotCastApiPlugin, runtime::ScriptRuntime};
 use std::{collections::BTreeMap, sync::Arc};
 use tracing::instrument;
 use uuid::Uuid;
+
+#[derive(serde::Deserialize)]
+struct CmsScriptResponseData {
+    stdout: Option<String>,
+    error: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct CmsScriptResponse {
+    code: i32,
+    data: CmsScriptResponseData,
+}
 
 #[derive(Clone)]
 pub(crate) struct ScriptService {
     script_repo: Arc<dyn ScriptRepo>,
     secret_repo: Arc<dyn SecretRepo>,
     configuration: Configuration,
+    cms_url: String,
 }
 
 impl ScriptService {
@@ -23,10 +35,13 @@ impl ScriptService {
         secret_repo: Arc<dyn SecretRepo>,
         configuration: Configuration,
     ) -> Self {
+        let cms_url =
+            std::env::var("CMS_URL").unwrap_or_else(|_| "http://localhost:3002".to_string());
         Self {
             script_repo,
             secret_repo,
             configuration,
+            cms_url,
         }
     }
 
@@ -63,14 +78,63 @@ impl ScriptService {
 
         let context = self.replace_context_to_secrets(me.id, parameters).await?;
 
-        let mut runtime = ScriptRuntime::default();
-        runtime.install_plugin(BotCastApiPlugin::new(self.configuration.clone()));
+        let code = match template {
+            serde_json::Value::String(s) => s.clone(),
+            _ => {
+                return Err(Error::InvalidInput(anyhow::anyhow!(
+                    "Template must be a string containing JavaScript code"
+                )))
+            }
+        };
 
-        let res = runtime
-            .run(template, context)
+        let preload = format!(
+            "const context = {};",
+            serde_json::to_string(&context)
+                .map_err(|e| Error::Other(anyhow::anyhow!("Failed to serialize context: {}", e)))?
+        );
+
+        let client = reqwest::Client::new();
+        let response = client
+            .post(format!("{}/scripts", self.cms_url))
+            .json(&serde_json::json!({
+                "language": "nodejs",
+                "code": code,
+                "preload": preload,
+                "enable_network": true,
+            }))
+            .send()
             .await
-            .map_err(Error::Script)?;
-        Ok(res)
+            .map_err(|e| Error::Script(anyhow::anyhow!("CMS request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(Error::Script(anyhow::anyhow!(
+                "CMS returned {}: {}",
+                status,
+                body
+            )));
+        }
+
+        let script_res: CmsScriptResponse = response
+            .json()
+            .await
+            .map_err(|e| Error::Script(anyhow::anyhow!("Failed to parse CMS response: {}", e)))?;
+
+        if script_res.code != 0 {
+            return Err(Error::Script(anyhow::anyhow!(
+                "Script failed: {}",
+                script_res.data.error.unwrap_or_default()
+            )));
+        }
+
+        let stdout = script_res.data.stdout.unwrap_or_default();
+        serde_json::from_str(&stdout).map_err(|e| {
+            Error::Script(anyhow::anyhow!(
+                "Failed to parse script output as JSON: {}",
+                e
+            ))
+        })
     }
 
     pub(crate) async fn update_template(
