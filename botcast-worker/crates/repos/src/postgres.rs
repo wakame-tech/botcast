@@ -1,4 +1,3 @@
-use crate::entities::corners::{self, Entity as CornerEntity, Model as Corner};
 use crate::entities::episodes::{Entity as EpisodeEntity, Model as Episode};
 use crate::entities::podcasts::{self, Entity as PodcastEntity, Model as Podcast};
 use crate::entities::scripts::{self, Entity as ScriptEntity, Model as Script};
@@ -8,8 +7,8 @@ use crate::entities::users::{self, Entity as UserEntity, Model as User};
 use crate::repo::{Secret, UserRepo};
 use crate::{
     error::Error,
-    id::{CornerId, EpisodeId, PodcastId, ScriptId, TaskId},
-    repo::{CornerRepo, EpisodeRepo, PodcastRepo, ScriptRepo, SecretRepo, TaskRepo},
+    id::{EpisodeId, PodcastId, ScriptId, TaskId},
+    repo::{EpisodeRepo, PodcastRepo, ScriptRepo, SecretRepo, TaskRepo},
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -246,67 +245,6 @@ impl ScriptRepo for PostgresScriptRepo {
             .map_err(Error::Other)?
             .ok_or_else(|| Error::NotFound("script".to_string(), id.0.to_string()))?;
         script.delete(&self.db).await.map_err(Error::Other)?;
-        Ok(())
-    }
-}
-
-pub struct PostgresCornerRepo {
-    db: DatabaseConnection,
-}
-
-impl PostgresCornerRepo {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
-    }
-}
-
-#[async_trait]
-impl CornerRepo for PostgresCornerRepo {
-    async fn find_all_by_podcast_id(
-        &self,
-        podcast_id: &PodcastId,
-    ) -> anyhow::Result<Vec<(Corner, Option<User>)>, Error> {
-        CornerEntity::find()
-            .filter(corners::Column::PodcastId.eq(podcast_id.0))
-            .find_also_related(UserEntity)
-            .all(&self.db)
-            .await
-            .map_err(Error::Other)
-    }
-
-    async fn find_by_id(&self, id: &CornerId) -> anyhow::Result<(Corner, Option<User>), Error> {
-        CornerEntity::find_by_id(id.0)
-            .find_also_related(UserEntity)
-            .one(&self.db)
-            .await
-            .map_err(Error::Other)?
-            .ok_or_else(|| Error::NotFound("corner".to_string(), id.0.to_string()))
-    }
-
-    async fn create(&self, corner: Corner) -> anyhow::Result<(), Error> {
-        CornerEntity::insert(corner.into_active_model())
-            .exec(&self.db)
-            .await
-            .map_err(Error::Other)?;
-        Ok(())
-    }
-
-    async fn update(&self, corner: Corner) -> anyhow::Result<(), Error> {
-        corner
-            .into_active_model()
-            .save(&self.db)
-            .await
-            .map_err(Error::Other)?;
-        Ok(())
-    }
-
-    async fn delete(&self, id: &CornerId) -> anyhow::Result<(), Error> {
-        let corner = CornerEntity::find_by_id(id.0)
-            .one(&self.db)
-            .await
-            .map_err(Error::Other)?
-            .ok_or_else(|| Error::NotFound("corner".to_string(), id.0.to_string()))?;
-        corner.delete(&self.db).await.map_err(Error::Other)?;
         Ok(())
     }
 }

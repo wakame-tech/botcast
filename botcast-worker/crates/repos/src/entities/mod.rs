@@ -2,7 +2,6 @@
 
 pub mod prelude;
 
-pub mod corners;
 pub mod episodes;
 pub mod podcasts;
 pub mod scripts;
