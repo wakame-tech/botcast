@@ -597,67 +597,6 @@ paths:
       responses:
         '200':
           description: OK
-  /corners/{cornerId}/mails:
-    parameters:
-      - in: path
-        name: cornerId
-        schema:
-          type: string
-        required: true
-    get:
-      tags:
-        - Mails
-      security:
-        - Bearer: []
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Mail'
-    post:
-      tags:
-        - Mails
-      security:
-        - Bearer: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                body:
-                  type: object
-                  additionalProperties: true
-              required:
-                - body
-      responses:
-        '200':
-          description: OK
-  /corners/{cornerId}/mails/{mailId}:
-    parameters:
-      - in: path
-        name: cornerId
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: mailId
-        schema:
-          type: string
-        required: true
-    delete:
-      tags:
-        - Mails
-      security:
-        - Bearer: []
-      responses:
-        '200':
-          description: OK
 components:
   securitySchemes:
     Bearer:
@@ -763,6 +702,8 @@ components:
         mail_schema:
           type: object
           additionalProperties: true
+        cms_collection_id:
+          type: string
         user:
           $ref: '#/components/schemas/User'
       required:
@@ -828,28 +769,6 @@ components:
         - title
         - description
         - arguments
-    Mail:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        body:
-          type: object
-          additionalProperties: true
-        user:
-          $ref: '#/components/schemas/User'
-        corner:
-          $ref: '#/components/schemas/Corner'
-        created_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - body
-        - user
-        - corner
-        - created_at
     Task:
       type: object
       properties:

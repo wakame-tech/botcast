@@ -21,6 +21,7 @@ pub(crate) fn into_corner_model((corner, user): (Corner, Option<User>)) -> Resul
         description: corner.description,
         requesting_mail: Some(corner.requesting_mail),
         mail_schema: Some(into_openapi_object(corner.mail_schema)?),
+        cms_collection_id: corner.cms_collection_id,
         user: into_user_model(user)?,
     })
 }

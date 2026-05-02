@@ -350,6 +350,10 @@ pub struct Corner {
     #[serde(skip_serializing_if="Option::is_none")]
     pub mail_schema: Option<std::collections::HashMap<String, crate::types::Object>>,
 
+    #[serde(rename = "cms_collection_id")]
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub cms_collection_id: Option<String>,
+
     #[serde(rename = "user")]
     pub user: models::User,
 
@@ -368,6 +372,7 @@ impl Corner {
             description,
             requesting_mail: None,
             mail_schema: None,
+            cms_collection_id: None,
             user,
         }
     }
@@ -468,6 +473,7 @@ impl std::str::FromStr for Corner {
             description: intermediate_rep.description.into_iter().next().ok_or_else(|| "description missing in Corner".to_string())?,
             requesting_mail: intermediate_rep.requesting_mail.into_iter().next(),
             mail_schema: intermediate_rep.mail_schema.into_iter().next(),
+            cms_collection_id: None,
             user: intermediate_rep.user.into_iter().next().ok_or_else(|| "user missing in Corner".to_string())?,
         })
     }
