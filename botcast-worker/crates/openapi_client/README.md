@@ -29,16 +29,10 @@ Class | Method | HTTP request | Description
 *AuthApi* | [**me_get**](docs/AuthApi.md#me_get) | **GET** /me | 
 *AuthApi* | [**sign_in_post**](docs/AuthApi.md#sign_in_post) | **POST** /signIn | Sign in
 *AuthApi* | [**sign_up_post**](docs/AuthApi.md#sign_up_post) | **POST** /signUp | Sign up
-*CornersApi* | [**corners_corner_id_delete**](docs/CornersApi.md#corners_corner_id_delete) | **DELETE** /corners/{cornerId} | 
-*CornersApi* | [**corners_corner_id_get**](docs/CornersApi.md#corners_corner_id_get) | **GET** /corners/{cornerId} | 
-*CornersApi* | [**corners_corner_id_put**](docs/CornersApi.md#corners_corner_id_put) | **PUT** /corners/{cornerId} | 
 *EpisodesApi* | [**episodes_episode_id_delete**](docs/EpisodesApi.md#episodes_episode_id_delete) | **DELETE** /episodes/{episodeId} | 
 *EpisodesApi* | [**episodes_episode_id_get**](docs/EpisodesApi.md#episodes_episode_id_get) | **GET** /episodes/{episodeId} | 
 *EpisodesApi* | [**episodes_episode_id_put**](docs/EpisodesApi.md#episodes_episode_id_put) | **PUT** /episodes/{episodeId} | 
 *EpisodesApi* | [**episodes_post**](docs/EpisodesApi.md#episodes_post) | **POST** /episodes | 
-*MailsApi* | [**corners_corner_id_mails_get**](docs/MailsApi.md#corners_corner_id_mails_get) | **GET** /corners/{cornerId}/mails | 
-*MailsApi* | [**corners_corner_id_mails_mail_id_delete**](docs/MailsApi.md#corners_corner_id_mails_mail_id_delete) | **DELETE** /corners/{cornerId}/mails/{mailId} | 
-*MailsApi* | [**corners_corner_id_mails_post**](docs/MailsApi.md#corners_corner_id_mails_post) | **POST** /corners/{cornerId}/mails | 
 *PodcastsApi* | [**podcast_podcast_id_delete**](docs/PodcastsApi.md#podcast_podcast_id_delete) | **DELETE** /podcast/{podcastId} | 
 *PodcastsApi* | [**podcast_podcast_id_get**](docs/PodcastsApi.md#podcast_podcast_id_get) | **GET** /podcast/{podcastId} | 
 *PodcastsApi* | [**podcast_podcast_id_put**](docs/PodcastsApi.md#podcast_podcast_id_put) | **PUT** /podcast/{podcastId} | 
@@ -50,8 +44,6 @@ Class | Method | HTTP request | Description
 *ScriptsApi* | [**scripts_script_id_delete**](docs/ScriptsApi.md#scripts_script_id_delete) | **DELETE** /scripts/{scriptId} | 
 *ScriptsApi* | [**scripts_script_id_get**](docs/ScriptsApi.md#scripts_script_id_get) | **GET** /scripts/{scriptId} | 
 *ScriptsApi* | [**scripts_script_id_put**](docs/ScriptsApi.md#scripts_script_id_put) | **PUT** /scripts/{scriptId} | 
-*SecretsApi* | [**secrets_get**](docs/SecretsApi.md#secrets_get) | **GET** /secrets | 
-*SecretsApi* | [**secrets_post**](docs/SecretsApi.md#secrets_post) | **POST** /secrets | 
 *TasksApi* | [**tasks_get**](docs/TasksApi.md#tasks_get) | **GET** /tasks | 
 *TasksApi* | [**tasks_post**](docs/TasksApi.md#tasks_post) | **POST** /tasks | 
 *TasksApi* | [**tasks_task_id_delete**](docs/TasksApi.md#tasks_task_id_delete) | **DELETE** /tasks/{taskId} | 
@@ -61,31 +53,20 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [AudioSection](docs/AudioSection.md)
- - [Corner](docs/Corner.md)
- - [CornersCornerIdMailsPostRequest](docs/CornersCornerIdMailsPostRequest.md)
- - [CornersCornerIdPutRequest](docs/CornersCornerIdPutRequest.md)
  - [Episode](docs/Episode.md)
  - [EpisodesEpisodeIdPutRequest](docs/EpisodesEpisodeIdPutRequest.md)
  - [EpisodesPostRequest](docs/EpisodesPostRequest.md)
- - [Mail](docs/Mail.md)
- - [MeGet404Response](docs/MeGet404Response.md)
  - [Podcast](docs/Podcast.md)
  - [PodcastPodcastIdGet200Response](docs/PodcastPodcastIdGet200Response.md)
  - [PodcastsPostRequest](docs/PodcastsPostRequest.md)
  - [Script](docs/Script.md)
  - [ScriptsPostRequest](docs/ScriptsPostRequest.md)
  - [ScriptsScriptIdPutRequest](docs/ScriptsScriptIdPutRequest.md)
- - [Secret](docs/Secret.md)
- - [SecretsPostRequest](docs/SecretsPostRequest.md)
- - [SecretsPostRequestNewsInner](docs/SecretsPostRequestNewsInner.md)
  - [Section](docs/Section.md)
  - [SerifSection](docs/SerifSection.md)
- - [SignInErrorResponse](docs/SignInErrorResponse.md)
- - [SignInRequest](docs/SignInRequest.md)
- - [SignInResponse](docs/SignInResponse.md)
- - [SignUpErrorResponse](docs/SignUpErrorResponse.md)
- - [SignUpRequest](docs/SignUpRequest.md)
- - [SignUpResponse](docs/SignUpResponse.md)
+ - [SignUpPost200Response](docs/SignUpPost200Response.md)
+ - [SignUpPost400Response](docs/SignUpPost400Response.md)
+ - [SignUpPostRequest](docs/SignUpPostRequest.md)
  - [Task](docs/Task.md)
  - [TaskStatus](docs/TaskStatus.md)
  - [TasksPostRequest](docs/TasksPostRequest.md)

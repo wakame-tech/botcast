@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# Rust: botcast-workerのチェック
+echo "Running cargo check..."
+cd botcast-worker && cargo check 2>&1
+RUST_STATUS=$?
+cd ..
+
+if [ $RUST_STATUS -ne 0 ]; then
+  echo "cargo check failed"
+  exit 1
+fi
+
+# Frontend: biome lint+format check (変更ファイルのみ)
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep "^web/src/.*\.\(ts\|tsx\)$" || true)
+if [ -n "$STAGED_TS" ]; then
+  echo "Running biome check on staged files..."
+  # strip "web/" prefix since we cd into web/
+  STAGED_TS_REL=$(echo "$STAGED_TS" | sed 's|^web/||')
+  cd web && npx @biomejs/biome check $STAGED_TS_REL 2>&1
+  BIOME_STATUS=$?
+  cd ..
+  if [ $BIOME_STATUS -ne 0 ]; then
+    echo "biome check failed"
+    exit 1
+  fi
+fi
+
+exit 0

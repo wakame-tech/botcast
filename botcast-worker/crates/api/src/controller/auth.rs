@@ -5,7 +5,7 @@ use axum::http::Method;
 use axum_extra::extract::{CookieJar, Host};
 use openapi::{
     apis::auth::{Auth, MeGetResponse, SignInPostResponse, SignUpPostResponse},
-    models::{self, SignInRequest, SignInResponse, SignInErrorResponse, SignUpRequest, SignUpResponse, SignUpErrorResponse},
+    models::{self, SignUpPost200Response, SignUpPost400Response, SignUpPostRequest},
 };
 use repos::entities::users::Model as User;
 
@@ -37,7 +37,7 @@ impl Auth<anyhow::Error> for ApiImpl {
         _method: &Method,
         _host: &Host,
         _cookie: &CookieJar,
-        body: &SignInRequest,
+        body: &SignUpPostRequest,
     ) -> Result<SignInPostResponse> {
         let session = self
             .auth_client
@@ -45,14 +45,14 @@ impl Auth<anyhow::Error> for ApiImpl {
             .await;
         match session {
             Ok(session) => Ok(SignInPostResponse::Status200_OK(
-                SignInResponse {
+                SignUpPost200Response {
                     access_token: session.access_token,
                 },
             )),
             Err(e) => {
                 tracing::error!("sign_in_post: {}", e);
                 Ok(SignInPostResponse::Status404_NotFound(
-                    SignInErrorResponse {
+                    SignUpPost400Response {
                         message: Some("User not found".to_string()),
                     },
                 ))
@@ -65,7 +65,7 @@ impl Auth<anyhow::Error> for ApiImpl {
         _method: &Method,
         _host: &Host,
         _cookie: &CookieJar,
-        body: &SignUpRequest,
+        body: &SignUpPostRequest,
     ) -> Result<SignUpPostResponse> {
         let session = self
             .auth_client
@@ -73,22 +73,21 @@ impl Auth<anyhow::Error> for ApiImpl {
             .await;
         match session {
             Ok(_signup_result) => {
-                // After successful signup, attempt to login to get access token
                 let login_result = self
                     .auth_client
                     .login_with_email(&body.email, &body.password)
                     .await;
-                    
+
                 match login_result {
                     Ok(login_session) => Ok(SignUpPostResponse::Status200_OK(
-                        SignUpResponse {
+                        SignUpPost200Response {
                             access_token: login_session.access_token,
                         },
                     )),
                     Err(e) => {
                         tracing::error!("sign_up_post: auto-login failed after signup: {}", e);
                         Ok(SignUpPostResponse::Status400_BadRequest(
-                            SignUpErrorResponse {
+                            SignUpPost400Response {
                                 message: Some("Registration succeeded but auto-login failed".to_string()),
                             },
                         ))
@@ -99,13 +98,13 @@ impl Auth<anyhow::Error> for ApiImpl {
                 tracing::error!("sign_up_post: {}", e);
                 if e.to_string().contains("User already registered") || e.to_string().contains("already been registered") {
                     Ok(SignUpPostResponse::Status409_Conflict(
-                        SignUpErrorResponse {
+                        SignUpPost400Response {
                             message: Some("User already exists".to_string()),
                         },
                     ))
                 } else {
                     Ok(SignUpPostResponse::Status400_BadRequest(
-                        SignUpErrorResponse {
+                        SignUpPost400Response {
                             message: Some("Registration failed".to_string()),
                         },
                     ))

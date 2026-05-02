@@ -17,12 +17,8 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::corners::Entity")]
-    Corners,
     #[sea_orm(has_many = "super::episodes::Entity")]
     Episodes,
-    #[sea_orm(has_many = "super::mails::Entity")]
-    Mails,
     #[sea_orm(has_many = "super::podcasts::Entity")]
     Podcasts,
     #[sea_orm(has_many = "super::scripts::Entity")]
@@ -31,21 +27,9 @@ pub enum Relation {
     Tasks,
 }
 
-impl Related<super::corners::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Corners.def()
-    }
-}
-
 impl Related<super::episodes::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Episodes.def()
-    }
-}
-
-impl Related<super::mails::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Mails.def()
     }
 }
 

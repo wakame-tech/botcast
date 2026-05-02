@@ -17,16 +17,13 @@ pub struct PodcastPodcastIdGet200Response {
     pub podcast: Box<models::Podcast>,
     #[serde(rename = "episodes")]
     pub episodes: Vec<models::Episode>,
-    #[serde(rename = "corners")]
-    pub corners: Vec<models::Corner>,
 }
 
 impl PodcastPodcastIdGet200Response {
-    pub fn new(podcast: models::Podcast, episodes: Vec<models::Episode>, corners: Vec<models::Corner>) -> PodcastPodcastIdGet200Response {
+    pub fn new(podcast: models::Podcast, episodes: Vec<models::Episode>) -> PodcastPodcastIdGet200Response {
         PodcastPodcastIdGet200Response {
             podcast: Box::new(podcast),
             episodes,
-            corners,
         }
     }
 }

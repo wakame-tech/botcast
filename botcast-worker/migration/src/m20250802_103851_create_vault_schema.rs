@@ -1,4 +1,4 @@
-use sea_orm_migration::{prelude::*, schema::*};
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -6,14 +6,13 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        let conn = manager.get_connection();
         // Create vault schema
-        manager
-            .raw_sql("CREATE SCHEMA IF NOT EXISTS vault;")
+        conn.execute_unprepared("CREATE SCHEMA IF NOT EXISTS vault;")
             .await?;
 
         // Create vault.secrets table
-        manager
-            .raw_sql(
+        conn.execute_unprepared(
                 r#"
                 CREATE TABLE IF NOT EXISTS vault.secrets (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -27,8 +26,7 @@ impl MigrationTrait for Migration {
             .await?;
 
         // Create vault.decrypted_secrets view
-        manager
-            .raw_sql(
+        conn.execute_unprepared(
                 r#"
                 CREATE OR REPLACE VIEW vault.decrypted_secrets AS
                 SELECT 
@@ -43,8 +41,7 @@ impl MigrationTrait for Migration {
             .await?;
 
         // Create vault functions
-        manager
-            .raw_sql(
+        conn.execute_unprepared(
                 r#"
                 CREATE OR REPLACE FUNCTION vault.create_secret(secret_value TEXT, secret_name TEXT)
                 RETURNS UUID
@@ -64,8 +61,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        manager
-            .raw_sql(
+        conn.execute_unprepared(
                 r#"
                 CREATE OR REPLACE FUNCTION vault.update_secret(secret_id UUID, secret_value TEXT, secret_name TEXT)
                 RETURNS VOID
@@ -87,28 +83,24 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        let conn = manager.get_connection();
         // Drop vault functions
-        manager
-            .raw_sql("DROP FUNCTION IF EXISTS vault.create_secret(TEXT, TEXT);")
+        conn.execute_unprepared("DROP FUNCTION IF EXISTS vault.create_secret(TEXT, TEXT);")
             .await?;
 
-        manager
-            .raw_sql("DROP FUNCTION IF EXISTS vault.update_secret(UUID, TEXT, TEXT);")
+        conn.execute_unprepared("DROP FUNCTION IF EXISTS vault.update_secret(UUID, TEXT, TEXT);")
             .await?;
 
         // Drop vault.decrypted_secrets view
-        manager
-            .raw_sql("DROP VIEW IF EXISTS vault.decrypted_secrets;")
+        conn.execute_unprepared("DROP VIEW IF EXISTS vault.decrypted_secrets;")
             .await?;
 
         // Drop vault.secrets table
-        manager
-            .raw_sql("DROP TABLE IF EXISTS vault.secrets;")
+        conn.execute_unprepared("DROP TABLE IF EXISTS vault.secrets;")
             .await?;
 
         // Drop vault schema
-        manager
-            .raw_sql("DROP SCHEMA IF EXISTS vault CASCADE;")
+        conn.execute_unprepared("DROP SCHEMA IF EXISTS vault CASCADE;")
             .await?;
 
         Ok(())

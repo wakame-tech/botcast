@@ -13,30 +13,6 @@ use crate::{models, types::*};
       
     #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
     #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
-    pub struct CornersCornerIdDeletePathParams {
-                pub corner_id: String,
-    }
-
-
-      
-    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-    #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
-    pub struct CornersCornerIdGetPathParams {
-                pub corner_id: String,
-    }
-
-
-      
-    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-    #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
-    pub struct CornersCornerIdPutPathParams {
-                pub corner_id: String,
-    }
-
-
-      
-    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-    #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
     pub struct EpisodesEpisodeIdDeletePathParams {
                 pub episode_id: String,
     }
@@ -59,31 +35,6 @@ use crate::{models, types::*};
 
 
       
-      
-    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-    #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
-    pub struct CornersCornerIdMailsGetPathParams {
-                pub corner_id: String,
-    }
-
-
-      
-    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-    #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
-    pub struct CornersCornerIdMailsMailIdDeletePathParams {
-                pub corner_id: String,
-                pub mail_id: String,
-    }
-
-
-      
-    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-    #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
-    pub struct CornersCornerIdMailsPostPathParams {
-                pub corner_id: String,
-    }
-
-
       
     #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
     #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))] 
@@ -137,8 +88,6 @@ use crate::{models, types::*};
     }
 
 
-      
-      
       
       
       
@@ -317,459 +266,6 @@ impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<AudioSection
                         std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
                         std::result::Result::Err(err) => std::result::Result::Err(
                             format!("Unable to convert header value '{}' into AudioSection - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct Corner {
-    #[serde(rename = "id")]
-    pub id: uuid::Uuid,
-
-    #[serde(rename = "title")]
-    pub title: String,
-
-    #[serde(rename = "description")]
-    pub description: String,
-
-    #[serde(rename = "requesting_mail")]
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub requesting_mail: Option<bool>,
-
-    #[serde(rename = "mail_schema")]
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub mail_schema: Option<std::collections::HashMap<String, crate::types::Object>>,
-
-    #[serde(rename = "user")]
-    pub user: models::User,
-
-}
-
-
-
-
-
-impl Corner {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(id: uuid::Uuid, title: String, description: String, user: models::User, ) -> Corner {
-        Corner {
-            id,
-            title,
-            description,
-            requesting_mail: None,
-            mail_schema: None,
-            user,
-        }
-    }
-}
-
-/// Converts the Corner value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for Corner {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-            // Skipping id in query parameter serialization
-
-
-            Some("title".to_string()),
-            Some(self.title.to_string()),
-
-
-            Some("description".to_string()),
-            Some(self.description.to_string()),
-
-
-            self.requesting_mail.as_ref().map(|requesting_mail| {
-                [
-                    "requesting_mail".to_string(),
-                    requesting_mail.to_string(),
-                ].join(",")
-            }),
-
-            // Skipping mail_schema in query parameter serialization
-            // Skipping mail_schema in query parameter serialization
-
-            // Skipping user in query parameter serialization
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a Corner value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for Corner {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub id: Vec<uuid::Uuid>,
-            pub title: Vec<String>,
-            pub description: Vec<String>,
-            pub requesting_mail: Vec<bool>,
-            pub mail_schema: Vec<std::collections::HashMap<String, crate::types::Object>>,
-            pub user: Vec<models::User>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing Corner".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "id" => intermediate_rep.id.push(<uuid::Uuid as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "title" => intermediate_rep.title.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "description" => intermediate_rep.description.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "requesting_mail" => intermediate_rep.requesting_mail.push(<bool as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    "mail_schema" => return std::result::Result::Err("Parsing a container in this style is not supported in Corner".to_string()),
-                    #[allow(clippy::redundant_clone)]
-                    "user" => intermediate_rep.user.push(<models::User as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing Corner".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(Corner {
-            id: intermediate_rep.id.into_iter().next().ok_or_else(|| "id missing in Corner".to_string())?,
-            title: intermediate_rep.title.into_iter().next().ok_or_else(|| "title missing in Corner".to_string())?,
-            description: intermediate_rep.description.into_iter().next().ok_or_else(|| "description missing in Corner".to_string())?,
-            requesting_mail: intermediate_rep.requesting_mail.into_iter().next(),
-            mail_schema: intermediate_rep.mail_schema.into_iter().next(),
-            user: intermediate_rep.user.into_iter().next().ok_or_else(|| "user missing in Corner".to_string())?,
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<Corner> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<Corner>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<Corner>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for Corner - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<Corner> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <Corner as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into Corner - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct CornersCornerIdMailsPostRequest {
-    #[serde(rename = "body")]
-    pub body: std::collections::HashMap<String, crate::types::Object>,
-
-}
-
-
-
-
-
-impl CornersCornerIdMailsPostRequest {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(body: std::collections::HashMap<String, crate::types::Object>, ) -> CornersCornerIdMailsPostRequest {
-        CornersCornerIdMailsPostRequest {
-            body,
-        }
-    }
-}
-
-/// Converts the CornersCornerIdMailsPostRequest value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for CornersCornerIdMailsPostRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-            // Skipping body in query parameter serialization
-            // Skipping body in query parameter serialization
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a CornersCornerIdMailsPostRequest value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for CornersCornerIdMailsPostRequest {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub body: Vec<std::collections::HashMap<String, crate::types::Object>>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing CornersCornerIdMailsPostRequest".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    "body" => return std::result::Result::Err("Parsing a container in this style is not supported in CornersCornerIdMailsPostRequest".to_string()),
-                    _ => return std::result::Result::Err("Unexpected key while parsing CornersCornerIdMailsPostRequest".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(CornersCornerIdMailsPostRequest {
-            body: intermediate_rep.body.into_iter().next().ok_or_else(|| "body missing in CornersCornerIdMailsPostRequest".to_string())?,
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<CornersCornerIdMailsPostRequest> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<CornersCornerIdMailsPostRequest>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<CornersCornerIdMailsPostRequest>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for CornersCornerIdMailsPostRequest - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<CornersCornerIdMailsPostRequest> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <CornersCornerIdMailsPostRequest as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into CornersCornerIdMailsPostRequest - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct CornersCornerIdPutRequest {
-    #[serde(rename = "title")]
-    pub title: String,
-
-    #[serde(rename = "description")]
-    pub description: String,
-
-    #[serde(rename = "mail_schema")]
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub mail_schema: Option<std::collections::HashMap<String, crate::types::Object>>,
-
-}
-
-
-
-
-
-impl CornersCornerIdPutRequest {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(title: String, description: String, ) -> CornersCornerIdPutRequest {
-        CornersCornerIdPutRequest {
-            title,
-            description,
-            mail_schema: None,
-        }
-    }
-}
-
-/// Converts the CornersCornerIdPutRequest value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for CornersCornerIdPutRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-
-            Some("title".to_string()),
-            Some(self.title.to_string()),
-
-
-            Some("description".to_string()),
-            Some(self.description.to_string()),
-
-            // Skipping mail_schema in query parameter serialization
-            // Skipping mail_schema in query parameter serialization
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a CornersCornerIdPutRequest value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for CornersCornerIdPutRequest {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub title: Vec<String>,
-            pub description: Vec<String>,
-            pub mail_schema: Vec<std::collections::HashMap<String, crate::types::Object>>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing CornersCornerIdPutRequest".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "title" => intermediate_rep.title.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "description" => intermediate_rep.description.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    "mail_schema" => return std::result::Result::Err("Parsing a container in this style is not supported in CornersCornerIdPutRequest".to_string()),
-                    _ => return std::result::Result::Err("Unexpected key while parsing CornersCornerIdPutRequest".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(CornersCornerIdPutRequest {
-            title: intermediate_rep.title.into_iter().next().ok_or_else(|| "title missing in CornersCornerIdPutRequest".to_string())?,
-            description: intermediate_rep.description.into_iter().next().ok_or_else(|| "description missing in CornersCornerIdPutRequest".to_string())?,
-            mail_schema: intermediate_rep.mail_schema.into_iter().next(),
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<CornersCornerIdPutRequest> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<CornersCornerIdPutRequest>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<CornersCornerIdPutRequest>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for CornersCornerIdPutRequest - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<CornersCornerIdPutRequest> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <CornersCornerIdPutRequest as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into CornersCornerIdPutRequest - {}",
                                 value, err))
                     }
              },
@@ -1315,297 +811,6 @@ impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<EpisodesPost
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct Mail {
-    #[serde(rename = "id")]
-    pub id: uuid::Uuid,
-
-    #[serde(rename = "body")]
-    pub body: std::collections::HashMap<String, crate::types::Object>,
-
-    #[serde(rename = "user")]
-    pub user: models::User,
-
-    #[serde(rename = "corner")]
-    pub corner: models::Corner,
-
-    #[serde(rename = "created_at")]
-    pub created_at: chrono::DateTime::<chrono::Utc>,
-
-}
-
-
-
-
-
-impl Mail {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(id: uuid::Uuid, body: std::collections::HashMap<String, crate::types::Object>, user: models::User, corner: models::Corner, created_at: chrono::DateTime::<chrono::Utc>, ) -> Mail {
-        Mail {
-            id,
-            body,
-            user,
-            corner,
-            created_at,
-        }
-    }
-}
-
-/// Converts the Mail value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for Mail {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-            // Skipping id in query parameter serialization
-
-            // Skipping body in query parameter serialization
-            // Skipping body in query parameter serialization
-
-            // Skipping user in query parameter serialization
-
-            // Skipping corner in query parameter serialization
-
-            // Skipping created_at in query parameter serialization
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a Mail value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for Mail {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub id: Vec<uuid::Uuid>,
-            pub body: Vec<std::collections::HashMap<String, crate::types::Object>>,
-            pub user: Vec<models::User>,
-            pub corner: Vec<models::Corner>,
-            pub created_at: Vec<chrono::DateTime::<chrono::Utc>>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing Mail".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "id" => intermediate_rep.id.push(<uuid::Uuid as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    "body" => return std::result::Result::Err("Parsing a container in this style is not supported in Mail".to_string()),
-                    #[allow(clippy::redundant_clone)]
-                    "user" => intermediate_rep.user.push(<models::User as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "corner" => intermediate_rep.corner.push(<models::Corner as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "created_at" => intermediate_rep.created_at.push(<chrono::DateTime::<chrono::Utc> as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing Mail".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(Mail {
-            id: intermediate_rep.id.into_iter().next().ok_or_else(|| "id missing in Mail".to_string())?,
-            body: intermediate_rep.body.into_iter().next().ok_or_else(|| "body missing in Mail".to_string())?,
-            user: intermediate_rep.user.into_iter().next().ok_or_else(|| "user missing in Mail".to_string())?,
-            corner: intermediate_rep.corner.into_iter().next().ok_or_else(|| "corner missing in Mail".to_string())?,
-            created_at: intermediate_rep.created_at.into_iter().next().ok_or_else(|| "created_at missing in Mail".to_string())?,
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<Mail> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<Mail>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<Mail>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for Mail - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<Mail> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <Mail as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into Mail - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct MeGet404Response {
-    #[serde(rename = "message")]
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub message: Option<String>,
-
-}
-
-
-
-
-
-impl MeGet404Response {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new() -> MeGet404Response {
-        MeGet404Response {
-            message: None,
-        }
-    }
-}
-
-/// Converts the MeGet404Response value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for MeGet404Response {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-
-            self.message.as_ref().map(|message| {
-                [
-                    "message".to_string(),
-                    message.to_string(),
-                ].join(",")
-            }),
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a MeGet404Response value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for MeGet404Response {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub message: Vec<String>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing MeGet404Response".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "message" => intermediate_rep.message.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing MeGet404Response".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(MeGet404Response {
-            message: intermediate_rep.message.into_iter().next(),
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<MeGet404Response> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<MeGet404Response>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<MeGet404Response>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for MeGet404Response - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<MeGet404Response> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <MeGet404Response as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into MeGet404Response - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
 pub struct Podcast {
     #[serde(rename = "id")]
     pub id: uuid::Uuid,
@@ -1791,9 +996,6 @@ pub struct PodcastPodcastIdGet200Response {
     #[serde(rename = "episodes")]
     pub episodes: Vec<models::Episode>,
 
-    #[serde(rename = "corners")]
-    pub corners: Vec<models::Corner>,
-
 }
 
 
@@ -1802,11 +1004,10 @@ pub struct PodcastPodcastIdGet200Response {
 
 impl PodcastPodcastIdGet200Response {
     #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(podcast: models::Podcast, episodes: Vec<models::Episode>, corners: Vec<models::Corner>, ) -> PodcastPodcastIdGet200Response {
+    pub fn new(podcast: models::Podcast, episodes: Vec<models::Episode>, ) -> PodcastPodcastIdGet200Response {
         PodcastPodcastIdGet200Response {
             podcast,
             episodes,
-            corners,
         }
     }
 }
@@ -1820,8 +1021,6 @@ impl std::fmt::Display for PodcastPodcastIdGet200Response {
             // Skipping podcast in query parameter serialization
 
             // Skipping episodes in query parameter serialization
-
-            // Skipping corners in query parameter serialization
 
         ];
 
@@ -1842,7 +1041,6 @@ impl std::str::FromStr for PodcastPodcastIdGet200Response {
         struct IntermediateRep {
             pub podcast: Vec<models::Podcast>,
             pub episodes: Vec<Vec<models::Episode>>,
-            pub corners: Vec<Vec<models::Corner>>,
         }
 
         let mut intermediate_rep = IntermediateRep::default();
@@ -1863,7 +1061,6 @@ impl std::str::FromStr for PodcastPodcastIdGet200Response {
                     #[allow(clippy::redundant_clone)]
                     "podcast" => intermediate_rep.podcast.push(<models::Podcast as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
                     "episodes" => return std::result::Result::Err("Parsing a container in this style is not supported in PodcastPodcastIdGet200Response".to_string()),
-                    "corners" => return std::result::Result::Err("Parsing a container in this style is not supported in PodcastPodcastIdGet200Response".to_string()),
                     _ => return std::result::Result::Err("Unexpected key while parsing PodcastPodcastIdGet200Response".to_string())
                 }
             }
@@ -1876,7 +1073,6 @@ impl std::str::FromStr for PodcastPodcastIdGet200Response {
         std::result::Result::Ok(PodcastPodcastIdGet200Response {
             podcast: intermediate_rep.podcast.into_iter().next().ok_or_else(|| "podcast missing in PodcastPodcastIdGet200Response".to_string())?,
             episodes: intermediate_rep.episodes.into_iter().next().ok_or_else(|| "episodes missing in PodcastPodcastIdGet200Response".to_string())?,
-            corners: intermediate_rep.corners.into_iter().next().ok_or_else(|| "corners missing in PodcastPodcastIdGet200Response".to_string())?,
         })
     }
 }
@@ -2538,414 +1734,6 @@ impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<ScriptsScrip
 
 
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct Secret {
-    #[serde(rename = "id")]
-    pub id: uuid::Uuid,
-
-    #[serde(rename = "name")]
-    pub name: String,
-
-}
-
-
-
-
-
-impl Secret {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(id: uuid::Uuid, name: String, ) -> Secret {
-        Secret {
-            id,
-            name,
-        }
-    }
-}
-
-/// Converts the Secret value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for Secret {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-            // Skipping id in query parameter serialization
-
-
-            Some("name".to_string()),
-            Some(self.name.to_string()),
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a Secret value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for Secret {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub id: Vec<uuid::Uuid>,
-            pub name: Vec<String>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing Secret".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "id" => intermediate_rep.id.push(<uuid::Uuid as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "name" => intermediate_rep.name.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing Secret".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(Secret {
-            id: intermediate_rep.id.into_iter().next().ok_or_else(|| "id missing in Secret".to_string())?,
-            name: intermediate_rep.name.into_iter().next().ok_or_else(|| "name missing in Secret".to_string())?,
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<Secret> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<Secret>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<Secret>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for Secret - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<Secret> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <Secret as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into Secret - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SecretsPostRequest {
-    #[serde(rename = "news")]
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub news: Option<Vec<models::SecretsPostRequestNewsInner>>,
-
-    #[serde(rename = "deletionIds")]
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub deletion_ids: Option<Vec<String>>,
-
-}
-
-
-
-
-
-impl SecretsPostRequest {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new() -> SecretsPostRequest {
-        SecretsPostRequest {
-            news: None,
-            deletion_ids: None,
-        }
-    }
-}
-
-/// Converts the SecretsPostRequest value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for SecretsPostRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-            // Skipping news in query parameter serialization
-
-
-            self.deletion_ids.as_ref().map(|deletion_ids| {
-                [
-                    "deletionIds".to_string(),
-                    deletion_ids.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","),
-                ].join(",")
-            }),
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a SecretsPostRequest value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for SecretsPostRequest {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub news: Vec<Vec<models::SecretsPostRequestNewsInner>>,
-            pub deletion_ids: Vec<Vec<String>>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SecretsPostRequest".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    "news" => return std::result::Result::Err("Parsing a container in this style is not supported in SecretsPostRequest".to_string()),
-                    "deletionIds" => return std::result::Result::Err("Parsing a container in this style is not supported in SecretsPostRequest".to_string()),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SecretsPostRequest".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SecretsPostRequest {
-            news: intermediate_rep.news.into_iter().next(),
-            deletion_ids: intermediate_rep.deletion_ids.into_iter().next(),
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<SecretsPostRequest> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SecretsPostRequest>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<SecretsPostRequest>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SecretsPostRequest - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SecretsPostRequest> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <SecretsPostRequest as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SecretsPostRequest - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SecretsPostRequestNewsInner {
-    #[serde(rename = "name")]
-    pub name: String,
-
-    #[serde(rename = "value")]
-    pub value: String,
-
-}
-
-
-
-
-
-impl SecretsPostRequestNewsInner {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(name: String, value: String, ) -> SecretsPostRequestNewsInner {
-        SecretsPostRequestNewsInner {
-            name,
-            value,
-        }
-    }
-}
-
-/// Converts the SecretsPostRequestNewsInner value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for SecretsPostRequestNewsInner {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-
-            Some("name".to_string()),
-            Some(self.name.to_string()),
-
-
-            Some("value".to_string()),
-            Some(self.value.to_string()),
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a SecretsPostRequestNewsInner value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for SecretsPostRequestNewsInner {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub name: Vec<String>,
-            pub value: Vec<String>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SecretsPostRequestNewsInner".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "name" => intermediate_rep.name.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "value" => intermediate_rep.value.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SecretsPostRequestNewsInner".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SecretsPostRequestNewsInner {
-            name: intermediate_rep.name.into_iter().next().ok_or_else(|| "name missing in SecretsPostRequestNewsInner".to_string())?,
-            value: intermediate_rep.value.into_iter().next().ok_or_else(|| "value missing in SecretsPostRequestNewsInner".to_string())?,
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<SecretsPostRequestNewsInner> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SecretsPostRequestNewsInner>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<SecretsPostRequestNewsInner>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SecretsPostRequestNewsInner - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SecretsPostRequestNewsInner> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <SecretsPostRequestNewsInner as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SecretsPostRequestNewsInner - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 #[allow(non_camel_case_types)]
@@ -3144,7 +1932,131 @@ impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SerifSection
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignInErrorResponse {
+pub struct SignUpPost200Response {
+    #[serde(rename = "accessToken")]
+    pub access_token: String,
+
+}
+
+
+
+
+
+impl SignUpPost200Response {
+    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
+    pub fn new(access_token: String, ) -> SignUpPost200Response {
+        SignUpPost200Response {
+            access_token,
+        }
+    }
+}
+
+/// Converts the SignUpPost200Response value to the Query Parameters representation (style=form, explode=false)
+/// specified in https://swagger.io/docs/specification/serialization/
+/// Should be implemented in a serde serializer
+impl std::fmt::Display for SignUpPost200Response {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let params: Vec<Option<String>> = vec![
+
+            Some("accessToken".to_string()),
+            Some(self.access_token.to_string()),
+
+        ];
+
+        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
+    }
+}
+
+/// Converts Query Parameters representation (style=form, explode=false) to a SignUpPost200Response value
+/// as specified in https://swagger.io/docs/specification/serialization/
+/// Should be implemented in a serde deserializer
+impl std::str::FromStr for SignUpPost200Response {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        /// An intermediate representation of the struct to use for parsing.
+        #[derive(Default)]
+        #[allow(dead_code)]
+        struct IntermediateRep {
+            pub access_token: Vec<String>,
+        }
+
+        let mut intermediate_rep = IntermediateRep::default();
+
+        // Parse into intermediate representation
+        let mut string_iter = s.split(',');
+        let mut key_result = string_iter.next();
+
+        while key_result.is_some() {
+            let val = match string_iter.next() {
+                Some(x) => x,
+                None => return std::result::Result::Err("Missing value while parsing SignUpPost200Response".to_string())
+            };
+
+            if let Some(key) = key_result {
+                #[allow(clippy::match_single_binding)]
+                match key {
+                    #[allow(clippy::redundant_clone)]
+                    "accessToken" => intermediate_rep.access_token.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
+                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpPost200Response".to_string())
+                }
+            }
+
+            // Get the next key
+            key_result = string_iter.next();
+        }
+
+        // Use the intermediate representation to return the struct
+        std::result::Result::Ok(SignUpPost200Response {
+            access_token: intermediate_rep.access_token.into_iter().next().ok_or_else(|| "accessToken missing in SignUpPost200Response".to_string())?,
+        })
+    }
+}
+
+// Methods for converting between header::IntoHeaderValue<SignUpPost200Response> and HeaderValue
+
+#[cfg(feature = "server")]
+impl std::convert::TryFrom<header::IntoHeaderValue<SignUpPost200Response>> for HeaderValue {
+    type Error = String;
+
+    fn try_from(hdr_value: header::IntoHeaderValue<SignUpPost200Response>) -> std::result::Result<Self, Self::Error> {
+        let hdr_value = hdr_value.to_string();
+        match HeaderValue::from_str(&hdr_value) {
+             std::result::Result::Ok(value) => std::result::Result::Ok(value),
+             std::result::Result::Err(e) => std::result::Result::Err(
+                 format!("Invalid header value for SignUpPost200Response - value: {} is invalid {}",
+                     hdr_value, e))
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpPost200Response> {
+    type Error = String;
+
+    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
+        match hdr_value.to_str() {
+             std::result::Result::Ok(value) => {
+                    match <SignUpPost200Response as std::str::FromStr>::from_str(value) {
+                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
+                        std::result::Result::Err(err) => std::result::Result::Err(
+                            format!("Unable to convert header value '{}' into SignUpPost200Response - {}",
+                                value, err))
+                    }
+             },
+             std::result::Result::Err(e) => std::result::Result::Err(
+                 format!("Unable to convert header: {:?} to string: {}",
+                     hdr_value, e))
+        }
+    }
+}
+
+
+
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
+#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
+pub struct SignUpPost400Response {
     #[serde(rename = "message")]
     #[serde(skip_serializing_if="Option::is_none")]
     pub message: Option<String>,
@@ -3155,19 +2067,19 @@ pub struct SignInErrorResponse {
 
 
 
-impl SignInErrorResponse {
+impl SignUpPost400Response {
     #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new() -> SignInErrorResponse {
-        SignInErrorResponse {
+    pub fn new() -> SignUpPost400Response {
+        SignUpPost400Response {
             message: None,
         }
     }
 }
 
-/// Converts the SignInErrorResponse value to the Query Parameters representation (style=form, explode=false)
+/// Converts the SignUpPost400Response value to the Query Parameters representation (style=form, explode=false)
 /// specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde serializer
-impl std::fmt::Display for SignInErrorResponse {
+impl std::fmt::Display for SignUpPost400Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let params: Vec<Option<String>> = vec![
 
@@ -3184,10 +2096,10 @@ impl std::fmt::Display for SignInErrorResponse {
     }
 }
 
-/// Converts Query Parameters representation (style=form, explode=false) to a SignInErrorResponse value
+/// Converts Query Parameters representation (style=form, explode=false) to a SignUpPost400Response value
 /// as specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignInErrorResponse {
+impl std::str::FromStr for SignUpPost400Response {
     type Err = String;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
@@ -3207,7 +2119,7 @@ impl std::str::FromStr for SignInErrorResponse {
         while key_result.is_some() {
             let val = match string_iter.next() {
                 Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignInErrorResponse".to_string())
+                None => return std::result::Result::Err("Missing value while parsing SignUpPost400Response".to_string())
             };
 
             if let Some(key) = key_result {
@@ -3215,7 +2127,7 @@ impl std::str::FromStr for SignInErrorResponse {
                 match key {
                     #[allow(clippy::redundant_clone)]
                     "message" => intermediate_rep.message.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignInErrorResponse".to_string())
+                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpPost400Response".to_string())
                 }
             }
 
@@ -3224,40 +2136,40 @@ impl std::str::FromStr for SignInErrorResponse {
         }
 
         // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignInErrorResponse {
+        std::result::Result::Ok(SignUpPost400Response {
             message: intermediate_rep.message.into_iter().next(),
         })
     }
 }
 
-// Methods for converting between header::IntoHeaderValue<SignInErrorResponse> and HeaderValue
+// Methods for converting between header::IntoHeaderValue<SignUpPost400Response> and HeaderValue
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignInErrorResponse>> for HeaderValue {
+impl std::convert::TryFrom<header::IntoHeaderValue<SignUpPost400Response>> for HeaderValue {
     type Error = String;
 
-    fn try_from(hdr_value: header::IntoHeaderValue<SignInErrorResponse>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(hdr_value: header::IntoHeaderValue<SignUpPost400Response>) -> std::result::Result<Self, Self::Error> {
         let hdr_value = hdr_value.to_string();
         match HeaderValue::from_str(&hdr_value) {
              std::result::Result::Ok(value) => std::result::Result::Ok(value),
              std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignInErrorResponse - value: {} is invalid {}",
+                 format!("Invalid header value for SignUpPost400Response - value: {} is invalid {}",
                      hdr_value, e))
         }
     }
 }
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInErrorResponse> {
+impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpPost400Response> {
     type Error = String;
 
     fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
         match hdr_value.to_str() {
              std::result::Result::Ok(value) => {
-                    match <SignInErrorResponse as std::str::FromStr>::from_str(value) {
+                    match <SignUpPost400Response as std::str::FromStr>::from_str(value) {
                         std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
                         std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignInErrorResponse - {}",
+                            format!("Unable to convert header value '{}' into SignUpPost400Response - {}",
                                 value, err))
                     }
              },
@@ -3273,7 +2185,7 @@ impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInErrorR
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignInRequest {
+pub struct SignUpPostRequest {
     #[serde(rename = "email")]
     pub email: String,
 
@@ -3286,20 +2198,20 @@ pub struct SignInRequest {
 
 
 
-impl SignInRequest {
+impl SignUpPostRequest {
     #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(email: String, password: String, ) -> SignInRequest {
-        SignInRequest {
+    pub fn new(email: String, password: String, ) -> SignUpPostRequest {
+        SignUpPostRequest {
             email,
             password,
         }
     }
 }
 
-/// Converts the SignInRequest value to the Query Parameters representation (style=form, explode=false)
+/// Converts the SignUpPostRequest value to the Query Parameters representation (style=form, explode=false)
 /// specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde serializer
-impl std::fmt::Display for SignInRequest {
+impl std::fmt::Display for SignUpPostRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let params: Vec<Option<String>> = vec![
 
@@ -3316,10 +2228,10 @@ impl std::fmt::Display for SignInRequest {
     }
 }
 
-/// Converts Query Parameters representation (style=form, explode=false) to a SignInRequest value
+/// Converts Query Parameters representation (style=form, explode=false) to a SignUpPostRequest value
 /// as specified in https://swagger.io/docs/specification/serialization/
 /// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignInRequest {
+impl std::str::FromStr for SignUpPostRequest {
     type Err = String;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
@@ -3340,7 +2252,7 @@ impl std::str::FromStr for SignInRequest {
         while key_result.is_some() {
             let val = match string_iter.next() {
                 Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignInRequest".to_string())
+                None => return std::result::Result::Err("Missing value while parsing SignUpPostRequest".to_string())
             };
 
             if let Some(key) = key_result {
@@ -3350,7 +2262,7 @@ impl std::str::FromStr for SignInRequest {
                     "email" => intermediate_rep.email.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
                     #[allow(clippy::redundant_clone)]
                     "password" => intermediate_rep.password.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignInRequest".to_string())
+                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpPostRequest".to_string())
                 }
             }
 
@@ -3359,554 +2271,41 @@ impl std::str::FromStr for SignInRequest {
         }
 
         // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignInRequest {
-            email: intermediate_rep.email.into_iter().next().ok_or_else(|| "email missing in SignInRequest".to_string())?,
-            password: intermediate_rep.password.into_iter().next().ok_or_else(|| "password missing in SignInRequest".to_string())?,
+        std::result::Result::Ok(SignUpPostRequest {
+            email: intermediate_rep.email.into_iter().next().ok_or_else(|| "email missing in SignUpPostRequest".to_string())?,
+            password: intermediate_rep.password.into_iter().next().ok_or_else(|| "password missing in SignUpPostRequest".to_string())?,
         })
     }
 }
 
-// Methods for converting between header::IntoHeaderValue<SignInRequest> and HeaderValue
+// Methods for converting between header::IntoHeaderValue<SignUpPostRequest> and HeaderValue
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignInRequest>> for HeaderValue {
+impl std::convert::TryFrom<header::IntoHeaderValue<SignUpPostRequest>> for HeaderValue {
     type Error = String;
 
-    fn try_from(hdr_value: header::IntoHeaderValue<SignInRequest>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(hdr_value: header::IntoHeaderValue<SignUpPostRequest>) -> std::result::Result<Self, Self::Error> {
         let hdr_value = hdr_value.to_string();
         match HeaderValue::from_str(&hdr_value) {
              std::result::Result::Ok(value) => std::result::Result::Ok(value),
              std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignInRequest - value: {} is invalid {}",
+                 format!("Invalid header value for SignUpPostRequest - value: {} is invalid {}",
                      hdr_value, e))
         }
     }
 }
 
 #[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInRequest> {
+impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpPostRequest> {
     type Error = String;
 
     fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
         match hdr_value.to_str() {
              std::result::Result::Ok(value) => {
-                    match <SignInRequest as std::str::FromStr>::from_str(value) {
+                    match <SignUpPostRequest as std::str::FromStr>::from_str(value) {
                         std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
                         std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignInRequest - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignInResponse {
-    #[serde(rename = "accessToken")]
-    pub access_token: String,
-
-}
-
-
-
-
-
-impl SignInResponse {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(access_token: String, ) -> SignInResponse {
-        SignInResponse {
-            access_token,
-        }
-    }
-}
-
-/// Converts the SignInResponse value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for SignInResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-
-            Some("accessToken".to_string()),
-            Some(self.access_token.to_string()),
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a SignInResponse value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignInResponse {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub access_token: Vec<String>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignInResponse".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "accessToken" => intermediate_rep.access_token.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignInResponse".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignInResponse {
-            access_token: intermediate_rep.access_token.into_iter().next().ok_or_else(|| "accessToken missing in SignInResponse".to_string())?,
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<SignInResponse> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignInResponse>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<SignInResponse>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignInResponse - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignInResponse> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <SignInResponse as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignInResponse - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignUpErrorResponse {
-    #[serde(rename = "message")]
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub message: Option<String>,
-
-}
-
-
-
-
-
-impl SignUpErrorResponse {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new() -> SignUpErrorResponse {
-        SignUpErrorResponse {
-            message: None,
-        }
-    }
-}
-
-/// Converts the SignUpErrorResponse value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for SignUpErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-
-            self.message.as_ref().map(|message| {
-                [
-                    "message".to_string(),
-                    message.to_string(),
-                ].join(",")
-            }),
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a SignUpErrorResponse value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignUpErrorResponse {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub message: Vec<String>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignUpErrorResponse".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "message" => intermediate_rep.message.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpErrorResponse".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignUpErrorResponse {
-            message: intermediate_rep.message.into_iter().next(),
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<SignUpErrorResponse> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignUpErrorResponse>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<SignUpErrorResponse>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignUpErrorResponse - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpErrorResponse> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <SignUpErrorResponse as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignUpErrorResponse - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignUpRequest {
-    #[serde(rename = "email")]
-    pub email: String,
-
-    #[serde(rename = "password")]
-    pub password: String,
-
-}
-
-
-
-
-
-impl SignUpRequest {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(email: String, password: String, ) -> SignUpRequest {
-        SignUpRequest {
-            email,
-            password,
-        }
-    }
-}
-
-/// Converts the SignUpRequest value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for SignUpRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-
-            Some("email".to_string()),
-            Some(self.email.to_string()),
-
-
-            Some("password".to_string()),
-            Some(self.password.to_string()),
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a SignUpRequest value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignUpRequest {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub email: Vec<String>,
-            pub password: Vec<String>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignUpRequest".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "email" => intermediate_rep.email.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    #[allow(clippy::redundant_clone)]
-                    "password" => intermediate_rep.password.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpRequest".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignUpRequest {
-            email: intermediate_rep.email.into_iter().next().ok_or_else(|| "email missing in SignUpRequest".to_string())?,
-            password: intermediate_rep.password.into_iter().next().ok_or_else(|| "password missing in SignUpRequest".to_string())?,
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<SignUpRequest> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignUpRequest>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<SignUpRequest>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignUpRequest - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpRequest> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <SignUpRequest as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignUpRequest - {}",
-                                value, err))
-                    }
-             },
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Unable to convert header: {:?} to string: {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-
-
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
-#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct SignUpResponse {
-    #[serde(rename = "accessToken")]
-    pub access_token: String,
-
-}
-
-
-
-
-
-impl SignUpResponse {
-    #[allow(clippy::new_without_default, clippy::too_many_arguments)]
-    pub fn new(access_token: String, ) -> SignUpResponse {
-        SignUpResponse {
-            access_token,
-        }
-    }
-}
-
-/// Converts the SignUpResponse value to the Query Parameters representation (style=form, explode=false)
-/// specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde serializer
-impl std::fmt::Display for SignUpResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let params: Vec<Option<String>> = vec![
-
-            Some("accessToken".to_string()),
-            Some(self.access_token.to_string()),
-
-        ];
-
-        write!(f, "{}", params.into_iter().flatten().collect::<Vec<_>>().join(","))
-    }
-}
-
-/// Converts Query Parameters representation (style=form, explode=false) to a SignUpResponse value
-/// as specified in https://swagger.io/docs/specification/serialization/
-/// Should be implemented in a serde deserializer
-impl std::str::FromStr for SignUpResponse {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        /// An intermediate representation of the struct to use for parsing.
-        #[derive(Default)]
-        #[allow(dead_code)]
-        struct IntermediateRep {
-            pub access_token: Vec<String>,
-        }
-
-        let mut intermediate_rep = IntermediateRep::default();
-
-        // Parse into intermediate representation
-        let mut string_iter = s.split(',');
-        let mut key_result = string_iter.next();
-
-        while key_result.is_some() {
-            let val = match string_iter.next() {
-                Some(x) => x,
-                None => return std::result::Result::Err("Missing value while parsing SignUpResponse".to_string())
-            };
-
-            if let Some(key) = key_result {
-                #[allow(clippy::match_single_binding)]
-                match key {
-                    #[allow(clippy::redundant_clone)]
-                    "accessToken" => intermediate_rep.access_token.push(<String as std::str::FromStr>::from_str(val).map_err(|x| x.to_string())?),
-                    _ => return std::result::Result::Err("Unexpected key while parsing SignUpResponse".to_string())
-                }
-            }
-
-            // Get the next key
-            key_result = string_iter.next();
-        }
-
-        // Use the intermediate representation to return the struct
-        std::result::Result::Ok(SignUpResponse {
-            access_token: intermediate_rep.access_token.into_iter().next().ok_or_else(|| "accessToken missing in SignUpResponse".to_string())?,
-        })
-    }
-}
-
-// Methods for converting between header::IntoHeaderValue<SignUpResponse> and HeaderValue
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<header::IntoHeaderValue<SignUpResponse>> for HeaderValue {
-    type Error = String;
-
-    fn try_from(hdr_value: header::IntoHeaderValue<SignUpResponse>) -> std::result::Result<Self, Self::Error> {
-        let hdr_value = hdr_value.to_string();
-        match HeaderValue::from_str(&hdr_value) {
-             std::result::Result::Ok(value) => std::result::Result::Ok(value),
-             std::result::Result::Err(e) => std::result::Result::Err(
-                 format!("Invalid header value for SignUpResponse - value: {} is invalid {}",
-                     hdr_value, e))
-        }
-    }
-}
-
-#[cfg(feature = "server")]
-impl std::convert::TryFrom<HeaderValue> for header::IntoHeaderValue<SignUpResponse> {
-    type Error = String;
-
-    fn try_from(hdr_value: HeaderValue) -> std::result::Result<Self, Self::Error> {
-        match hdr_value.to_str() {
-             std::result::Result::Ok(value) => {
-                    match <SignUpResponse as std::str::FromStr>::from_str(value) {
-                        std::result::Result::Ok(value) => std::result::Result::Ok(header::IntoHeaderValue(value)),
-                        std::result::Result::Err(err) => std::result::Result::Err(
-                            format!("Unable to convert header value '{}' into SignUpResponse - {}",
+                            format!("Unable to convert header value '{}' into SignUpPostRequest - {}",
                                 value, err))
                     }
              },

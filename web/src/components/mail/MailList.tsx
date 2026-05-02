@@ -1,29 +1,30 @@
-import type { Mail } from "@/lib/api_client";
-
 interface MailListProps {
-	mails: Mail[];
+	records: Record<string, unknown>[];
 }
 
 export function MailList(props: MailListProps) {
 	return (
 		<>
-			{props.mails.map((mail) => (
-				<div key={mail.id}>
-					<MailListItem mail={mail} />
-				</div>
-			))}
+			{props.records.map((record) => {
+				const key = (record.id as string) ?? JSON.stringify(record);
+				return (
+					<div key={key}>
+						<MailListItem record={record} />
+					</div>
+				);
+			})}
 		</>
 	);
 }
 
 interface MailListItemProps {
-	mail: Mail;
+	record: Record<string, unknown>;
 }
 
 function MailListItem(props: MailListItemProps) {
 	return (
 		<ul className="">
-			{Object.entries(props.mail.body).map(([k, v]) => {
+			{Object.entries(props.record).map(([k, v]) => {
 				return (
 					<li key={k} className="">
 						<span className="pr-4 font-bold">{k}</span>

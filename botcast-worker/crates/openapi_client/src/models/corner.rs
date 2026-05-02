@@ -23,6 +23,8 @@ pub struct Corner {
     pub requesting_mail: Option<bool>,
     #[serde(rename = "mail_schema", skip_serializing_if = "Option::is_none")]
     pub mail_schema: Option<std::collections::HashMap<String, serde_json::Value>>,
+    #[serde(rename = "cms_collection_id", skip_serializing_if = "Option::is_none")]
+    pub cms_collection_id: Option<String>,
     #[serde(rename = "user")]
     pub user: Box<models::User>,
 }
@@ -35,6 +37,7 @@ impl Corner {
             description,
             requesting_mail: None,
             mail_schema: None,
+            cms_collection_id: None,
             user: Box::new(user),
         }
     }

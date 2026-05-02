@@ -1,4 +1,4 @@
-use super::{ApiImpl, corners::into_corner_model, episodes::into_episode_model};
+use super::{ApiImpl, episodes::into_episode_model};
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::http::Method;
@@ -10,7 +10,7 @@ use openapi::{
 use repos::{
     entities::{podcasts::Model as Podcast, users::Model as User},
     id::PodcastId,
-    repo::{CornerRepo, EpisodeRepo, PodcastRepo, UserRepo},
+    repo::{EpisodeRepo, PodcastRepo, UserRepo},
 };
 use uuid::Uuid;
 
@@ -68,19 +68,11 @@ impl Podcasts<anyhow::Error> for ApiImpl {
             .into_iter()
             .map(|episode| into_episode_model(episode, None, None))
             .collect::<Result<Vec<_>>>()?;
-        let corners = self
-            .corner_repo
-            .find_all_by_podcast_id(&podcast_id)
-            .await?
-            .into_iter()
-            .map(into_corner_model)
-            .collect::<Result<Vec<_>>>()?;
         let user = self.user_repo.find_by_id(&podcast.user_id.unwrap()).await?;
         Ok(PodcastPodcastIdGetResponse::Status200_OK(
             PodcastPodcastIdGet200Response {
                 podcast: into_podcast_model((podcast, Some(user))),
                 episodes,
-                corners,
             },
         ))
     }

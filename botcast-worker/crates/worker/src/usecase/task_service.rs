@@ -4,13 +4,14 @@ use crate::error::Error;
 use crate::worker::use_work_dir;
 use anyhow::Context;
 use chrono::{DateTime, FixedOffset, Utc};
+use kafru::queue::{Queue, QueueData};
 use openapi_client::apis::auth_api::me_get;
 use openapi_client::apis::configuration::Configuration;
 use repos::entities::sea_orm_active_enums::TaskStatus;
 use repos::entities::tasks::Model as Task;
-use repos::id::EpisodeId;
+use repos::id::{EpisodeId, TaskId};
 use repos::repo::TaskRepo;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::instrument;
@@ -54,6 +55,7 @@ pub(crate) struct TaskService {
     configuration: Configuration,
     episode_service: EpisodeService,
     script_service: ScriptService,
+    kafru_queue: Arc<Queue<'static>>,
 }
 
 impl TaskService {
@@ -62,12 +64,14 @@ impl TaskService {
         configuration: Configuration,
         episode_service: EpisodeService,
         script_service: ScriptService,
+        kafru_queue: Arc<Queue<'static>>,
     ) -> Self {
         Self {
             task_repo,
             configuration,
             episode_service,
             script_service,
+            kafru_queue,
         }
     }
 
@@ -139,16 +143,31 @@ impl TaskService {
             .context("Failed to get user")
             .map_err(Error::Other)?;
         let task = new_task(Some(user.id), None, args, Utc::now().into());
+        let task_id = task.id;
         self.task_repo.create(task).await?;
+
+        let mut params = HashMap::new();
+        params.insert(
+            "task_id".to_string(),
+            serde_json::Value::String(task_id.to_string()),
+        );
+        let queue_data = QueueData {
+            queue: Some("botcast-worker-default".to_string()),
+            name: Some("execute_task".to_string()),
+            handler: Some("execute_task".to_string()),
+            parameters: Some(params),
+            ..Default::default()
+        };
+        self.kafru_queue
+            .push(queue_data)
+            .await
+            .map_err(|e| Error::Other(anyhow::anyhow!("Failed to enqueue task: {}", e)))?;
         Ok(())
     }
 
-    pub(crate) async fn execute_queued_tasks(&self) -> anyhow::Result<(), Error> {
-        let Some(task) = self.task_repo.pop(Utc::now()).await? else {
-            return Ok(());
-        };
-        tracing::info!("Found task: {} args={}", task.id, task.args);
-        self.run_task(task).await?;
-        Ok(())
+    pub(crate) async fn execute_by_id(&self, task_id: &TaskId) -> anyhow::Result<(), Error> {
+        let task = self.task_repo.find_by_id(task_id).await?;
+        tracing::info!("Executing task: {} args={}", task.id, task.args);
+        self.run_task(task).await
     }
 }

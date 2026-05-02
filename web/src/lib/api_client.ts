@@ -25,7 +25,6 @@ export type Podcast = components["schemas"]["Podcast"];
 export type Episode = components["schemas"]["Episode"];
 export type Section = components["schemas"]["Section"];
 export type Corner = components["schemas"]["Corner"];
-export type Mail = components["schemas"]["Mail"];
 export type User = components["schemas"]["User"];
 export type Task = components["schemas"]["Task"];
 export type TaskStatus = components["schemas"]["TaskStatus"];

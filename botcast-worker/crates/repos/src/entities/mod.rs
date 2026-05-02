@@ -2,9 +2,7 @@
 
 pub mod prelude;
 
-pub mod corners;
 pub mod episodes;
-pub mod mails;
 pub mod podcasts;
 pub mod scripts;
 pub mod sea_orm_active_enums;

@@ -1,5 +1,6 @@
 import { MailList } from "@/components/mail/MailList";
 import { $api } from "@/lib/api_client";
+import { $cms } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/corners/$cornerId")({
@@ -12,10 +13,17 @@ export default function Corner() {
 		params: { path: { cornerId } },
 	});
 	const corner = getCorner.data;
-	const getMails = $api.useQuery("get", "/corners/{cornerId}/mails", {
-		params: { path: { cornerId } },
-	});
-	const mails = getMails.data ?? [];
+	const collectionId = corner?.cms_collection_id ?? "";
+
+	const getRecords = $cms.useQuery(
+		"get",
+		"/records/{collectionId}",
+		{
+			params: { path: { collectionId: collectionId } },
+		},
+		{ enabled: !!collectionId },
+	);
+	const records = (getRecords.data ?? []) as Record<string, unknown>[];
 
 	if (!corner) {
 		return <div>not found</div>;
@@ -26,7 +34,7 @@ export default function Corner() {
 			<h1>{corner.title}</h1>
 			<p>{corner.description}</p>
 
-			<MailList mails={mails} />
+			<MailList records={records} />
 		</div>
 	);
 }
