@@ -21,8 +21,6 @@ pub enum Relation {
     Corners,
     #[sea_orm(has_many = "super::episodes::Entity")]
     Episodes,
-    #[sea_orm(has_many = "super::mails::Entity")]
-    Mails,
     #[sea_orm(has_many = "super::podcasts::Entity")]
     Podcasts,
     #[sea_orm(has_many = "super::scripts::Entity")]
@@ -40,12 +38,6 @@ impl Related<super::corners::Entity> for Entity {
 impl Related<super::episodes::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Episodes.def()
-    }
-}
-
-impl Related<super::mails::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Mails.def()
     }
 }
 

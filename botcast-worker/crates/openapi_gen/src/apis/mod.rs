@@ -1,7 +1,6 @@
 pub mod auth;
 pub mod corners;
 pub mod episodes;
-pub mod mails;
 pub mod podcasts;
 pub mod scripts;
 pub mod secrets;

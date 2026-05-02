@@ -16,12 +16,11 @@ pub struct Model {
     #[sea_orm(column_type = "JsonBinary")]
     pub mail_schema: Json,
     pub podcast_id: Uuid,
+    pub cms_collection_id: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::mails::Entity")]
-    Mails,
     #[sea_orm(
         belongs_to = "super::podcasts::Entity",
         from = "Column::PodcastId",
@@ -38,12 +37,6 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Users,
-}
-
-impl Related<super::mails::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Mails.def()
-    }
 }
 
 impl Related<super::podcasts::Entity> for Entity {

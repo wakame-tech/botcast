@@ -19,10 +19,6 @@ pub trait ProvideCornerRepo: Debug + Send + Sync {
     fn corner_repo(&self) -> Arc<dyn CornerRepo>;
 }
 
-pub trait ProvideMailRepo: Debug + Send + Sync {
-    fn mail_repo(&self) -> Arc<dyn MailRepo>;
-}
-
 pub trait ProvideTaskRepo: Debug + Send + Sync {
     fn task_repo(&self) -> Arc<dyn TaskRepo>;
 }
@@ -67,12 +63,6 @@ impl ProvideScriptRepo for DefaultProvider {
 impl ProvideCornerRepo for DefaultProvider {
     fn corner_repo(&self) -> Arc<dyn CornerRepo> {
         Arc::new(PostgresCornerRepo::new(self.db.clone()))
-    }
-}
-
-impl ProvideMailRepo for DefaultProvider {
-    fn mail_repo(&self) -> Arc<dyn MailRepo> {
-        Arc::new(PostgresMailRepo::new(self.db.clone()))
     }
 }
 

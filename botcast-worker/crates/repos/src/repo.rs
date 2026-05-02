@@ -1,11 +1,11 @@
 use crate::{
     entities::{
-        corners::Model as Corner, episodes::Model as Episode, mails::Model as Mail,
+        corners::Model as Corner, episodes::Model as Episode,
         podcasts::Model as Podcast, scripts::Model as Script, tasks::Model as Task,
         users::Model as User,
     },
     error::Error,
-    id::{CornerId, EpisodeId, MailId, PodcastId, ScriptId, TaskId},
+    id::{CornerId, EpisodeId, PodcastId, ScriptId, TaskId},
 };
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset, Utc};
@@ -70,15 +70,6 @@ pub trait CornerRepo: Send + Sync {
     async fn create(&self, corner: Corner) -> anyhow::Result<(), Error>;
     async fn update(&self, corner: Corner) -> anyhow::Result<(), Error>;
     async fn delete(&self, id: &CornerId) -> anyhow::Result<(), Error>;
-}
-
-#[async_trait]
-pub trait MailRepo: Send + Sync {
-    async fn list(&self, corner_id: &CornerId) -> anyhow::Result<Vec<(Mail, Option<User>)>, Error>;
-    async fn find_by_id(&self, id: &MailId) -> anyhow::Result<(Mail, Option<User>), Error>;
-    async fn create(&self, mail: Mail) -> anyhow::Result<(), Error>;
-    async fn update(&self, mail: Mail) -> anyhow::Result<(), Error>;
-    async fn delete(&self, id: &MailId) -> anyhow::Result<(), Error>;
 }
 
 #[async_trait]

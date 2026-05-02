@@ -2,7 +2,6 @@
 
 pub use super::corners::Entity as Corners;
 pub use super::episodes::Entity as Episodes;
-pub use super::mails::Entity as Mails;
 pub use super::podcasts::Entity as Podcasts;
 pub use super::scripts::Entity as Scripts;
 pub use super::tasks::Entity as Tasks;
