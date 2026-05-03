@@ -1,14 +1,13 @@
 use crate::entities::episodes::{Entity as EpisodeEntity, Model as Episode};
 use crate::entities::podcasts::{self, Entity as PodcastEntity, Model as Podcast};
-use crate::entities::scripts::{self, Entity as ScriptEntity, Model as Script};
 use crate::entities::sea_orm_active_enums::TaskStatus;
 use crate::entities::tasks::{self, Entity as TaskEntity, Model as Task};
 use crate::entities::users::{self, Entity as UserEntity, Model as User};
 use crate::repo::{Secret, UserRepo};
 use crate::{
     error::Error,
-    id::{EpisodeId, PodcastId, ScriptId, TaskId},
-    repo::{EpisodeRepo, PodcastRepo, ScriptRepo, SecretRepo, TaskRepo},
+    id::{EpisodeId, PodcastId, TaskId},
+    repo::{EpisodeRepo, PodcastRepo, SecretRepo, TaskRepo},
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -188,63 +187,6 @@ impl EpisodeRepo for PostgresEpisodeRepo {
             .map_err(Error::Other)?
             .ok_or_else(|| Error::NotFound("episode".to_string(), id.0.to_string()))?;
         episode.delete(&self.db).await.map_err(Error::Other)?;
-        Ok(())
-    }
-}
-
-pub struct PostgresScriptRepo {
-    db: DatabaseConnection,
-}
-
-impl PostgresScriptRepo {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
-    }
-}
-
-#[async_trait]
-impl ScriptRepo for PostgresScriptRepo {
-    async fn list(&self, user_id: &Uuid) -> anyhow::Result<Vec<Script>, Error> {
-        let scripts = ScriptEntity::find()
-            .filter(scripts::Column::UserId.eq(*user_id))
-            .all(&self.db)
-            .await
-            .map_err(Error::Other)?;
-        Ok(scripts)
-    }
-
-    async fn find_by_id(&self, id: &ScriptId) -> anyhow::Result<Script, Error> {
-        ScriptEntity::find_by_id(id.0)
-            .one(&self.db)
-            .await
-            .map_err(Error::Other)?
-            .ok_or_else(|| Error::NotFound("script".to_string(), id.0.to_string()))
-    }
-
-    async fn create(&self, script: Script) -> anyhow::Result<(), Error> {
-        ScriptEntity::insert(script.into_active_model())
-            .exec(&self.db)
-            .await
-            .map_err(Error::Other)?;
-        Ok(())
-    }
-
-    async fn update(&self, script: Script) -> anyhow::Result<(), Error> {
-        script
-            .into_active_model()
-            .save(&self.db)
-            .await
-            .map_err(Error::Other)?;
-        Ok(())
-    }
-
-    async fn delete(&self, id: &ScriptId) -> anyhow::Result<(), Error> {
-        let script = ScriptEntity::find_by_id(id.0)
-            .one(&self.db)
-            .await
-            .map_err(Error::Other)?
-            .ok_or_else(|| Error::NotFound("script".to_string(), id.0.to_string()))?;
-        script.delete(&self.db).await.map_err(Error::Other)?;
         Ok(())
     }
 }

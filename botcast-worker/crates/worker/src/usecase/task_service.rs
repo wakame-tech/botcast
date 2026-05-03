@@ -1,5 +1,4 @@
 use super::episode_service::EpisodeService;
-use super::script_service::ScriptService;
 use crate::error::Error;
 use crate::worker::use_work_dir;
 use anyhow::Context;
@@ -11,7 +10,7 @@ use repos::entities::sea_orm_active_enums::TaskStatus;
 use repos::entities::tasks::Model as Task;
 use repos::id::{EpisodeId, TaskId};
 use repos::repo::TaskRepo;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::instrument;
@@ -23,10 +22,6 @@ use uuid::Uuid;
 pub(crate) enum Args {
     GenerateAudio {
         episode_id: EpisodeId,
-    },
-    EvaluateTemplate {
-        template: serde_json::Value,
-        parameters: BTreeMap<String, serde_json::Value>,
     },
 }
 
@@ -54,7 +49,6 @@ pub(crate) struct TaskService {
     task_repo: Arc<dyn TaskRepo>,
     configuration: Configuration,
     episode_service: EpisodeService,
-    script_service: ScriptService,
     kafru_queue: Arc<Queue<'static>>,
 }
 
@@ -63,14 +57,12 @@ impl TaskService {
         task_repo: Arc<dyn TaskRepo>,
         configuration: Configuration,
         episode_service: EpisodeService,
-        script_service: ScriptService,
         kafru_queue: Arc<Queue<'static>>,
     ) -> Self {
         Self {
             task_repo,
             configuration,
             episode_service,
-            script_service,
             kafru_queue,
         }
     }
@@ -106,16 +98,6 @@ impl TaskService {
                     .generate_audio(&work_dir, &episode_id)
                     .await?;
                 Ok(serde_json::Value::String("OK".to_string()))
-            }
-            Args::EvaluateTemplate {
-                template,
-                parameters,
-            } => {
-                let result = self
-                    .script_service
-                    .run_template(&template, parameters)
-                    .await?;
-                Ok(result)
             }
         }
     }
