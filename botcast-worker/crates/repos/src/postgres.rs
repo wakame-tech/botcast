@@ -1,6 +1,5 @@
 use crate::entities::episodes::{Entity as EpisodeEntity, Model as Episode};
 use crate::entities::podcasts::{self, Entity as PodcastEntity, Model as Podcast};
-use crate::entities::sea_orm_active_enums::TaskStatus;
 use crate::entities::tasks::{self, Entity as TaskEntity, Model as Task};
 use crate::entities::users::{self, Entity as UserEntity, Model as User};
 use crate::repo::{Secret, UserRepo};
@@ -10,7 +9,6 @@ use crate::{
     repo::{EpisodeRepo, PodcastRepo, SecretRepo, TaskRepo},
 };
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseBackend, DatabaseConnection, DbErr,
     EntityTrait, IntoActiveModel, ModelTrait, QueryFilter, QueryOrder, QuerySelect, RuntimeErr,
@@ -219,18 +217,6 @@ impl TaskRepo for PostgresTaskRepo {
             .await
             .map_err(Error::Other)?
             .ok_or_else(|| Error::NotFound("task".to_string(), id.0.to_string()))?;
-        Ok(task)
-    }
-
-    async fn pop(&self, now: DateTime<Utc>) -> anyhow::Result<Option<Task>, Error> {
-        let task = TaskEntity::find()
-            .filter(tasks::Column::Status.eq(TaskStatus::Pending))
-            .filter(tasks::Column::ExecuteAfter.lt(now))
-            .order_by_asc(tasks::Column::ExecuteAfter)
-            .limit(1)
-            .one(&self.db)
-            .await
-            .map_err(Error::Other)?;
         Ok(task)
     }
 

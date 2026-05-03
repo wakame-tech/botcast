@@ -23,22 +23,6 @@ export const $api = createClient(fetchClient);
 
 export type Section = components["schemas"]["Section"];
 export type User = components["schemas"]["User"];
-export type Task = components["schemas"]["Task"];
-export type TaskStatus = components["schemas"]["TaskStatus"];
-
-export const taskArgsSchema = z.discriminatedUnion("type", [
-	z.object({
-		type: z.literal("generateAudio"),
-		episodeId: z.string(),
-	}),
-	z.object({
-		type: z.literal("evaluateTemplate"),
-		template: z.record(z.any()),
-		parameters: z.record(z.any()),
-	}),
-]);
-
-export type TaskArgs = z.infer<typeof taskArgsSchema>;
 
 export const PodcastInputSchema = z.object({
 	icon: z.string().regex(/\p{Emoji_Presentation}/gu),

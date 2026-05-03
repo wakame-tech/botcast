@@ -1,29 +1,22 @@
 mod auth;
-mod tasks;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::http::{HeaderMap, Method};
 use axum_extra::extract::{CookieJar, Host};
-use openapi::{
-    apis::{ApiAuthBasic, BasicAuthKind, ErrorHandler},
-    types::Object,
-};
+use openapi::apis::{ApiAuthBasic, BasicAuthKind, ErrorHandler};
 use repos::{
     entities::users::Model as User,
-    postgres::{PostgresTaskRepo, PostgresUserRepo},
-    r2_storage::R2Storage,
+    postgres::PostgresUserRepo,
     repo::UserRepo,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use supabase_auth::models::AuthClient;
 
 #[derive(Clone)]
 pub(crate) struct ApiImpl {
     pub(crate) auth_client: AuthClient,
-    pub(crate) storage: Arc<R2Storage>,
     pub(crate) user_repo: Arc<PostgresUserRepo>,
-    pub(crate) task_repo: Arc<PostgresTaskRepo>,
 }
 
 impl AsRef<ApiImpl> for ApiImpl {
@@ -74,16 +67,3 @@ impl ErrorHandler<anyhow::Error> for ApiImpl {
     }
 }
 
-pub(crate) fn into_openapi_object(value: serde_json::Value) -> Result<HashMap<String, Object>> {
-    let kv = value
-        .as_object()
-        .ok_or_else(|| anyhow::anyhow!("Expected a JSON object, but got: {}", value))?
-        .into_iter()
-        .map(|(k, v)| {
-            (
-                k.clone(),
-                serde_json::to_string(v).unwrap().parse().unwrap(),
-            )
-        });
-    Ok(HashMap::from_iter(kv))
-}

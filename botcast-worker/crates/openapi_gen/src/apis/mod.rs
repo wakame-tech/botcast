@@ -1,5 +1,4 @@
 pub mod auth;
-pub mod tasks;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]

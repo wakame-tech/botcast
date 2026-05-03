@@ -29,10 +29,6 @@ Class | Method | HTTP request | Description
 *AuthApi* | [**me_get**](docs/AuthApi.md#me_get) | **GET** /me | 
 *AuthApi* | [**sign_in_post**](docs/AuthApi.md#sign_in_post) | **POST** /signIn | Sign in
 *AuthApi* | [**sign_up_post**](docs/AuthApi.md#sign_up_post) | **POST** /signUp | Sign up
-*TasksApi* | [**tasks_get**](docs/TasksApi.md#tasks_get) | **GET** /tasks | 
-*TasksApi* | [**tasks_post**](docs/TasksApi.md#tasks_post) | **POST** /tasks | 
-*TasksApi* | [**tasks_task_id_delete**](docs/TasksApi.md#tasks_task_id_delete) | **DELETE** /tasks/{taskId} | 
-*TasksApi* | [**tasks_task_id_put**](docs/TasksApi.md#tasks_task_id_put) | **PUT** /tasks/{taskId} | 
 
 
 ## Documentation For Models
@@ -43,10 +39,6 @@ Class | Method | HTTP request | Description
  - [SignUpPost200Response](docs/SignUpPost200Response.md)
  - [SignUpPost400Response](docs/SignUpPost400Response.md)
  - [SignUpPostRequest](docs/SignUpPostRequest.md)
- - [Task](docs/Task.md)
- - [TaskStatus](docs/TaskStatus.md)
- - [TasksPostRequest](docs/TasksPostRequest.md)
- - [TasksTaskIdPutRequest](docs/TasksTaskIdPutRequest.md)
  - [User](docs/User.md)
 
 
