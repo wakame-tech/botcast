@@ -1,6 +1,6 @@
 use sea_orm::DatabaseConnection;
 
-use crate::{postgres::*, r2_storage::R2Storage, repo::{EpisodeRepo, PodcastRepo, ScriptRepo, SecretRepo, TaskRepo}, storage::Storage};
+use crate::{postgres::*, r2_storage::R2Storage, repo::{EpisodeRepo, PodcastRepo, SecretRepo, TaskRepo}, storage::Storage};
 use std::{fmt::Debug, sync::Arc};
 
 pub trait ProvidePodcastRepo: Debug + Send + Sync {
@@ -9,10 +9,6 @@ pub trait ProvidePodcastRepo: Debug + Send + Sync {
 
 pub trait ProvideEpisodeRepo: Debug + Send + Sync {
     fn episode_repo(&self) -> Arc<dyn EpisodeRepo>;
-}
-
-pub trait ProvideScriptRepo: Debug + Send + Sync {
-    fn script_repo(&self) -> Arc<dyn ScriptRepo>;
 }
 
 pub trait ProvideTaskRepo: Debug + Send + Sync {
@@ -47,12 +43,6 @@ impl ProvidePodcastRepo for DefaultProvider {
 impl ProvideEpisodeRepo for DefaultProvider {
     fn episode_repo(&self) -> Arc<dyn EpisodeRepo> {
         Arc::new(PostgresEpisodeRepo::new(self.db.clone()))
-    }
-}
-
-impl ProvideScriptRepo for DefaultProvider {
-    fn script_repo(&self) -> Arc<dyn ScriptRepo> {
-        Arc::new(PostgresScriptRepo::new(self.db.clone()))
     }
 }
 

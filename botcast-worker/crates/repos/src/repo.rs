@@ -1,11 +1,11 @@
 use crate::{
     entities::{
         episodes::Model as Episode,
-        podcasts::Model as Podcast, scripts::Model as Script, tasks::Model as Task,
+        podcasts::Model as Podcast, tasks::Model as Task,
         users::Model as User,
     },
     error::Error,
-    id::{EpisodeId, PodcastId, ScriptId, TaskId},
+    id::{EpisodeId, PodcastId, TaskId},
 };
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset, Utc};
@@ -49,15 +49,6 @@ pub trait EpisodeRepo: Send + Sync {
     async fn create(&self, episode: Episode) -> anyhow::Result<(), Error>;
     async fn update(&self, episode: Episode) -> anyhow::Result<(), Error>;
     async fn delete(&self, id: &EpisodeId) -> anyhow::Result<(), Error>;
-}
-
-#[async_trait]
-pub trait ScriptRepo: Send + Sync {
-    async fn list(&self, user_id: &Uuid) -> anyhow::Result<Vec<Script>, Error>;
-    async fn find_by_id(&self, id: &ScriptId) -> anyhow::Result<Script, Error>;
-    async fn create(&self, script: Script) -> anyhow::Result<(), Error>;
-    async fn update(&self, script: Script) -> anyhow::Result<(), Error>;
-    async fn delete(&self, id: &ScriptId) -> anyhow::Result<(), Error>;
 }
 
 #[async_trait]

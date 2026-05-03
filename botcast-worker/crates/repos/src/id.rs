@@ -11,8 +11,4 @@ pub struct EpisodeId(pub Uuid);
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
-pub struct ScriptId(pub Uuid);
-
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(transparent)]
 pub struct TaskId(pub Uuid);

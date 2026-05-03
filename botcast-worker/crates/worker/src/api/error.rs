@@ -15,10 +15,6 @@ impl IntoResponse for Error {
             Error::Repo(ReposError::Other(e)) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
             }
-            Error::Script(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
-            Error::UnAuthorized => {
-                (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()).into_response()
-            }
             Error::Other(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         }
     }

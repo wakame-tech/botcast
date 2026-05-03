@@ -4,17 +4,15 @@ use crate::{
     usecase::{task_service::Args, Provider, UserApiClientProvider},
 };
 use axum::{
-    extract::{Path, State},
+    extract::State,
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
-use repos::id::ScriptId;
-use serde_json::{json, Value};
-use std::{collections::BTreeMap, sync::Arc};
+use serde_json::json;
+use std::sync::Arc;
 use tracing::instrument;
-use uuid::Uuid;
 
 fn with_user_api_client(provider: &Provider, token: Option<String>) -> Provider {
     Provider {
@@ -28,44 +26,6 @@ fn get_authorization(headers: &HeaderMap) -> Option<String> {
         .get("Authorization")
         .and_then(|value| value.to_str().ok())
         .map(ToString::to_string)
-}
-
-#[instrument(skip(state))]
-async fn update_script(
-    State(state): State<Arc<AppState>>,
-    Path(script_id): Path<Uuid>,
-    Json(template): Json<Value>,
-) -> Result<impl IntoResponse, Error> {
-    state
-        .0
-        .script_service()
-        .update_template(&ScriptId(script_id), template)
-        .await?;
-    Ok(StatusCode::CREATED)
-}
-
-#[derive(Debug, serde::Deserialize)]
-struct EvalTemplateRequest {
-    template: Value,
-    arguments: BTreeMap<String, Value>,
-}
-
-#[instrument(skip(state))]
-async fn eval_template(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-    Json(EvalTemplateRequest {
-        template,
-        arguments,
-    }): Json<EvalTemplateRequest>,
-) -> Result<impl IntoResponse, Error> {
-    let provider = with_user_api_client(&state.0, get_authorization(&headers));
-
-    let evaluated = provider
-        .script_service()
-        .run_template(&template, arguments)
-        .await?;
-    Ok(Json(evaluated))
 }
 
 #[instrument(skip(state))]
@@ -90,7 +50,5 @@ async fn version() -> Result<impl IntoResponse, Error> {
 pub(crate) fn routers() -> Router<Arc<AppState>> {
     Router::new()
         .route("/version", get(version))
-        .route("/scripts/:script_id", post(update_script))
         .route("/createTask", post(create_task))
-        .route("/evalTemplate", post(eval_template))
 }

@@ -1,5 +1,5 @@
 use super::{
-    episode_service::EpisodeService, script_service::ScriptService, task_service::TaskService,
+    episode_service::EpisodeService, task_service::TaskService,
     ProvideApiClient, UserApiClientProvider,
 };
 use kafru::queue::Queue;
@@ -10,9 +10,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct Provider {
     pub(crate) provide_task_repo: Arc<dyn ProvideTaskRepo>,
-    pub(crate) provide_script_repo: Arc<dyn ProvideScriptRepo>,
     pub(crate) provide_storage: Arc<dyn ProvideStorage>,
-    pub(crate) provide_secret_repo: Arc<dyn ProvideSecretRepo>,
     pub(crate) provide_api_client: Arc<dyn ProvideApiClient>,
     pub(crate) kafru_queue: Arc<Queue<'static>>,
 }
@@ -22,9 +20,7 @@ impl Provider {
         let provider = DefaultProvider::new(db);
         Self {
             provide_task_repo: Arc::new(provider.clone()),
-            provide_script_repo: Arc::new(provider.clone()),
             provide_storage: Arc::new(provider.clone()),
-            provide_secret_repo: Arc::new(provider.clone()),
             provide_api_client: Arc::new(UserApiClientProvider::default()),
             kafru_queue,
         }
@@ -35,20 +31,11 @@ impl Provider {
             self.provide_task_repo.task_repo(),
             self.provide_api_client.api_client(),
             self.episode_service(),
-            self.script_service(),
             self.kafru_queue.clone(),
         )
     }
 
     pub(crate) fn episode_service(&self) -> EpisodeService {
         EpisodeService::new(self.provide_storage.storage())
-    }
-
-    pub(crate) fn script_service(&self) -> ScriptService {
-        ScriptService::new(
-            self.provide_script_repo.script_repo(),
-            self.provide_secret_repo.secret_repo(),
-            self.provide_api_client.api_client(),
-        )
     }
 }
