@@ -4,7 +4,7 @@ import type { PodcastInput } from "@/lib/api_client";
 import { $cms, recordToPodcast, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
-export const Route = createLazyFileRoute("/podcasts/$podcastId/edit")({
+export const Route = createLazyFileRoute("/podcasts/$podcastId_/edit")({
 	component: EditPodcast,
 });
 

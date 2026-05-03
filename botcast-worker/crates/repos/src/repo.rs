@@ -8,7 +8,7 @@ use crate::{
     id::{EpisodeId, PodcastId, TaskId},
 };
 use async_trait::async_trait;
-use chrono::{DateTime, FixedOffset, Utc};
+use chrono::{DateTime, FixedOffset};
 use uuid::Uuid;
 
 #[derive(Debug, serde::Serialize, sqlx::FromRow)]
@@ -53,7 +53,6 @@ pub trait EpisodeRepo: Send + Sync {
 
 #[async_trait]
 pub trait TaskRepo: Send + Sync {
-    async fn pop(&self, now: DateTime<Utc>) -> anyhow::Result<Option<Task>, Error>;
     async fn list(&self, user_id: &Uuid) -> anyhow::Result<Vec<Task>, Error>;
     async fn find_by_id(&self, id: &TaskId) -> anyhow::Result<Task, Error>;
     async fn create(&self, task: Task) -> anyhow::Result<(), Error>;
