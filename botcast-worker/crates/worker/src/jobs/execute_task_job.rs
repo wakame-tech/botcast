@@ -1,13 +1,12 @@
 use crate::usecase::provider::Provider;
+use crate::usecase::task_service::Args;
 use async_trait::async_trait;
 use kafru::task::{RecordId, TaskHandler};
-use repos::id::TaskId;
 use serde_json::Value;
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock},
 };
-use uuid::Uuid;
 
 static PROVIDER: OnceLock<Arc<Provider>> = OnceLock::new();
 
@@ -30,14 +29,14 @@ impl TaskHandler for ExecuteTaskJob {
         _agent_id: Option<RecordId>,
     ) -> Result<(), String> {
         let provider = PROVIDER.get().ok_or("Provider not initialized")?;
-        let task_id = params
-            .get("task_id")
-            .and_then(|v| v.as_str())
-            .ok_or("task_id not found in params")?;
-        let task_id = Uuid::parse_str(task_id).map_err(|e| e.to_string())?;
+        let args_value = params
+            .get("args")
+            .ok_or("args not found in params")?
+            .clone();
+        let args: Args = serde_json::from_value(args_value).map_err(|e| e.to_string())?;
         provider
             .task_service()
-            .execute_by_id(&TaskId(task_id))
+            .execute_args(args)
             .await
             .map_err(|e| e.to_string())
     }

@@ -43,9 +43,6 @@ async fn main() -> anyhow::Result<()> {
     let otlp_collector_endpoint = std::env::var("OTLP_COLLECTOR_ENDPOINT")?;
     init_tracing(otlp_collector_endpoint)?;
 
-    let database_url = std::env::var("DATABASE_URL")?;
-    let db = sea_orm::Database::connect(&database_url).await?;
-
     let kafru_db = Arc::new(
         kafru::database::Db::new(None)
             .await
@@ -53,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
     );
     let kafru_queue = Arc::new(kafru::queue::Queue::new(Some(kafru_db.clone())).await);
 
-    let provider = Arc::new(Provider::new(db, kafru_queue));
+    let provider = Arc::new(Provider::new(kafru_queue));
     start_worker(provider.clone(), kafru_db);
     start_api(provider).await
 }

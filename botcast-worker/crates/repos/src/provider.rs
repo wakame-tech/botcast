@@ -1,30 +1,22 @@
-use sea_orm::DatabaseConnection;
-
-use crate::{postgres::*, r2_storage::R2Storage, repo::TaskRepo, storage::Storage};
+use crate::{r2_storage::R2Storage, storage::Storage};
 use std::{fmt::Debug, sync::Arc};
-
-pub trait ProvideTaskRepo: Debug + Send + Sync {
-    fn task_repo(&self) -> Arc<dyn TaskRepo>;
-}
 
 pub trait ProvideStorage: Debug + Send + Sync {
     fn storage(&self) -> Arc<dyn Storage>;
 }
 
 #[derive(Debug, Clone)]
-pub struct DefaultProvider {
-    db: DatabaseConnection,
-}
+pub struct DefaultProvider;
 
 impl DefaultProvider {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
+    pub fn new() -> Self {
+        Self
     }
 }
 
-impl ProvideTaskRepo for DefaultProvider {
-    fn task_repo(&self) -> Arc<dyn TaskRepo> {
-        Arc::new(PostgresTaskRepo::new(self.db.clone()))
+impl Default for DefaultProvider {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

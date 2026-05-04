@@ -11,7 +11,6 @@ axum-extra = { version = "0.10", features = ["cookie", "query"] }
 tokio = { version = "1.39.3", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 openapi = { path = "../openapi_gen" }
-repos = { path = "../repos" }
 supabase-auth = "0.10.12"
 tower-http = { version = "0.6.2", features = ["cors"] }
 uuid = { version = "1.10.0", features = ["v4", "serde"] }
