@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-openapi_client = { path = "../openapi_client" }
 tracing = "0.1.37"
 anyhow = "1.0.89"
 serde = { version = "1.0.210", features = ["derive"] }

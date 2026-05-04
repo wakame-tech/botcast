@@ -1,10 +1,9 @@
 pub mod client;
 
-use crate::{ffmpeg::convert_to_stereo_wav, workdir::WorkDir, AudioGenerator};
+use crate::{ffmpeg::convert_to_stereo_wav, models::Section, workdir::WorkDir, AudioGenerator};
 use anyhow::Result;
 use async_trait::async_trait;
 use client::VoiceVoxClient;
-use openapi_client::models::Section;
 use std::{
     fs::{self, OpenOptions},
     io::Write,

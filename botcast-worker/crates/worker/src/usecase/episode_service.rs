@@ -2,9 +2,9 @@ use crate::error::Error;
 use anyhow::Context;
 use audio_generator::{
     generate_audio::{generate_audio, SynthesisResult},
+    models::Section,
     workdir::WorkDir,
 };
-use openapi_client::models::Section;
 use repos::storage::Storage;
 use std::{fs::File, io::Read, sync::Arc};
 use tracing::instrument;

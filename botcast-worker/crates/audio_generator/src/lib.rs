@@ -1,6 +1,6 @@
 //! Audio Generator クレート — VoiceVox TTS と ffmpeg を使った音声合成。
 //!
-//! [`generate_audio::generate_audio`] が [`openapi_client::models::Section`] の配列を受け取り、
+//! [`generate_audio::generate_audio`] が [`models::Section`] の配列を受け取り、
 //! wav を結合して mp3 と SRT ファイルを生成する。
 //!
 //! # 依存サービス
@@ -9,13 +9,14 @@
 
 pub mod ffmpeg;
 pub mod generate_audio;
+pub mod models;
 pub mod voicevox;
 pub mod workdir;
 
 mod audio_downloader;
 
 use async_trait::async_trait;
-use openapi_client::models::Section;
+use models::Section;
 use std::path::PathBuf;
 use workdir::WorkDir;
 
