@@ -1,6 +1,12 @@
 {
   "name": "botcast",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "cms-dashboard",
+    "spec",
+    "mcp"
+  ],
   "scripts": {
     "prepare": "husky"
   },
@@ -9,7 +15,10 @@
     "lint-staged": "^15.4.3"
   },
   "lint-staged": {
-    "web/src/**/*.{ts,tsx}": [
+    "frontend/src/**/*.{ts,tsx}": [
+      "npx @biomejs/biome check --write"
+    ],
+    "cms-dashboard/src/**/*.{ts,tsx}": [
       "npx @biomejs/biome check --write"
     ]
   }

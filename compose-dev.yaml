@@ -1,0 +1,45 @@
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    container_name: botcast-surrealdb-dev
+    ports:
+      - "8000:8000"
+    command: start --user root --pass root
+    environment:
+      - SURREAL_LOG=info
+    volumes:
+      - surrealdb_data:/data
+      - images_data:/data/images
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  sandbox:
+    image: langgenius/dify-sandbox
+    ports:
+      - "8194:8194"
+    environment:
+      API_KEY: dify-sandbox
+
+# voicevox_engine:
+#   image: voicevox/voicevox_engine:nvidia-ubuntu20.04-latest
+#   container_name: botcast-voicevox-dev
+#   ports:
+#     - "50021:50021"
+#   tty: true
+#   deploy:
+#     resources:
+#       reservations:
+#         devices:
+#           - capabilities: [gpu]
+
+volumes:
+  surrealdb_data:
+  images_data:
+
+networks:
+  default:
+    name: botcast-dev-network

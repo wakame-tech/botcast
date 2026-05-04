@@ -1,0 +1,17 @@
+specre_dir = "docs/specres"
+source_dirs = [
+  "crates/api/src",
+  "crates/worker/src",
+  "crates/audio_generator/src",
+  "crates/repos/src",
+  "cms-dashboard/src",
+  "frontend/src",
+  "mcp/src",
+]
+ext = ["rs", "ts", "tsx"]
+language = "ja"
+
+[health_check]
+coverage = 0.30
+orphans = 0
+index_age_hours = 48

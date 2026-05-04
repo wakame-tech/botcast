@@ -1,0 +1,56 @@
+.layout {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+
+.nav {
+	display: flex;
+	align-items: center;
+	gap: 2rem;
+	padding: 0 1.5rem;
+	height: 56px;
+	background: #18181b;
+	color: #fff;
+	border-bottom: 1px solid #27272a;
+}
+
+.nav-brand {
+	font-weight: 700;
+	font-size: 1.1rem;
+	letter-spacing: 0.02em;
+	color: #a78bfa;
+}
+
+.nav-links {
+	display: flex;
+	gap: 1rem;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.nav-links a {
+	color: #a1a1aa;
+	text-decoration: none;
+	font-size: 0.9rem;
+	padding: 0.3rem 0.5rem;
+	border-radius: 4px;
+	transition: color 0.15s, background 0.15s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+	color: #fff;
+	background: #3f3f46;
+}
+
+.main {
+	flex: 1;
+	padding: 2rem 2.5rem;
+	background: #09090b;
+	color: #e4e4e7;
+	max-width: 1200px;
+	width: 100%;
+	margin: 0 auto;
+}

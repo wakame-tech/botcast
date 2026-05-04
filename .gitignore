@@ -2,3 +2,13 @@
 .serena/
 node_modules/
 .env
+target/
+# SurrealDB ローカルデータ
+surrealdb_data/
+# TypeSpec 生成物（再生成可能）
+spec/tsp-output/
+# MCP ビルド成果物
+mcp/build/
+# フロントエンドビルド成果物
+frontend/dist/
+cms-dashboard/dist/

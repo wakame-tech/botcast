@@ -1,10 +1,9 @@
 #!/bin/sh
 
-# Rust: botcast-workerのチェック
+# Rust: ルートワークスペースのチェック
 echo "Running cargo check..."
-cd botcast-worker && cargo check 2>&1
+cargo check 2>&1
 RUST_STATUS=$?
-cd ..
 
 if [ $RUST_STATUS -ne 0 ]; then
   echo "cargo check failed"
@@ -12,16 +11,26 @@ if [ $RUST_STATUS -ne 0 ]; then
 fi
 
 # Frontend: biome lint+format check (変更ファイルのみ)
-STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep "^web/src/.*\.\(ts\|tsx\)$" || true)
-if [ -n "$STAGED_TS" ]; then
-  echo "Running biome check on staged files..."
-  # strip "web/" prefix since we cd into web/
-  STAGED_TS_REL=$(echo "$STAGED_TS" | sed 's|^web/||')
-  cd web && npx @biomejs/biome check $STAGED_TS_REL 2>&1
+STAGED_FRONTEND=$(git diff --cached --name-only --diff-filter=ACMR | grep "^frontend/src/.*\.\(ts\|tsx\)$" | sed 's|^frontend/||' || true)
+if [ -n "$STAGED_FRONTEND" ]; then
+  echo "Running biome check on staged frontend files..."
+  cd frontend && npx @biomejs/biome check $STAGED_FRONTEND 2>&1
   BIOME_STATUS=$?
   cd ..
   if [ $BIOME_STATUS -ne 0 ]; then
-    echo "biome check failed"
+    echo "biome check failed (frontend)"
+    exit 1
+  fi
+fi
+
+STAGED_CMS=$(git diff --cached --name-only --diff-filter=ACMR | grep "^cms-dashboard/src/.*\.\(ts\|tsx\)$" | sed 's|^cms-dashboard/||' || true)
+if [ -n "$STAGED_CMS" ]; then
+  echo "Running biome check on staged cms-dashboard files..."
+  cd cms-dashboard && npx @biomejs/biome check $STAGED_CMS 2>&1
+  BIOME_STATUS=$?
+  cd ..
+  if [ $BIOME_STATUS -ne 0 ]; then
+    echo "biome check failed (cms-dashboard)"
     exit 1
   fi
 fi
