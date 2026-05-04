@@ -15,6 +15,28 @@ struct CmsRecord {
     data: serde_json::Value,
 }
 
+/// CMS からエピソードを取得し音声を生成するサービス。
+///
+/// # 音声生成フロー (`GenerateAudio`)
+///
+/// ```mermaid
+/// sequenceDiagram
+///   participant kafru as kafru
+///   participant worker as worker
+///   participant cms as botcast-cms
+///   participant vv as VoiceVox
+///   participant r2 as Cloudflare R2
+///
+///   kafru->>worker: execute job (generateAudio)
+///   worker->>cms: GET /records/episodes/{id}
+///   cms-->>worker: sections
+///   worker->>vv: 音声合成 (各セクション)
+///   vv-->>worker: wav
+///   worker->>worker: wav 結合 → mp3 / SRT 生成
+///   worker->>r2: upload mp3, srt
+///   worker->>cms: PUT /records/episodes/{id} (audio_url, srt_url)
+/// ```
+#[cfg_attr(doc, aquamarine::aquamarine)]
 #[derive(Clone)]
 pub(crate) struct EpisodeService {
     storage: Arc<dyn Storage>,

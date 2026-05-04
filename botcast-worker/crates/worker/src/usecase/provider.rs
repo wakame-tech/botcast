@@ -4,6 +4,19 @@ use kafru::queue::Queue;
 use repos::provider::ProvideStorage;
 use std::sync::Arc;
 
+/// ユースケース層のサービスを組み立てるプロバイダー。
+///
+/// # クレート依存関係
+///
+/// ```mermaid
+/// graph TD
+///   worker --> audio_generator
+///   worker --> repos["repos (R2 storage)"]
+///   worker --> openapi_client["openapi_client (Section 型)"]
+///   worker --> readable_text
+///   api["api (別バイナリ)"]
+/// ```
+#[cfg_attr(doc, aquamarine::aquamarine)]
 #[derive(Debug, Clone)]
 pub struct Provider {
     pub(crate) provide_storage: Arc<dyn ProvideStorage>,

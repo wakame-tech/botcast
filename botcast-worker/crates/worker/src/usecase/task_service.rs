@@ -23,6 +23,35 @@ pub(crate) enum Args {
     },
 }
 
+/// タスクのエンキューと実行を担当するサービス。
+///
+/// kafru キューに `Args` を直接 JSON として積み、ジョブハンドラー側で取り出して実行する。
+///
+/// # タスクフロー
+///
+/// ## 台本生成 (`GenerateScript`)
+///
+/// ```mermaid
+/// sequenceDiagram
+///   participant web as フロントエンド
+///   participant wapi as worker API
+///   participant kafru as kafru
+///   participant worker as worker
+///   participant llm as Anthropic API
+///   participant cms as botcast-cms MCP
+///
+///   web->>wapi: POST /createTask (generateScript)
+///   wapi->>kafru: push job {args}
+///   kafru->>worker: execute job
+///   loop エージェントループ
+///     worker->>llm: messages + tools
+///     llm-->>worker: tool_use
+///     worker->>cms: tools/call
+///     cms-->>worker: result
+///   end
+///   llm-->>worker: end_turn
+/// ```
+#[cfg_attr(doc, aquamarine::aquamarine)]
 #[derive(Clone)]
 pub(crate) struct TaskService {
     episode_service: EpisodeService,

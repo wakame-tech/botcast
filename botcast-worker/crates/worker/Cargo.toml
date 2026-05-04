@@ -35,3 +35,4 @@ async-trait = "0.1.83"
 thiserror = "1.0.64"
 kafru = "1.0.4"
 rmcp = { version = "1.6.0", features = ["client", "transport-child-process"] }
+aquamarine = "0.6"
