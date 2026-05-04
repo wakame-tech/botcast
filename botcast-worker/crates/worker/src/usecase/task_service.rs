@@ -1,4 +1,6 @@
+use super::agent_service::AgentService;
 use super::episode_service::EpisodeService;
+use super::mcp_client::McpClient;
 use crate::error::Error;
 use crate::worker::use_work_dir;
 use anyhow::Context;
@@ -22,6 +24,10 @@ use uuid::Uuid;
 pub(crate) enum Args {
     GenerateAudio {
         episode_id: EpisodeId,
+    },
+    GenerateScript {
+        episode_id: EpisodeId,
+        prompt: String,
     },
 }
 
@@ -99,6 +105,10 @@ impl TaskService {
                     .await?;
                 Ok(serde_json::Value::String("OK".to_string()))
             }
+            Args::GenerateScript { episode_id, prompt } => {
+                let result = self.run_generate_script(&episode_id, &prompt).await?;
+                Ok(serde_json::Value::String(result))
+            }
         }
     }
 
@@ -147,9 +157,90 @@ impl TaskService {
         Ok(())
     }
 
+    async fn run_generate_script(
+        &self,
+        episode_id: &EpisodeId,
+        prompt: &str,
+    ) -> anyhow::Result<String, Error> {
+        let api_key = std::env::var("ANTHROPIC_API_KEY")
+            .context("ANTHROPIC_API_KEY is not set")
+            .map_err(Error::Other)?;
+        let mcp_cmd = std::env::var("MCP_SERVER_CMD").unwrap_or_else(|_| "node".to_string());
+        let mcp_args_str = std::env::var("MCP_SERVER_ARGS")
+            .unwrap_or_else(|_| "/Users/kmt/dev/botcast-cms/mcp/build/index.js".to_string());
+        let mcp_args: Vec<&str> = mcp_args_str.split_whitespace().collect();
+
+        let mcp_client = McpClient::new(&mcp_cmd, &mcp_args)
+            .await
+            .context("Failed to create MCP client")
+            .map_err(Error::Other)?;
+
+        let agent = AgentService::new(api_key, mcp_client);
+
+        let system = "あなたはポッドキャストの台本を生成するアシスタントです。\
+MCPツールを使用してエピソードの台本を生成し、CMSに保存してください。\
+台本はsectionsフィールドに格納され、各セクションはSerifSection(speaker, text)またはAudioSection(url, from, to)の形式です。";
+
+        let full_prompt = format!(
+            "エピソードID: {}\n\n{}",
+            episode_id.0.hyphenated(),
+            prompt
+        );
+
+        let result = agent
+            .run(system, &full_prompt)
+            .await
+            .context("Agent failed")
+            .map_err(Error::Other)?;
+
+        agent.close().await.map_err(Error::Other)?;
+
+        Ok(result)
+    }
+
     pub(crate) async fn execute_by_id(&self, task_id: &TaskId) -> anyhow::Result<(), Error> {
         let task = self.task_repo.find_by_id(task_id).await?;
         tracing::info!("Executing task: {} args={}", task.id, task.args);
         self.run_task(task).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use repos::id::EpisodeId;
+    use uuid::Uuid;
+
+    #[test]
+    fn args_generate_audio_serializes_correctly() {
+        let episode_id = EpisodeId(Uuid::nil());
+        let args = Args::GenerateAudio { episode_id };
+        let json = serde_json::to_value(&args).unwrap();
+        assert_eq!(json["type"], "generateAudio");
+        assert!(json["episodeId"].is_string());
+    }
+
+    #[test]
+    fn args_generate_script_serializes_correctly() {
+        let episode_id = EpisodeId(Uuid::nil());
+        let args = Args::GenerateScript {
+            episode_id,
+            prompt: "テスト台本を生成してください".to_string(),
+        };
+        let json = serde_json::to_value(&args).unwrap();
+        assert_eq!(json["type"], "generateScript");
+        assert_eq!(json["prompt"], "テスト台本を生成してください");
+        assert!(json["episodeId"].is_string());
+    }
+
+    #[test]
+    fn args_deserializes_generate_script() {
+        let json = serde_json::json!({
+            "type": "generateScript",
+            "episodeId": Uuid::nil().to_string(),
+            "prompt": "プロンプト"
+        });
+        let args: Args = serde_json::from_value(json).unwrap();
+        assert!(matches!(args, Args::GenerateScript { .. }));
     }
 }
