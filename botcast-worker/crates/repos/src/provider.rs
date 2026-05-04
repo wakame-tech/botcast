@@ -1,60 +1,22 @@
-use sea_orm::DatabaseConnection;
-
-use crate::{postgres::*, r2_storage::R2Storage, repo::{EpisodeRepo, PodcastRepo, SecretRepo, TaskRepo}, storage::Storage};
+use crate::{r2_storage::R2Storage, storage::Storage};
 use std::{fmt::Debug, sync::Arc};
-
-pub trait ProvidePodcastRepo: Debug + Send + Sync {
-    fn podcast_repo(&self) -> Arc<dyn PodcastRepo>;
-}
-
-pub trait ProvideEpisodeRepo: Debug + Send + Sync {
-    fn episode_repo(&self) -> Arc<dyn EpisodeRepo>;
-}
-
-pub trait ProvideTaskRepo: Debug + Send + Sync {
-    fn task_repo(&self) -> Arc<dyn TaskRepo>;
-}
-
-pub trait ProvideSecretRepo: Debug + Send + Sync {
-    fn secret_repo(&self) -> Arc<dyn SecretRepo>;
-}
 
 pub trait ProvideStorage: Debug + Send + Sync {
     fn storage(&self) -> Arc<dyn Storage>;
 }
 
 #[derive(Debug, Clone)]
-pub struct DefaultProvider {
-    db: DatabaseConnection,
-}
+pub struct DefaultProvider;
 
 impl DefaultProvider {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
+    pub fn new() -> Self {
+        Self
     }
 }
 
-impl ProvidePodcastRepo for DefaultProvider {
-    fn podcast_repo(&self) -> Arc<dyn PodcastRepo> {
-        Arc::new(PostgresPodcastRepo::new(self.db.clone()))
-    }
-}
-
-impl ProvideEpisodeRepo for DefaultProvider {
-    fn episode_repo(&self) -> Arc<dyn EpisodeRepo> {
-        Arc::new(PostgresEpisodeRepo::new(self.db.clone()))
-    }
-}
-
-impl ProvideTaskRepo for DefaultProvider {
-    fn task_repo(&self) -> Arc<dyn TaskRepo> {
-        Arc::new(PostgresTaskRepo::new(self.db.clone()))
-    }
-}
-
-impl ProvideSecretRepo for DefaultProvider {
-    fn secret_repo(&self) -> Arc<dyn SecretRepo> {
-        Arc::new(PostgresSecretRepo::new(self.db.clone()))
+impl Default for DefaultProvider {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -7,16 +7,7 @@ use openapi::{
     apis::auth::{Auth, MeGetResponse, SignInPostResponse, SignUpPostResponse},
     models::{self, SignUpPost200Response, SignUpPost400Response, SignUpPostRequest},
 };
-use repos::entities::users::Model as User;
-
-pub(crate) fn into_user_model(user: User) -> Result<models::User> {
-    Ok(models::User {
-        id: user.id,
-        auth_id: user.auth_id.parse()?,
-        email: user.email.clone(),
-        name: user.name.unwrap_or_default(),
-    })
-}
+use supabase_auth::models::User;
 
 #[async_trait]
 impl Auth<anyhow::Error> for ApiImpl {
@@ -29,7 +20,12 @@ impl Auth<anyhow::Error> for ApiImpl {
         _cookie: &CookieJar,
         user: &Self::Claims,
     ) -> Result<MeGetResponse> {
-        Ok(MeGetResponse::Status200_OK(into_user_model(user.clone())?))
+        Ok(MeGetResponse::Status200_OK(models::User {
+            id: user.id,
+            auth_id: user.id,
+            email: user.email.clone(),
+            name: user.user_metadata.name.clone().unwrap_or_default(),
+        }))
     }
 
     async fn sign_in_post(

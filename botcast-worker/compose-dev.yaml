@@ -1,13 +1,4 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: botcast-postgres-dev
-    environment:
-      POSTGRES_DB: botcast_dev
-      POSTGRES_USER: botcast_user
-      POSTGRES_PASSWORD: botcast_password
-    ports:
-      - "5435:5432"
   surrealdb:
     image: surrealdb/surrealdb:latest
     container_name: botcast-surrealdb-dev
@@ -28,9 +19,6 @@ services:
 #           - capabilities: [gpu]
 #   networks:
 #     - botcast-dev-network
-
-volumes:
-  postgres_data_dev:
 
 networks:
   botcast-dev-network:

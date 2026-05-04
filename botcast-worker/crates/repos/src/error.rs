@@ -5,5 +5,5 @@ pub enum Error {
     #[error("{0} {1} not found")]
     NotFound(String, String),
     #[error("Other: {0}")]
-    Other(sea_orm::DbErr),
+    Other(anyhow::Error),
 }
