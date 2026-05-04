@@ -5,9 +5,10 @@ use audio_generator::{
     workdir::WorkDir,
 };
 use openapi_client::models::Section;
-use repos::{id::EpisodeId, storage::Storage};
+use repos::storage::Storage;
 use std::{fs::File, io::Read, sync::Arc};
 use tracing::instrument;
+use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 struct CmsRecord {
@@ -31,10 +32,10 @@ impl EpisodeService {
     pub(crate) async fn generate_audio(
         &self,
         work_dir: &WorkDir,
-        episode_id: &EpisodeId,
+        episode_id: &Uuid,
     ) -> anyhow::Result<(), Error> {
         let client = reqwest::Client::new();
-        let episode_id_str = episode_id.0.hyphenated().to_string();
+        let episode_id_str = episode_id.hyphenated().to_string();
 
         let response = client
             .get(format!(

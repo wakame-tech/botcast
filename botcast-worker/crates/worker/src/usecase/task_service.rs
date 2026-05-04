@@ -10,7 +10,7 @@ use openapi_client::apis::auth_api::me_get;
 use openapi_client::apis::configuration::Configuration;
 use repos::entities::sea_orm_active_enums::TaskStatus;
 use repos::entities::tasks::Model as Task;
-use repos::id::{EpisodeId, TaskId};
+use repos::id::TaskId;
 use repos::repo::TaskRepo;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -23,10 +23,10 @@ use uuid::Uuid;
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub(crate) enum Args {
     GenerateAudio {
-        episode_id: EpisodeId,
+        episode_id: Uuid,
     },
     GenerateScript {
-        episode_id: EpisodeId,
+        episode_id: Uuid,
         prompt: String,
     },
 }
@@ -159,7 +159,7 @@ impl TaskService {
 
     async fn run_generate_script(
         &self,
-        episode_id: &EpisodeId,
+        episode_id: &Uuid,
         prompt: &str,
     ) -> anyhow::Result<String, Error> {
         let api_key = std::env::var("ANTHROPIC_API_KEY")
@@ -183,7 +183,7 @@ MCPツールを使用してエピソードの台本を生成し、CMSに保存�
 
         let full_prompt = format!(
             "エピソードID: {}\n\n{}",
-            episode_id.0.hyphenated(),
+            episode_id.hyphenated(),
             prompt
         );
 
@@ -208,13 +208,11 @@ MCPツールを使用してエピソードの台本を生成し、CMSに保存�
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repos::id::EpisodeId;
     use uuid::Uuid;
 
     #[test]
     fn args_generate_audio_serializes_correctly() {
-        let episode_id = EpisodeId(Uuid::nil());
-        let args = Args::GenerateAudio { episode_id };
+        let args = Args::GenerateAudio { episode_id: Uuid::nil() };
         let json = serde_json::to_value(&args).unwrap();
         assert_eq!(json["type"], "generateAudio");
         assert!(json["episodeId"].is_string());
@@ -222,9 +220,8 @@ mod tests {
 
     #[test]
     fn args_generate_script_serializes_correctly() {
-        let episode_id = EpisodeId(Uuid::nil());
         let args = Args::GenerateScript {
-            episode_id,
+            episode_id: Uuid::nil(),
             prompt: "テスト台本を生成してください".to_string(),
         };
         let json = serde_json::to_value(&args).unwrap();

@@ -2,8 +2,6 @@
 
 pub mod prelude;
 
-pub mod episodes;
-pub mod podcasts;
 pub mod sea_orm_active_enums;
 pub mod tasks;
 pub mod users;
