@@ -24,9 +24,6 @@ check-worker:
 
 # --- botcast-cms ---
 
-# Check botcast-cms (Rust)
-check-cms:
-    cargo check --workspace --manifest-path botcast-cms/cms/Cargo.toml
 
 # Test botcast-cms (Rust)
 test-cms:

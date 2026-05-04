@@ -3,9 +3,3 @@
 node_modules/
 .env
 
-# botcast-cms
-botcast-cms/cms/target/
-botcast-cms/surrealdb_data/
-botcast-cms/spec/tsp-output/
-botcast-cms/mcp/build/
-botcast-cms/web/dist/

@@ -2,10 +2,7 @@
   "name": "botcast",
   "private": true,
   "workspaces": [
-    "web",
-    "botcast-cms/mcp",
-    "botcast-cms/spec",
-    "botcast-cms/web"
+    "web"
   ],
   "scripts": {
     "prepare": "husky"
