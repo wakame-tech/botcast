@@ -92,4 +92,22 @@ mod tests {
         );
         client.close().await.unwrap();
     }
+
+    #[tokio::test]
+    #[ignore = "requires botcast-cms MCP server to be built"]
+    async fn mcp_client_calls_record_list() {
+        let path = mcp_server_path();
+        let args: Vec<&str> = path.split_whitespace().collect();
+        let client = McpClient::new("node", &args).await.expect("failed to create client");
+        let tool_names: Vec<&str> = client.tools().iter().map(|t| t.name.as_ref()).collect();
+        eprintln!("available tools: {:?}", tool_names);
+        let result = client
+            .call_tool("RecordApi_list", serde_json::json!({ "collectionId": "episodes" }))
+            .await
+            .expect("failed to call tool");
+        assert!(!result.is_empty(), "expected non-empty result");
+        eprintln!("result: {}", result);
+        assert!(result.contains("Status:"), "expected API response in: {}", result);
+        client.close().await.unwrap();
+    }
 }
