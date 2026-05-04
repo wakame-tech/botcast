@@ -118,9 +118,8 @@ impl EpisodeService {
         let mut data = record.data;
         data["audio_url"] = serde_json::Value::String(audio_path);
         data["srt_url"] = serde_json::Value::String(srt_path);
-        data["duration_sec"] = serde_json::Value::Number(
-            serde_json::Number::from(duration_sec.round() as i64),
-        );
+        data["duration_sec"] =
+            serde_json::Value::Number(serde_json::Number::from(duration_sec.round() as i64));
 
         let update_response = client
             .put(format!(

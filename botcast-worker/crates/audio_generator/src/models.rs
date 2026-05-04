@@ -10,7 +10,9 @@ pub struct SerifSection {
     pub text: String,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize, Default,
+)]
 pub enum SerifType {
     #[default]
     #[serde(rename = "Serif")]
@@ -29,7 +31,9 @@ pub struct AudioSection {
     pub to: Option<f64>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize, Default,
+)]
 pub enum AudioType {
     #[default]
     #[serde(rename = "Audio")]

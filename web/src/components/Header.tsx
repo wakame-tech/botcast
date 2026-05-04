@@ -6,7 +6,10 @@ import { Link, useNavigate } from "@tanstack/react-router";
 export function Header({
 	isSignedIn,
 	userId,
-}: { isSignedIn: boolean; userId?: string }) {
+}: {
+	isSignedIn: boolean;
+	userId?: string;
+}) {
 	const { removeToken } = useSession();
 	const navigate = useNavigate();
 
