@@ -1,9 +1,6 @@
 {
   "name": "botcast",
   "private": true,
-  "workspaces": [
-    "web"
-  ],
   "scripts": {
     "prepare": "husky"
   },
