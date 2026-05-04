@@ -17,13 +17,16 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v4
 
-      - name: Setup Deno environment
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Build site
-        run: cd doc && deno task build
+      - name: Build rustdoc
+        run: cd botcast-worker && cargo doc --no-deps --workspace
+
+      - name: Add redirect index
+        run: |
+          echo '<meta http-equiv="refresh" content="0; url=worker/index.html">' \
+            > botcast-worker/target/doc/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
@@ -31,7 +34,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          path: "doc/_site"
+          path: "botcast-worker/target/doc"
 
       - name: Deploy to GitHub Pages
         id: deployment
