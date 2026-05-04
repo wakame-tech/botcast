@@ -1,3 +1,8 @@
+//! API クレート — OpenAPI 生成の Axum サーバー。
+//!
+//! Supabase Auth JWT を検証し、`/me`, `/signIn`, `/signUp` エンドポイントを提供する。
+//! ポート `1234` で起動する。
+
 mod controller;
 
 use controller::ApiImpl;
