@@ -1,0 +1,14 @@
+specre_dir = "botcast-cms/docs/specres"
+source_dirs = [
+  "botcast-cms/cms/crates/api/src",
+  "botcast-cms/cms/crates/worker/src",
+  "botcast-cms/web/src",
+  "botcast-cms/mcp/src",
+]
+ext = ["rs", "ts", "tsx"]
+language = "ja"
+
+[health_check]
+coverage = 0.30
+orphans = 0
+index_age_hours = 48

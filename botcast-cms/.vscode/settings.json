@@ -1,0 +1,20 @@
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/node_modules/**": true,
+    "**/cms/target/**": true,
+    "**/surrealdb_data/**": true
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/cms/target": true,
+    "**/surrealdb_data": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/cms/target": true,
+    "**/surrealdb_data": true,
+    "**/*.lock": true
+  }
+}

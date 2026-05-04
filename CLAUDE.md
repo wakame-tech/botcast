@@ -11,8 +11,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Botcast is a podcast generation system with a Rust backend and TypeScript/React frontend. The system consists of three main components:
 
 1. **botcast-worker**: Rust backend with OpenAPI-generated server and worker services
-2. **web**: React frontend with TypeScript and TanStack Router
-3. **doc**: Documentation site built with Deno
+2. **botcast-cms**: CMS server (Rust/Axum + SurrealDB) with TypeSpec-defined API, MCP server, and admin UI
+3. **web**: React frontend with TypeScript and TanStack Router
+4. **doc**: OpenAPI spec and rustdoc CI
 
 ## Development Commands
 
@@ -231,3 +232,60 @@ components:
 - Use `cd /absolute/path && command` for commands that need specific context
 - Use `just` commands from `botcast-worker/` directory
 - Use `npm run` commands from `web/` directory
+
+## botcast-cms (botcast-cms/)
+
+### 構成
+
+| ディレクトリ | 役割 |
+|---|---|
+| `botcast-cms/cms/` | Rust workspace (api / worker / openapi-gen)。ポート 3002 で起動 |
+| `botcast-cms/spec/` | TypeSpec → OpenAPI YAML 生成 |
+| `botcast-cms/mcp/` | Node.js MCP サーバー。`MCP_SERVER_ARGS` 環境変数で起動パスを指定 |
+| `botcast-cms/web/` | React 管理ダッシュボード (Vite) |
+
+### 開発コマンド (botcast-cms/cms/)
+
+```bash
+# API サーバー起動 (ポート 3002)
+just run
+
+# OpenAPI サーバー生成
+just gen_server
+
+# MCP サーバー生成
+just gen_mcp
+
+# テスト
+cargo test
+
+# Lint
+cargo clippy
+```
+
+### 開発コマンド (botcast-cms/spec/)
+
+```bash
+npm run build   # TypeSpec → OpenAPI YAML 生成 (spec/tsp-output/schema/openapi.yaml)
+```
+
+### 開発コマンド (botcast-cms/mcp/)
+
+```bash
+npm run build   # TypeScript → build/index.js
+npm start       # MCP サーバー起動
+```
+
+### 環境変数 (botcast-cms/cms/.env)
+
+`.env` ファイルは git 管理外。`.env.example` を参考に作成すること。
+主要な変数: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `DATABASE_NAMESPACE`, `DATABASE_NAME`, `DIFY_SANDBOX_ENDPOINT`, `KAFRU_DB_*`
+
+### SurrealDB
+
+botcast-worker (kafru) と botcast-cms は同一の SurrealDB インスタンスを共有する。
+ローカル開発は `compose-dev.yaml` (リポジトリルート) で起動:
+
+```bash
+docker compose -f compose-dev.yaml up -d
+```

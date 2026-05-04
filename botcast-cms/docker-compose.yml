@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  sandbox:
+    image: langgenius/dify-sandbox
+    ports:
+      - "8194:8194"
+    environment:
+      API_KEY: dify-sandbox
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    ports:
+      - "8000:8000"
+    command: start --user root --pass root
+    environment:
+      - SURREAL_LOG=trace
+    volumes:
+      - surrealdb_data:/data
+      - images_data:/data/images
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  surrealdb_data:
+  images_data:

@@ -1,0 +1,108 @@
+# Semantic versioning release automation
+# Usage:
+#   just release patch   # 0.1.0 -> 0.1.1
+#   just release minor   # 0.1.0 -> 0.2.0
+#   just release major   # 0.1.0 -> 1.0.0
+
+# Get current version from api Cargo.toml
+current_version := `grep '^version' cms/crates/api/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/'`
+
+# Calculate next version
+_bump_version version bump:
+    #!/usr/bin/env bash
+    IFS='.' read -r major minor patch <<< "{{version}}"
+    case "{{bump}}" in
+        major) echo "$((major + 1)).0.0" ;;
+        minor) echo "${major}.$((minor + 1)).0" ;;
+        patch) echo "${major}.${minor}.$((patch + 1))" ;;
+        *) echo "Invalid bump type: {{bump}}" >&2; exit 1 ;;
+    esac
+
+# Show current version
+version:
+    @echo "Current version: {{current_version}}"
+
+# Bump version, update files, create tag, and push
+release bump:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Calculate new version
+    CURRENT="{{current_version}}"
+    NEW=$(just _bump_version "$CURRENT" "{{bump}}")
+
+    echo "📦 Release: $CURRENT → $NEW"
+
+    # Check for uncommitted changes
+    if ! git diff --quiet || ! git diff --staged --quiet; then
+        echo "❌ Error: Uncommitted changes exist. Commit or stash them first."
+        exit 1
+    fi
+
+    # Check on develop or main branch
+    BRANCH=$(git branch --show-current)
+    if [[ "$BRANCH" != "develop" && "$BRANCH" != "main" ]]; then
+        echo "⚠️  Warning: Not on develop or main branch (currently on $BRANCH)"
+        read -p "Continue anyway? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+
+    # Update cms/crates/api/Cargo.toml
+    sed -i '' "s/^version = \"$CURRENT\"/version = \"$NEW\"/" cms/crates/api/Cargo.toml
+    echo "✓ Updated cms/crates/api/Cargo.toml"
+
+    # Update web/package.json
+    cd web && npm version "$NEW" --no-git-tag-version --allow-same-version && cd ..
+    echo "✓ Updated web/package.json"
+
+    # Commit version bump
+    git add cms/crates/api/Cargo.toml web/package.json
+    git commit -m "chore: bump version to $NEW"
+
+    # Create annotated tag
+    git tag -a "v$NEW" -m "Release v$NEW"
+    echo "✓ Created tag v$NEW"
+
+    # Push commit and tag
+    git push && git push --tags
+    echo "✓ Pushed to remote"
+
+    echo ""
+    echo "🎉 Released v$NEW!"
+    echo "   GitHub Release: https://github.com/wakame-tech/botcast-cms/releases/new?tag=v$NEW"
+
+# Create GitHub release (requires gh CLI)
+gh-release version:
+    gh release create "v{{version}}" \
+        --title "v{{version}}" \
+        --generate-notes
+
+# Release and create GitHub release in one command
+release-full bump:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just release "{{bump}}"
+    NEW=$(grep '^version' cms/crates/api/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+    just gh-release "$NEW"
+
+# Show release history
+releases:
+    git tag -l 'v*' --sort=-version:refname | head -10
+
+# Dry run - show what would happen
+release-dry bump:
+    #!/usr/bin/env bash
+    CURRENT="{{current_version}}"
+    NEW=$(just _bump_version "$CURRENT" "{{bump}}")
+    echo "📦 Dry run: $CURRENT → $NEW"
+    echo ""
+    echo "Would update:"
+    echo "  - cms/crates/api/Cargo.toml: version = \"$NEW\""
+    echo "  - web/package.json: \"version\": \"$NEW\""
+    echo ""
+    echo "Would create:"
+    echo "  - Commit: chore: bump version to $NEW"
+    echo "  - Tag: v$NEW"

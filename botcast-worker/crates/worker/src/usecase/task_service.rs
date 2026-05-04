@@ -117,7 +117,8 @@ impl TaskService {
             .map_err(Error::Other)?;
         let mcp_cmd = std::env::var("MCP_SERVER_CMD").unwrap_or_else(|_| "node".to_string());
         let mcp_args_str = std::env::var("MCP_SERVER_ARGS")
-            .unwrap_or_else(|_| "/Users/kmt/dev/botcast-cms/mcp/build/index.js".to_string());
+            .context("MCP_SERVER_ARGS is not set")
+            .map_err(Error::Other)?;
         let mcp_args: Vec<&str> = mcp_args_str.split_whitespace().collect();
 
         let mcp_client = McpClient::new(&mcp_cmd, &mcp_args)
