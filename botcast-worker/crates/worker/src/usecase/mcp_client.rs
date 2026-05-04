@@ -73,8 +73,7 @@ mod tests {
     use super::*;
 
     fn mcp_server_path() -> String {
-        std::env::var("MCP_SERVER_ARGS")
-            .unwrap_or_else(|_| "/Users/kmt/dev/botcast-cms/mcp/build/index.js".to_string())
+        std::env::var("MCP_SERVER_ARGS").expect("MCP_SERVER_ARGS is not set")
     }
 
     #[tokio::test]

@@ -1,12 +1,12 @@
 use crate::{
     audio_downloader::AudioDownloader,
     ffmpeg::{concat_audios, get_duration},
+    models::Section,
     voicevox::client::VoiceVoxClient,
     workdir::WorkDir,
     AudioGenerator,
 };
 use anyhow::Result;
-use openapi_client::models::Section;
 use srtlib::{Subtitle, Subtitles, Timestamp};
 use std::{fs::File, path::PathBuf, time::Duration};
 use wavers::Wav;

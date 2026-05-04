@@ -2,9 +2,9 @@ use crate::error::Error;
 use anyhow::Context;
 use audio_generator::{
     generate_audio::{generate_audio, SynthesisResult},
+    models::Section,
     workdir::WorkDir,
 };
-use openapi_client::models::Section;
 use repos::storage::Storage;
 use std::{fs::File, io::Read, sync::Arc};
 use tracing::instrument;
@@ -118,9 +118,8 @@ impl EpisodeService {
         let mut data = record.data;
         data["audio_url"] = serde_json::Value::String(audio_path);
         data["srt_url"] = serde_json::Value::String(srt_path);
-        data["duration_sec"] = serde_json::Value::Number(
-            serde_json::Number::from(duration_sec.round() as i64),
-        );
+        data["duration_sec"] =
+            serde_json::Value::Number(serde_json::Number::from(duration_sec.round() as i64));
 
         let update_response = client
             .put(format!(

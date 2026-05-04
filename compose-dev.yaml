@@ -5,6 +5,20 @@ services:
     ports:
       - "4030:8000"
     command: start --user kafru_admin --pass kafru_password memory
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  dify-sandbox:
+    image: langgenius/dify-sandbox
+    container_name: botcast-dify-sandbox-dev
+    ports:
+      - "8194:8194"
+    environment:
+      API_KEY: dify-sandbox
 
 # voicevox_engine:
 #   image: voicevox/voicevox_engine:nvidia-ubuntu20.04-latest
@@ -12,14 +26,3 @@ services:
 #   ports:
 #     - "50021:50021"
 #   tty: true
-#   deploy:
-#     resources:
-#       reservations:
-#         devices:
-#           - capabilities: [gpu]
-#   networks:
-#     - botcast-dev-network
-
-networks:
-  botcast-dev-network:
-    driver: bridge

@@ -1,12 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { UserIcon } from "@/components/user/UserIcon";
-import { supabase } from "@/supabase";
-import type { Session } from "@supabase/supabase-js";
-import { Link } from "@tanstack/react-router";
+import { useSession } from "@/hooks/useSession";
+import { Link, useNavigate } from "@tanstack/react-router";
 
-export function Header({ session }: { session: Session | null }) {
-	const signOut = async () => {
-		await supabase.auth.signOut();
+export function Header({
+	isSignedIn,
+	userId,
+}: {
+	isSignedIn: boolean;
+	userId?: string;
+}) {
+	const { removeToken } = useSession();
+	const navigate = useNavigate();
+
+	const signOut = () => {
+		removeToken();
+		navigate({ to: "/signin" });
 	};
 
 	return (
@@ -15,7 +24,7 @@ export function Header({ session }: { session: Session | null }) {
 				<Link to="/" className="font-bold text-teal-700 text-3xl no-underline">
 					Botcast
 				</Link>
-				{session && (
+				{isSignedIn && (
 					<>
 						<div className="pl-2">
 							<Link to="/podcasts" className="no-underline">
@@ -32,13 +41,13 @@ export function Header({ session }: { session: Session | null }) {
 
 				<div className="flex-grow" />
 				<>
-					{session && (
+					{isSignedIn && (
 						<>
-							<UserIcon userId={session.user.id} />
-							<Button onClick={() => signOut()}>サインアウト</Button>
+							{userId && <UserIcon userId={userId} />}
+							<Button onClick={signOut}>サインアウト</Button>
 						</>
 					)}
-					{!session && (
+					{!isSignedIn && (
 						<Link to="/signin">
 							<Button>サインイン</Button>
 						</Link>

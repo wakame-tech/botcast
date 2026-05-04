@@ -7,7 +7,6 @@ edition = "2021"
 readable_text = { path = "../readable_text" }
 audio_generator = { path = "../audio_generator" }
 repos = { path = "../repos" }
-openapi_client = { path = "../openapi_client" }
 anyhow = "1.0.86"
 axum = "0.7.5"
 tower = "0.5.1"

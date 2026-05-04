@@ -1,6 +1,5 @@
-use crate::{ffmpeg::slice_audio, workdir::WorkDir, AudioGenerator};
+use crate::{ffmpeg::slice_audio, models::Section, workdir::WorkDir, AudioGenerator};
 use async_trait::async_trait;
-use openapi_client::models::Section;
 use std::path::PathBuf;
 use tokio::fs;
 

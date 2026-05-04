@@ -1,34 +1,35 @@
-import { supabase } from "@/supabase";
-import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
+const TOKEN_KEY = "botcast_token";
+
+export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
+export const setToken = (token: string) =>
+	localStorage.setItem(TOKEN_KEY, token);
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
 export const useSession = () => {
-	const [session, setSession] = useState<Session | null>(null);
+	const [token, setTokenState] = useState<string | null>(() => getToken());
 
 	useEffect(() => {
-		// 初期セッションを取得
-		const getInitialSession = async () => {
-			const {
-				data: { session },
-			} = await supabase.auth.getSession();
-			setSession(session);
-		};
-
-		getInitialSession();
-
-		// 認証状態の変更を監視
-		const {
-			data: { subscription },
-		} = supabase.auth.onAuthStateChange((_event, session) => {
-			setSession(session);
-		});
-
-		// クリーンアップ関数でリスナーを削除
-		return () => subscription.unsubscribe();
+		const handler = () => setTokenState(getToken());
+		window.addEventListener("storage", handler);
+		return () => window.removeEventListener("storage", handler);
 	}, []);
 
+	const saveToken = (t: string) => {
+		setToken(t);
+		setTokenState(t);
+	};
+
+	const removeToken = () => {
+		clearToken();
+		setTokenState(null);
+	};
+
 	return {
-		session,
-		setSession,
+		token,
+		saveToken,
+		removeToken,
+		isSignedIn: token !== null,
 	};
 };

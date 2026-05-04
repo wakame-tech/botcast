@@ -1,233 +1,38 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Response Language
-
 **すべてのレスポンスは日本語で行うこと。**
 
-## Project Overview
+## 構成
 
-Botcast is a podcast generation system with a Rust backend and TypeScript/React frontend. The system consists of three main components:
+- **botcast-worker**: Rust バックエンド（worker / audio_generator / repos）
+- **web**: React + TypeScript フロントエンド（TanStack Router）
+- **botcast-cms**: CMS サーバー（Rust/Axum + SurrealDB）。認証は botcast-cms JWT を使用
 
-1. **botcast-worker**: Rust backend with OpenAPI-generated server and worker services
-2. **web**: React frontend with TypeScript and TanStack Router
-3. **doc**: Documentation site built with Deno
-
-## Development Commands
-
-### Rust Backend (botcast-worker/)
+## 開発コマンド
 
 ```bash
-# Run the main worker service
-just
-# or explicitly:
-RUST_BACKTRACE=1 cargo run -p worker
+# worker 起動
+cd botcast-worker && just
 
-# Run the API server only (starts on port 1234)
-just api
-# or:
-cargo run -p api
+# 型チェック
+cd botcast-worker && cargo check
 
-# IMPORTANT: Always use `just api` instead of direct `cargo run -p api`
-# The Justfile automatically loads environment variables from .env file
-# Direct cargo run will fail with "environment variable not found" error
+# web 開発サーバー
+cd web && npm run dev
 
-# To run API server in background:
-just api &
-
-# Type checking
-cargo check
-just check
-
-# Generate OpenAPI server and client
-just generate
-# or individually:
-just generate_openapi_server
-just generate_openapi_client
-
-# Run tests
-cargo test
+# web 型チェック・lint
+cd web && npm run check
 ```
 
-### Frontend (web/)
+## 認証
 
-```bash
-# Development server
-npm run dev
+- botcast-cms の POST /auth/signin でトークン取得
+- web は localStorage にトークンを保存し Authorization: Bearer <token> で送信
+- 環境変数 VITE_CMS_URL に botcast-cms のエンドポイントを設定
 
-# Type checking, linting, and formatting
-npm run check
+## 環境変数
 
-# Build for production
-npm run build
-
-# Generate TypeScript types from OpenAPI spec
-npm run generate
-
-# Linting and formatting
-npm run lint
-npm run format
-```
-
-### Documentation (doc/)
-
-Uses Deno for building the documentation site.
-
-## Architecture
-
-### Backend Architecture
-
-- **Workspace structure**: Multi-crate workspace with specialized crates
-- **API layer**: OpenAPI-first design with generated Axum server (`crates/api/`)
-- **Worker layer**: Background task processing (`crates/worker/`)
-- **Data layer**: SeaORM with PostgreSQL (`crates/repos/`)
-- **Storage**: R2 (Cloudflare) object storage integration
-- **Audio processing**: FFmpeg integration and VoiceVox TTS (`crates/audio_generator/`)
-- **Script runtime**: Custom JavaScript-like runtime for podcast scripts (`crates/script_runtime/`)
-
-### Frontend Architecture
-
-- **React 18** with TypeScript
-- **TanStack Router** for routing with file-based routing in `src/routes/`
-- **TanStack Query** for server state management
-- **OpenAPI integration**: Auto-generated TypeScript types and React Query hooks
-- **Styling**: UnoCSS with Tailwind-compatible utilities and shadcn/ui components
-- **State management**: Jotai for client state
-- **Authentication**: Supabase Auth integration
-
-### Key Directories
-
-**Backend (`botcast-worker/crates/`):**
-- `api/`: REST API controllers and main server
-- `worker/`: Background worker and task processing
-- `repos/`: Database entities and repository patterns
-- `script_runtime/`: Custom runtime for podcast script execution
-- `audio_generator/`: Audio synthesis and processing
-- `openapi_gen/` & `openapi_client/`: Generated OpenAPI code
-
-**Frontend (`web/src/`):**
-- `routes/`: File-based routing structure
-- `components/`: Reusable UI components organized by domain
-- `lib/`: Utilities and API client configuration
-- `hooks/`: Custom React hooks
-
-## OpenAPI Integration
-
-The project uses OpenAPI spec-first development:
-- Spec defined in `doc/spec.yml`
-- Rust server generated into `crates/openapi_gen/`
-- Rust client generated into `crates/openapi_client/`
-- TypeScript types generated into `web/src/lib/api.d.ts`
-
-When making API changes, update `doc/spec.yml` first, then regenerate all clients.
-
-## Environment Setup
-
-The backend requires:
-- PostgreSQL database (DATABASE_URL)
-- Supabase authentication configuration
-- R2 storage credentials
-- Optional: VoiceVox engine for TTS
-
-Frontend uses Vite for development with hot reload and TypeScript checking.
-
-### Local Development Environment
-
-**Database Setup with SeaORM:**
-- SeaORM CLI is required for database migrations: `cargo install sea-orm-cli`
-- Migration files are in `migration/` directory (part of workspace)
-- Initialize migrations: `sea-orm-cli migrate init`
-- Apply migrations: `sea-orm-cli migrate up -u "DATABASE_URL"`
-- Database schema must be created before API server can start
-
-**Environment Variables:**
-- Use Justfile commands (`just api`) for automatic .env loading instead of raw `cargo run`
-- Justfile automatically loads `.env` file with `set dotenv-filename := ".env"`
-- Avoids environment variable not found errors when running Rust binaries
-
-**Local Development Setup:**
-1. Create `compose-dev.yaml` for local services (PostgreSQL + VoiceVox)
-2. Use different port (e.g., 5435) to avoid conflicts with system PostgreSQL
-3. Run database migrations before starting API server
-4. Use `just api` to start API server with proper environment loading
-
-## Testing
-
-- Rust: Standard `cargo test` for unit tests
-- Frontend: No specific test runner configured - check if tests exist before assuming testing approach
-
-## Common Issues and Solutions
-
-### OpenAPI Code Generation Issues
-
-**Problem**: When adding new endpoints to OpenAPI spec, the generated types may be inconsistent or share the same type between different endpoints.
-
-**Root Cause**: Using inline schemas in OpenAPI paths instead of defining explicit schemas in `components/schemas`.
-
-**Solution**:
-1. Always define explicit schemas in `components/schemas` section for request/response types
-2. Use `$ref` references in paths instead of inline type definitions
-3. Ensure each endpoint has its own dedicated types (e.g., `SignInRequest` vs `SignUpRequest`)
-
-**Example**:
-```yaml
-# ❌ Bad: Inline schema causes type generation issues
-paths:
-  /signUp:
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email: { type: string }
-                password: { type: string }
-
-# ✅ Good: Explicit schema with $ref
-paths:
-  /signUp:
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SignUpRequest'
-
-components:
-  schemas:
-    SignUpRequest:
-      type: object
-      properties:
-        email: { type: string, format: email }
-        password: { type: string }
-```
-
-**Regeneration Steps**:
-1. Update `doc/spec.yml` with proper schemas
-2. Run `just generate` in `botcast-worker/`
-3. Run `npm run generate` in `web/`
-4. Update Rust controller imports and implementations to use correct types
-
-### Package.json Path Issues
-
-**Problem**: Frontend code generation fails with "spec.yml not found" errors.
-
-**Solution**: Ensure `web/package.json` references the correct path to OpenAPI spec:
-```json
-{
-  "scripts": {
-    "generate": "npx openapi-typescript ../doc/spec.yml -o ./src/lib/api.d.ts"
-  }
-}
-```
-
-### Directory Context Issues
-
-**Problem**: Commands fail when run from wrong directory context.
-
-**Solution**: Always be explicit about working directories:
-- Use `cd /absolute/path && command` for commands that need specific context
-- Use `just` commands from `botcast-worker/` directory
-- Use `npm run` commands from `web/` directory
+- DATABASE_URL: PostgreSQL 接続文字列
+- VITE_API_URL: botcast-worker API URL（web）
+- VITE_CMS_URL: botcast-cms URL（web）
+- VOICEVOX_ENDPOINT: VoiceVox エンジン URL（任意）
