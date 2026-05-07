@@ -4,7 +4,7 @@
 
 ## 構成
 
-- **botcast-worker**: Rust バックエンド（worker / audio_generator / repos）
+- **crates/worker**: Rust バックエンド（worker / audio_generator / repos）
 - **web**: React + TypeScript フロントエンド（TanStack Router）
 - **botcast-cms**: CMS サーバー（Rust/Axum + SurrealDB）。認証は botcast-cms JWT を使用
 
@@ -12,10 +12,10 @@
 
 ```bash
 # worker 起動
-cd botcast-worker && just
+just worker
 
 # 型チェック
-cd botcast-worker && cargo check
+cargo check
 
 # web 開発サーバー
 cd web && npm run dev
