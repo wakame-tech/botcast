@@ -8,19 +8,19 @@ up:
 down:
     docker compose -f compose-dev.yaml down
 
-# --- botcast-worker ---
+# --- worker ---
 
 # Run worker (default)
 worker:
-    just -f botcast-worker/Justfile
+    cargo run -p worker
 
 # Run API server
 api:
-    just -f botcast-worker/Justfile api
+    cargo run -p worker -- api
 
-# Check botcast-worker
+# Check worker
 check-worker:
-    just -f botcast-worker/Justfile check
+    cargo check -p worker
 
 # --- botcast-cms ---
 

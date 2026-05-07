@@ -1,4 +1,4 @@
-use crate::{r2_storage::R2Storage, storage::Storage};
+use super::{r2_storage::R2Storage, Storage};
 use std::{fmt::Debug, sync::Arc};
 
 pub trait ProvideStorage: Debug + Send + Sync {

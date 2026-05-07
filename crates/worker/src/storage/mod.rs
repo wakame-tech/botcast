@@ -1,3 +1,6 @@
+pub mod provider;
+pub mod r2_storage;
+
 use async_trait::async_trait;
 use std::time::Duration;
 

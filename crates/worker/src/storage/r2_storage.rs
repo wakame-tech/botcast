@@ -1,4 +1,4 @@
-use crate::storage::Storage;
+use super::Storage;
 use async_trait::async_trait;
 use s3::{creds::Credentials, Bucket, Region};
 use std::{fmt::Debug, time::Duration};

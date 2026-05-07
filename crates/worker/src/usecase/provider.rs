@@ -1,7 +1,7 @@
 use super::episode_service::EpisodeService;
 use super::task_service::TaskService;
 use kafru::queue::Queue;
-use repos::provider::ProvideStorage;
+use crate::storage::provider::ProvideStorage;
 use std::sync::Arc;
 
 /// ユースケース層のサービスを組み立てるプロバイダー。
@@ -11,8 +11,7 @@ use std::sync::Arc;
 /// ```mermaid
 /// graph TD
 ///   worker --> audio_generator
-///   worker --> repos["repos (R2 storage)"]
-///   worker --> openapi_client["openapi_client (Section 型)"]
+///   worker --> storage["storage (R2)"]\n///   worker --> openapi_client["openapi_client (Section 型)"]
 ///   worker --> readable_text
 ///   api["api (別バイナリ)"]
 /// ```
@@ -25,7 +24,7 @@ pub struct Provider {
 
 impl Provider {
     pub fn new(kafru_queue: Arc<Queue<'static>>) -> Self {
-        let provider = repos::provider::DefaultProvider::new();
+        let provider = crate::storage::provider::DefaultProvider::new();
         Self {
             provide_storage: Arc::new(provider),
             kafru_queue,

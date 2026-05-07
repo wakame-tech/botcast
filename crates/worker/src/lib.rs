@@ -24,5 +24,6 @@
 pub mod api;
 pub mod error;
 pub mod jobs;
+pub mod storage;
 pub mod usecase;
 pub mod worker;

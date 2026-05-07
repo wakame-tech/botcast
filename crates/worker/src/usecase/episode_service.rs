@@ -5,7 +5,7 @@ use audio_generator::{
     models::Section,
     workdir::WorkDir,
 };
-use repos::storage::Storage;
+use crate::storage::Storage;
 use std::{fs::File, io::Read, sync::Arc};
 use tracing::instrument;
 use uuid::Uuid;

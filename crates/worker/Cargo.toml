@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 readable_text = { path = "../readable_text" }
 audio_generator = { path = "../audio_generator" }
-repos = { path = "../repos" }
 anyhow = "1.0.86"
 axum = "0.7.5"
 tower = "0.5.1"
@@ -32,6 +31,7 @@ clap = { version = "4.5.17", features = ["derive"] }
 chrono = "0.4.38"
 async-trait = "0.1.83"
 thiserror = "1.0.64"
+rust-s3 = "0.35.1"
 kafru = "1.0.4"
 rmcp = { version = "1.6.0", features = ["client", "transport-child-process"] }
 aquamarine = "0.6"
