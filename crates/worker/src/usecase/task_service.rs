@@ -4,7 +4,8 @@ use super::mcp_client::McpClient;
 use crate::error::Error;
 use crate::worker::use_work_dir;
 use anyhow::Context;
-use kafru::queue::{Queue, QueueData};
+use kafru::queue::{Queue, QueueData, QueueListConditions, QueueStatus};
+use kafru::task::RecordId;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::instrument;
@@ -89,6 +90,37 @@ impl TaskService {
         Ok(())
     }
 
+    pub(crate) async fn list_jobs(&self) -> anyhow::Result<Vec<JobInfo>, Error> {
+        self.kafru_queue
+            .list(QueueListConditions {
+                status: Some(vec![
+                    QueueStatus::Waiting.to_string(),
+                    QueueStatus::InProgress.to_string(),
+                    QueueStatus::Error.to_string(),
+                    QueueStatus::Completed.to_string(),
+                ]),
+                queue: Some(vec!["botcast-worker-default".to_string()]),
+                limit: Some(100),
+            })
+            .await
+            .map_err(|e| Error::Other(anyhow::anyhow!(e)))?
+            .into_iter()
+            .map(JobInfo::try_from)
+            .collect()
+    }
+
+    pub(crate) async fn get_job_status(&self, job_id: &str) -> anyhow::Result<JobInfo, Error> {
+        let id: RecordId = job_id
+            .parse()
+            .map_err(|e| Error::Other(anyhow::anyhow!("invalid job_id: {}", e)))?;
+        let data = self
+            .kafru_queue
+            .get(id)
+            .await
+            .map_err(|e| Error::Other(anyhow::anyhow!("job not found: {}", e)))?;
+        JobInfo::try_from(data)
+    }
+
     #[instrument(skip(self))]
     pub(crate) async fn execute_args(&self, args: Args) -> anyhow::Result<(), Error> {
         match args {
@@ -150,10 +182,43 @@ MCPツールを使用してエピソードの台本を生成し、CMSに保存�
     }
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub(crate) struct JobInfo {
+    pub id: String,
+    pub name: String,
+    pub status: String,
+}
+
+impl TryFrom<QueueData> for JobInfo {
+    type Error = Error;
+
+    fn try_from(q: QueueData) -> Result<Self, Self::Error> {
+        Ok(JobInfo {
+            id: q
+                .id
+                .map(|r| r.to_string())
+                .ok_or_else(|| Error::Other(anyhow::anyhow!("missing job id")))?,
+            name: q.name.unwrap_or_default(),
+            status: q.status.map(|s| s.to_string()).unwrap_or_default(),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use uuid::Uuid;
+
+    #[test]
+    fn job_info_try_from_missing_id_returns_error() {
+        let data = QueueData {
+            id: None,
+            name: Some("test".to_string()),
+            ..Default::default()
+        };
+        let result = JobInfo::try_from(data);
+        assert!(result.is_err());
+    }
 
     #[test]
     fn args_generate_audio_serializes_correctly() {
