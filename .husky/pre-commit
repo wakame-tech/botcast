@@ -1,10 +1,9 @@
 #!/bin/sh
 
-# Rust: botcast-workerのチェック
+# Rust: cargo check
 echo "Running cargo check..."
-cd botcast-worker && cargo check 2>&1
+cargo check 2>&1
 RUST_STATUS=$?
-cd ..
 
 if [ $RUST_STATUS -ne 0 ]; then
   echo "cargo check failed"
