@@ -24,6 +24,7 @@
 pub mod api;
 pub mod error;
 pub mod jobs;
+pub(crate) mod mcp_server;
 pub mod storage;
 pub mod usecase;
 pub mod worker;

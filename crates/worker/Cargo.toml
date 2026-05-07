@@ -33,5 +33,6 @@ async-trait = "0.1.83"
 thiserror = "1.0.64"
 rust-s3 = "0.35.1"
 kafru = "1.0.4"
-rmcp = { version = "1.6.0", features = ["client", "transport-child-process"] }
+rmcp = { version = "1.6.0", features = ["client", "server", "transport-child-process", "transport-streamable-http-server"] }
+schemars = { version = "1", features = ["uuid1"] }
 aquamarine = "0.6"
