@@ -11,8 +11,8 @@ mod router;
 struct AppState(Arc<Provider>);
 
 pub async fn start_api(provider: Arc<Provider>) -> anyhow::Result<()> {
-    let state = Arc::new(AppState(provider));
-    let router = routers()
+    let state = Arc::new(AppState(provider.clone()));
+    let router = routers(provider)
         .with_state(state)
         .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()));
     let port = std::env::var("PORT").unwrap_or("9001".to_string());
