@@ -62,6 +62,32 @@ impl McpClient {
         Ok(text)
     }
 
+    /// コレクションが存在しなければ作成する（冪等）。
+    pub async fn ensure_collection(
+        &self,
+        name: &str,
+        schema: serde_json::Value,
+    ) -> anyhow::Result<()> {
+        let list = self.call_tool("CollectionApi_list", serde_json::json!({})).await?;
+        let start = list.find('[').or_else(|| list.find('{')).context("no JSON in CollectionApi_list response")?;
+        let collections: serde_json::Value = serde_json::from_str(&list[start..])?;
+        let exists = collections
+            .as_array()
+            .map(|arr| arr.iter().any(|c| c["name"] == name))
+            .unwrap_or(false);
+        if exists {
+            tracing::info!("collection '{}' already exists, skipping", name);
+            return Ok(());
+        }
+        self.call_tool(
+            "CollectionApi_create",
+            serde_json::json!({ "requestBody": { "name": name, "schema": schema } }),
+        )
+        .await?;
+        tracing::info!("created collection '{}'", name);
+        Ok(())
+    }
+
     pub async fn close(self) -> anyhow::Result<()> {
         self.service.cancel().await.context("Failed to close MCP client")?;
         Ok(())
@@ -74,6 +100,35 @@ mod tests {
 
     fn mcp_server_path() -> String {
         std::env::var("MCP_SERVER_ARGS").expect("MCP_SERVER_ARGS is not set")
+    }
+
+    async fn make_client() -> McpClient {
+        let path = mcp_server_path();
+        let args: Vec<&str> = path.split_whitespace().collect();
+        McpClient::new("node", &args).await.expect("failed to create client")
+    }
+
+    async fn resolve_collection_id(client: &McpClient, name: &str) -> String {
+        let raw = client
+            .call_tool("CollectionApi_list", serde_json::json!({}))
+            .await
+            .expect("failed to list collections");
+        let start = raw.find('[').or_else(|| raw.find('{')).expect("no JSON in response");
+        let json: serde_json::Value = serde_json::from_str(&raw[start..]).expect("invalid JSON");
+        json.as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == name)
+            .and_then(|c| c["id"].as_str())
+            .and_then(|id| id.strip_prefix("collection:"))
+            .unwrap_or_else(|| panic!("collection '{}' not found", name))
+            .to_string()
+    }
+
+    fn parse_created_id(result: &str) -> String {
+        let start = result.find('{').expect("no JSON in result");
+        let json: serde_json::Value = serde_json::from_str(&result[start..]).expect("invalid JSON");
+        json["id"].as_str().expect("id field missing").to_string()
     }
 
     #[tokio::test]
@@ -89,6 +144,72 @@ mod tests {
             tool_names.contains(&"RecordApi_list"),
             "expected RecordApi_list tool"
         );
+        client.close().await.unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires botcast-cms MCP server to be built"]
+    async fn mcp_client_creates_podcast() {
+        let client = make_client().await;
+        let col_id = resolve_collection_id(&client, "podcasts").await;
+
+        let result = client
+            .call_tool(
+                "RecordApi_create",
+                serde_json::json!({
+                    "collectionId": col_id,
+                    "requestBody": { "data": { "title": "test podcast", "icon": "🎙️", "user_id": "test-user" } }
+                }),
+            )
+            .await
+            .expect("failed to call tool");
+        eprintln!("result: {}", result);
+        assert!(result.contains("201"), "expected 201: {}", result);
+        client.close().await.unwrap();
+    }
+
+
+    #[tokio::test]
+    #[ignore = "requires botcast-cms MCP server to be built"]
+    async fn mcp_client_creates_episode() {
+        let client = make_client().await;
+
+        // まず podcast を作成して podcast_id を取得
+        let podcast_col_id = resolve_collection_id(&client, "podcasts").await;
+        let podcast_result = client
+            .call_tool(
+                "RecordApi_create",
+                serde_json::json!({
+                    "collectionId": podcast_col_id,
+                    "requestBody": { "data": { "title": "podcast for episode test", "icon": "🎙️", "user_id": "test-user" } }
+                }),
+            )
+            .await
+            .expect("failed to create podcast");
+        assert!(podcast_result.contains("201"), "podcast creation failed: {}", podcast_result);
+        let podcast_record_id = parse_created_id(&podcast_result);
+        eprintln!("created podcast id: {}", podcast_record_id);
+
+        // episode を作成
+        let ep_col_id = resolve_collection_id(&client, "episodes").await;
+        let result = client
+            .call_tool(
+                "RecordApi_create",
+                serde_json::json!({
+                    "collectionId": ep_col_id,
+                    "requestBody": {
+                        "data": {
+                            "title": "test episode",
+                            "podcast_id": podcast_record_id,
+                            "user_id": "test-user"
+                        }
+                    }
+                }),
+            )
+            .await
+            .expect("failed to call tool");
+        eprintln!("result: {}", result);
+        assert!(result.contains("201"), "expected 201: {}", result);
         client.close().await.unwrap();
     }
 
