@@ -1,0 +1,128 @@
+# セルフホスト構成 (docker compose 1 台構成)
+# - CMS は外部 (CMS_URL) を使う
+# - ストレージは R2 の代わりに MinIO
+# - VOICEVOX は起動しない (VOICEVOX_ENDPOINT を設定すれば外部のものを使える)
+name: botcast
+
+services:
+  worker:
+    build:
+      context: ../..
+      dockerfile: deploy/selfhost/Dockerfile.worker
+      additional_contexts:
+        cms_mcp: ${CMS_MCP_DIR:-../../../botcast-cms/mcp}
+    restart: unless-stopped
+    env_file:
+      - path: ./worker.env
+        required: false
+    ports:
+      - "9001:9001"
+    environment:
+      - PORT=9001
+      - CMS_URL=${CMS_URL}
+      - API_KEY=${API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # ANTHROPIC_MODEL / VOICEVOX_ENDPOINT は空文字だとそのまま使われるため
+      # 必要なときだけ env_file (worker.env) 経由で渡す
+      - OTLP_COLLECTOR_ENDPOINT=http://otel-collector:4317
+      - KAFRU_DB_HOST=kafru-db
+      - KAFRU_DB_PORT=8000
+      - KAFRU_DB_USERNAME=${KAFRU_DB_USERNAME:-kafru_admin}
+      - KAFRU_DB_PASSWORD=${KAFRU_DB_PASSWORD}
+      - KAFRU_DB_NAMESPACE=botcast
+      - KAFRU_DB_NAME=kafru
+      # 署名付き URL のホストはブラウザから到達できる必要がある
+      - S3_ENDPOINT=${S3_PUBLIC_ENDPOINT}
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+    depends_on:
+      kafru-db:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_started
+
+  kafru-db:
+    image: surrealdb/surrealdb:v2
+    restart: unless-stopped
+    user: root
+    command: start --user ${KAFRU_DB_USERNAME:-kafru_admin} --pass ${KAFRU_DB_PASSWORD} rocksdb:/data/kafru.db
+    volumes:
+      - kafru_data:/data
+    healthcheck:
+      test: ["CMD", "/surreal", "isready", "--endpoint", "http://localhost:8000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # MinIO は Docker Hub での公式イメージ配布を終了しているため、
+  # 取得済みのイメージをタグ固定で使う (pull しない)
+  minio:
+    image: minio/minio:RELEASE.2024-05-27T19-17-46Z
+    pull_policy: never
+    restart: unless-stopped
+    command: server /data --console-address ":9091"
+    ports:
+      - "9000:9000"
+      - "9091:9091"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    # minio イメージに mc が同梱されている
+    image: minio/minio:RELEASE.2024-05-27T19-17-46Z
+    pull_policy: never
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+             mc mb --ignore-existing local/botcast"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    depends_on:
+      - jaeger
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    restart: unless-stopped
+    ports:
+      - "16686:16686"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/selfhost/Dockerfile.web
+      args:
+        VITE_API_URL: /api
+        VITE_CMS_URL: ${CMS_URL}
+        VITE_CMS_API_URL: ${CMS_URL}
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - worker
+
+volumes:
+  kafru_data:
+  minio_data:
