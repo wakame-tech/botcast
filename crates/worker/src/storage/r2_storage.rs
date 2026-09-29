@@ -11,14 +11,28 @@ pub struct R2Storage {
 impl R2Storage {
     const BUCKET_NAME: &'static str = "botcast";
 
+    /// `S3_ENDPOINT` が設定されていれば S3 互換ストレージ (MinIO 等) を path-style で使い、
+    /// なければ `CLOUDFLARE_ACCOUNT_ID` の R2 を使う
     pub fn new() -> anyhow::Result<Self> {
-        let bucket = Bucket::new(
-            Self::BUCKET_NAME,
-            Region::R2 {
-                account_id: std::env::var("CLOUDFLARE_ACCOUNT_ID")?,
-            },
-            Credentials::from_env()?,
-        )?;
+        let credentials = Credentials::from_env()?;
+        let bucket = match std::env::var("S3_ENDPOINT") {
+            Ok(endpoint) => Bucket::new(
+                Self::BUCKET_NAME,
+                Region::Custom {
+                    region: std::env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
+                    endpoint,
+                },
+                credentials,
+            )?
+            .with_path_style(),
+            Err(_) => Bucket::new(
+                Self::BUCKET_NAME,
+                Region::R2 {
+                    account_id: std::env::var("CLOUDFLARE_ACCOUNT_ID")?,
+                },
+                credentials,
+            )?,
+        };
         Ok(Self { bucket })
     }
 }
