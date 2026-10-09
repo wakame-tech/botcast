@@ -30,19 +30,22 @@ pub(crate) enum Args {
 ///
 /// # タスクフロー
 ///
+/// ジョブは worker の MCP サーバー (`/mcp`) のツールから投入する。
+/// 音声生成 (`GenerateAudio`) の流れは [`EpisodeService`] を参照。
+///
 /// ## 台本生成 (`GenerateScript`)
 ///
 /// ```mermaid
 /// sequenceDiagram
-///   participant web as フロントエンド
-///   participant wapi as worker API
+///   participant client as MCP クライアント
+///   participant wmcp as worker MCP (/mcp)
 ///   participant kafru as kafru
 ///   participant worker as worker
 ///   participant llm as Anthropic API
 ///   participant cms as botcast-cms MCP
 ///
-///   web->>wapi: POST /createTask (generateScript)
-///   wapi->>kafru: push job {args}
+///   client->>wmcp: tools/call generate_script
+///   wmcp->>kafru: push job {args}
 ///   kafru->>worker: execute job
 ///   loop エージェントループ
 ///     worker->>llm: messages + tools
