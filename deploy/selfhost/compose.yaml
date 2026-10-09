@@ -2,15 +2,19 @@
 # - CMS は外部 (CMS_URL) を使う
 # - 音声・字幕ファイルは CMS に保存する
 # - VOICEVOX は起動しない (VOICEVOX_ENDPOINT を設定すれば外部のものを使える)
+# - worker / web は GHCR のイメージ (.github/workflows/images.yml) を使う:
+#     docker compose pull && docker compose up -d --remove-orphans
+#   手元でビルドするときは docker compose up -d --build
 name: botcast
 
 services:
   worker:
+    image: ghcr.io/wakame-tech/botcast-worker:${BOTCAST_TAG:-latest}
     build:
       context: ../..
       dockerfile: deploy/selfhost/Dockerfile.worker
-      additional_contexts:
-        cms_mcp: ${CMS_MCP_DIR:-../../../botcast-cms/mcp}
+      args:
+        CMS_MCP_IMAGE: ${CMS_MCP_IMAGE:-ghcr.io/wakame-tech/botcast-cms-mcp:latest}
     restart: unless-stopped
     env_file:
       - path: ./worker.env
@@ -69,6 +73,8 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
 
   web:
+    # CMS_URL はビルド時に埋め込まれる。GHCR のイメージはリポジトリ変数 CMS_URL の値
+    image: ghcr.io/wakame-tech/botcast-web:${BOTCAST_TAG:-latest}
     build:
       context: ../..
       dockerfile: deploy/selfhost/Dockerfile.web
