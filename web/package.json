@@ -7,7 +7,7 @@
     "dev": "vite",
     "check": "tsc && npm run lint && npm run format",
     "build": "tsc && vite build",
-    "generate": "echo 'spec.yml removed; update api.d.ts manually'",
+    "generate": "openapi-typescript ../../botcast-cms/spec/tsp-output/schema/openapi.yaml -o src/lib/cms_api.d.ts",
     "lint": "npx @biomejs/biome lint --write src",
     "format": "npx @biomejs/biome format --write src && npx @biomejs/biome check --write src",
     "preview": "vite preview"

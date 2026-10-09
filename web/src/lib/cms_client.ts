@@ -1,4 +1,5 @@
-import createFetchClient from "openapi-fetch";
+import { clearToken, getToken } from "@/hooks/useSession";
+import createFetchClient, { type Middleware } from "openapi-fetch";
 import createClient from "openapi-react-query";
 import type { Section } from "./api_client";
 import type { components, paths } from "./cms_api";
@@ -78,8 +79,31 @@ export function toRecordData(
 	return data as unknown as Record<string, never>;
 }
 
+export const CMS_URL = import.meta.env.VITE_CMS_URL ?? "http://localhost:3002";
+
+const authMiddleware: Middleware = {
+	async onRequest({ request }) {
+		const token = getToken();
+		if (token) {
+			request.headers.set("Authorization", `Bearer ${token}`);
+		}
+		return request;
+	},
+	async onResponse({ response }) {
+		// トークン失効時はサインイン画面へ戻す
+		if (response.status === 401) {
+			clearToken();
+			if (window.location.pathname !== "/signin") {
+				window.location.assign("/signin");
+			}
+		}
+		return response;
+	},
+};
+
 const fetchClient = createFetchClient<paths>({
-	baseUrl: import.meta.env.VITE_CMS_API_URL ?? "http://localhost:3002",
+	baseUrl: CMS_URL,
 });
+fetchClient.use(authMiddleware);
 
 export const $cms = createClient(fetchClient);

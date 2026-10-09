@@ -17,7 +17,7 @@ const playerEpisodeAtom = atom<PlayerState>({
 
 export const usePlayer = () => {
 	const [state, setState] = useAtom(playerEpisodeAtom);
-	const ref = useRef<ReactPlayer>();
+	const ref = useRef<ReactPlayer | undefined>(undefined);
 
 	const setEpisode = (episode: Episode) => {
 		setState((state) => ({

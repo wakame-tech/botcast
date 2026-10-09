@@ -6,13 +6,13 @@ import { Outlet } from "@tanstack/react-router";
 import { useState } from "react";
 
 export function App() {
-	const { isSignedIn } = useSession();
+	const { isSignedIn, userId } = useSession();
 	const [queryClient] = useState(() => new QueryClient());
 
 	return (
 		<>
 			<QueryClientProvider client={queryClient}>
-				<Header isSignedIn={isSignedIn} />
+				<Header isSignedIn={isSignedIn} userId={userId ?? undefined} />
 				<Outlet />
 				<div className="mb-16">
 					<EpisodePlayer />
