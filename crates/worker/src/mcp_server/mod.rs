@@ -23,6 +23,12 @@ pub struct GenerateScriptParams {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct GenerateEpisodeParams {
+    /// botcast-cms の podcasts レコード ID (schedule.script_id が必要)
+    pub podcast_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct GetJobStatusParams {
     pub job_id: String,
 }
@@ -75,6 +81,21 @@ impl BotcastMcpServer {
             .create_task(crate::usecase::task_service::Args::GenerateScript {
                 episode_id: params.0.episode_id,
                 prompt: params.0.prompt.clone(),
+            })
+            .await
+        {
+            Ok(()) => serde_json::json!({ "status": "enqueued" }).to_string(),
+            Err(e) => serde_json::json!({ "error": e.to_string() }).to_string(),
+        }
+    }
+
+    #[tool(description = "番組のスクリプトで前回エピソード宛てのお便りを読む新しいエピソードを作り、音声まで生成するジョブをエンキューします")]
+    pub async fn generate_episode(&self, params: Parameters<GenerateEpisodeParams>) -> String {
+        match self
+            .provider
+            .task_service()
+            .create_task(crate::usecase::task_service::Args::GenerateEpisode {
+                podcast_id: params.0.podcast_id,
             })
             .await
         {

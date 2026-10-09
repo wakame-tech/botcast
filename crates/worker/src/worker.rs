@@ -39,3 +39,12 @@ pub fn start_worker(provider: Arc<Provider>, kafru_db: Arc<Db>) {
         let _ = manager.wait().await;
     });
 }
+
+/// CMS の番組スケジュールを kafru に同期するタスクを起動する
+pub fn start_schedule_sync(provider: Arc<Provider>, kafru_db: Arc<Db>) {
+    tokio::spawn(async move {
+        let sync =
+            crate::usecase::schedule_sync::ScheduleSync::new(provider.cms.clone(), kafru_db).await;
+        sync.run().await;
+    });
+}

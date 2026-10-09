@@ -30,18 +30,3 @@ export const ScriptInputSchema = z.object({
 });
 
 export type ScriptInput = z.infer<typeof ScriptInputSchema>;
-
-export const CornerInputSchema = z.object({
-	title: z.string(),
-	description: z.string().nullable(),
-	requesting_mail: z.boolean(),
-	mail_schema: z.string(),
-});
-
-export type CornerInput = z.infer<typeof CornerInputSchema>;
-
-export const MailInputSchema = z.object({
-	body: z.record(z.unknown()),
-});
-
-export type MailInput = z.infer<typeof MailInputSchema>;

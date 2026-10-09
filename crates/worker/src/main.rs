@@ -8,7 +8,7 @@ use std::{str::FromStr, sync::Arc};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
-use worker::{api::start_api, usecase::Provider, worker::start_worker};
+use worker::{api::start_api, usecase::Provider, worker::{start_schedule_sync, start_worker}};
 use worker::usecase::mcp_client::McpClient;
 
 async fn seed_cms_collections() -> anyhow::Result<()> {
@@ -29,7 +29,15 @@ async fn seed_cms_collections() -> anyhow::Result<()> {
             "title": { "type": "string" },
             "icon": { "type": "string" },
             "description": { "type": "string" },
-            "user_id": { "type": "string" }
+            "user_id": { "type": "string" },
+            "schedule": {
+                "type": "object",
+                "properties": {
+                    "cron": { "type": "string" },
+                    "script_id": { "type": "string" },
+                    "enabled": { "type": "boolean" }
+                }
+            }
         },
         "required": ["title", "icon", "user_id"]
     });
@@ -59,9 +67,22 @@ async fn seed_cms_collections() -> anyhow::Result<()> {
         "required": ["title", "template", "user_id"]
     });
 
+    let mails_schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "podcast_id": { "type": "string" },
+            "episode_id": { "type": "string" },
+            "radio_name": { "type": "string" },
+            "body": { "type": "string" },
+            "user_id": { "type": "string" }
+        },
+        "required": ["podcast_id", "episode_id", "radio_name", "body", "user_id"]
+    });
+
     client.ensure_collection("podcasts", podcasts_schema).await?;
     client.ensure_collection("episodes", episodes_schema).await?;
     client.ensure_collection("scripts", scripts_schema).await?;
+    client.ensure_collection("mails", mails_schema).await?;
     client.close().await?;
     Ok(())
 }
@@ -109,6 +130,7 @@ async fn main() -> anyhow::Result<()> {
     seed_cms_collections().await?;
 
     let provider = Arc::new(Provider::new(kafru_queue));
-    start_worker(provider.clone(), kafru_db);
+    start_worker(provider.clone(), kafru_db.clone());
+    start_schedule_sync(provider.clone(), kafru_db);
     start_api(provider).await
 }
