@@ -12,8 +12,9 @@ use std::sync::Arc;
 /// graph TD
 ///   worker --> audio_generator
 ///   worker --> cms["botcast-cms (REST / MCP)"]
+///   worker --> kafru["kafru (SurrealDB ジョブキュー)"]
 ///   worker --> readable_text
-///   api["api (別バイナリ)"]
+///   audio_generator --> voicevox["VoiceVox Engine"]
 /// ```
 #[cfg_attr(doc, aquamarine::aquamarine)]
 #[derive(Clone)]

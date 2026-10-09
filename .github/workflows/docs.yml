@@ -3,6 +3,8 @@ name: Publish on GitHub Pages
 on:
   push:
     branches: [main]
+  # PR ではビルドだけ確認する (デプロイは main への push のみ)
+  pull_request:
 
 permissions:
   contents: read
@@ -23,26 +25,24 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: botcast-worker
 
       - name: Build rustdoc
-        run: cargo doc --no-deps --package worker --package repos --package audio_generator --package readable_text
-        working-directory: botcast-worker
+        run: cargo doc --no-deps --package worker --package audio_generator --package readable_text
 
       - name: Add root redirect to worker crate
         run: |
           echo '<meta http-equiv="refresh" content="0; url=worker/index.html">' \
-            > botcast-worker/target/doc/index.html
+            > target/doc/index.html
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: botcast-worker/target/doc
+          path: target/doc
 
   deploy:
     needs: build
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

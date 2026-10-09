@@ -1,4 +1,4 @@
-//! Worker クレート — タスクキュー処理と API サーバー。
+//! Worker クレート — ジョブキュー処理と MCP サーバー。
 //!
 //! # システム概要
 //!
@@ -6,15 +6,15 @@
 //!
 //! | コンポーネント | 技術 | 役割 |
 //! |---|---|---|
-//! | frontend | React / TanStack Router / UnoCSS | UI |
-//! | api | Rust / Axum / OpenAPI | 認証・ユーザー管理 |
-//! | worker | Rust / kafru / VoiceVox | タスク実行 |
-//! | botcast-cms | Rust / Axum / SurrealDB | Podcast/Episode/Script データ・音声/字幕ファイル管理 |
+//! | web | React / TanStack Router / UnoCSS | UI。botcast-cms に JWT で直接アクセスする |
+//! | worker | Rust / Axum / kafru / rmcp / VoiceVox | ジョブ実行。HTTP で MCP サーバー (`/mcp`) とジョブ一覧 (`/jobs`) を提供する |
+//! | botcast-cms | Rust / Axum / SurrealDB | 認証 (JWT)・Podcast/Episode/Script データ・音声/字幕ファイル管理 |
 //!
 //! ## 機能
 //!
-//! - ユーザー (`User`) 作成・ログイン (Supabase Auth)
+//! - ユーザー登録・サインイン (botcast-cms の `/auth/signup`・`/auth/signin`)
 //! - ポッドキャスト (`Podcast`) / エピソード (`Episode`) の管理 (botcast-cms)
+//! - MCP ツール (`generate_audio` / `generate_script` / `list_jobs` / `get_job_status`) でジョブを投入・確認
 //! - LLM エージェント (Claude) が MCP 経由で台本を生成し CMS に保存
 //! - 台本から VoiceVox TTS で音声を合成し botcast-cms に保存
 //!
