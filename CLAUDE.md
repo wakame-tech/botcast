@@ -38,6 +38,7 @@ cd web && npm run check
 ## 環境変数
 
 - VITE_CMS_URL: botcast-cms URL（web）
+- VITE_WORKER_URL: worker URL（web。未設定時 `http://localhost:9001`。セルフホストでは nginx が中継する `/api`）。web は `POST /jobs` に botcast-cms のトークンを `Authorization: Bearer` で付け、worker が CMS の `GET /collections` で検証する
 - CMS_URL: botcast-cms URL（worker）
 - API_KEY: botcast-cms の API_KEY と同じ値。worker → CMS の `X-Api-Key` 認証に使い、MCP サーバーの子プロセスにもそのまま渡る
 - MCP_SERVER_ARGS: botcast-cms MCP サーバーの起動引数（例: `../botcast-cms/mcp/build/index.js`）

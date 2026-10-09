@@ -74,6 +74,7 @@ services:
       dockerfile: deploy/selfhost/Dockerfile.web
       args:
         VITE_CMS_URL: ${CMS_URL}
+        VITE_WORKER_URL: ${WEB_WORKER_URL:-/api}
     restart: unless-stopped
     ports:
       - "8081:80"

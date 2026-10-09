@@ -1,4 +1,6 @@
 import { SectionsComponent } from "@/components/episode/Sections";
+import { GenerateScriptForm } from "@/components/job/GenerateScriptForm";
+import { JobButton } from "@/components/job/JobButton";
 import { EpisodeMails } from "@/components/mail/EpisodeMails";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -101,6 +103,13 @@ function Episode() {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
+					<div className="py-2 flex flex-col gap-2">
+						<JobButton
+							label="音声を生成"
+							args={{ type: "generateAudio", episodeId }}
+						/>
+						<GenerateScriptForm episodeId={episodeId} />
+					</div>
 					<div className="py-2">
 						<SectionsComponent
 							isPlayingEpisode={isPlayingEpisode}
