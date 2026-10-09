@@ -46,7 +46,7 @@
 ### スクリプト（既存の `scripts` レコード）
 
 - `template`: Node.js のコード。`arguments`: スクリプトに渡す任意の値（object）
-- 実行時に `preload` で次の変数が定義される
+- 実行時、コードの先頭に次の変数定義が連結される（Dify Sandbox の `preload` は Node.js での挙動が不確かなため使わない）
 
   ```js
   const context = {
@@ -76,7 +76,7 @@
 2. 前回エピソードを取得する: `episodes` を `filter=podcast_id:eq:<id>`・`sort=created_at`・`order=desc`・`limit=1`
 3. お便りを取得する: `mails` を `filter=episode_id:eq:<前回エピソード ID>`
 4. エピソード数を取得する（`title` 省略時の番号用）
-5. CMS `POST /scripts` を `language: "nodejs"`・`preload: "const context = <JSON>;"`・`code: template` で呼ぶ
+5. CMS `POST /scripts` を `language: "nodejs"`・`code: "const context = <JSON>;\n" + template` で呼ぶ
 6. 応答の `data.error` が空でなければ失敗。`data.stdout` を `{ title?, sections }` として解釈し、失敗すれば失敗
 7. `episodes` にレコードを作成する（`podcast_id`・`title`・`description: ""`・`sections`・`user_id` = 番組の `user_id`）
 8. 作成したエピソードに対して既存の `EpisodeService::generate_audio` を同じジョブ内で実行する
@@ -96,8 +96,8 @@
 - worker 起動時と、その後 60 秒ごとに実行する
 - CMS の `podcasts` を全件取得し、`schedule.enabled == true` かつ `cron`・`script_id` がある番組を対象にする
 - kafru のスケジュール（名前 `podcast:<id>`）と比較して差分を適用する
-  - 対象にあって kafru に無い → 作成（`handler: execute_task`・`parameters.args = GenerateEpisode`・`status: Enabled`）
-  - 両方にあって cron が異なる → 更新
+  - 対象にあって kafru に無い → 作成（`queue: botcast-worker-default`・`handler: execute_task`・`parameters.args = GenerateEpisode`・`status: Enabled`・`until_schedule` = 100 年後。kafru は `until_schedule >= 現在` で発火対象を選ぶため空にできない）
+  - 両方にあって cron が異なる → 削除して作り直す
   - kafru にあって対象に無い → 削除
 - 比較は純粋関数 `diff_schedules(desired, current) -> Vec<ScheduleChange>` に分ける
 - cron の文字列は 7 フィールドに分割して `CronSchedule` の setter で組み立てる。フィールド数が違う番組は警告ログを出して対象外にする
@@ -117,7 +117,7 @@
 ## テスト
 
 - 単体テスト（worker）
-  - `preload` の組み立て
+  - スクリプトのコードの組み立て（context 定義の連結）
   - スクリプト出力の解釈: 正常 / `title` 省略 / 不正な JSON / `sections` が空 / `error` が空でない
   - `diff_schedules`: 作成・更新・削除・変化なし
   - cron 文字列の分割（7 フィールド・不正なフィールド数）
