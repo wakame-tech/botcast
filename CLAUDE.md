@@ -48,3 +48,10 @@ cd web && npm run check
 ## 音声ファイル
 
 生成した mp3 / srt は botcast-cms の `/records/{c}/{r}/images/{audio,srt}` に保存し、episode の `audio_url` / `srt_url` にその相対パスを入れる。web は認証付きで取得して Blob URL にして再生する（`useCmsFileUrl`）。
+
+## お便りエピソードの定期生成
+
+- お便りは CMS の `mails`（`podcast_id` / `episode_id` / `radio_name` / `body` / `user_id`）。web のエピソード画面から投稿する
+- 番組の `data.schedule = { cron, script_id, enabled }`（cron は Quartz 7 フィールド・UTC）を worker の `ScheduleSync` が 60 秒ごとに kafru のスケジュールへ同期する
+- 発火すると `GenerateEpisode` ジョブがスクリプト（Node.js）を CMS `/scripts` で実行する。スクリプトは `context = { podcast, previous_episode, mails, arguments }` を受け取り、`{ title?, sections }` を JSON で標準出力する
+- 手動実行は worker の MCP ツール `generate_episode(podcast_id)`

@@ -17,6 +17,7 @@
 //! - MCP ツール (`generate_audio` / `generate_script` / `list_jobs` / `get_job_status`) でジョブを投入・確認
 //! - LLM エージェント (Claude) が MCP 経由で台本を生成し CMS に保存
 //! - 台本から VoiceVox TTS で音声を合成し botcast-cms に保存
+//! - 番組のスクリプトで前回エピソード宛てのお便りを読む新しいエピソードを定期生成 (`GenerateEpisode`・`ScheduleSync`)
 //!
 //! クレート依存関係とタスクフローの詳細は [`usecase`] モジュールを参照。
 
