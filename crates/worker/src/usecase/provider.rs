@@ -1,3 +1,4 @@
+use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
 use super::task_service::TaskService;
 use super::cms_client::CmsClient;
@@ -39,6 +40,10 @@ impl Provider {
 
     pub(crate) fn task_service(&self) -> TaskService {
         TaskService::new(self.episode_service(), self.kafru_queue.clone())
+    }
+
+    pub(crate) fn episode_generation_service(&self) -> EpisodeGenerationService {
+        EpisodeGenerationService::new(self.cms.clone())
     }
 
     pub(crate) fn episode_service(&self) -> EpisodeService {
