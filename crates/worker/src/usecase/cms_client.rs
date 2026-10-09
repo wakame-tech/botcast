@@ -3,6 +3,42 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use std::collections::HashMap;
 use tokio::sync::Mutex;
 
+/// `GET /records/{collection}` のクエリ
+#[derive(Debug, Default, Clone)]
+pub(crate) struct ListQuery {
+    /// `<field>:<op>:<value>` 形式 (1 件のみ)
+    pub filter: Option<String>,
+    pub sort: Option<String>,
+    pub order_desc: bool,
+    pub limit: Option<u32>,
+}
+
+impl ListQuery {
+    fn to_params(&self) -> Vec<(&'static str, String)> {
+        let mut params = vec![];
+        if let Some(f) = &self.filter {
+            params.push(("filter", f.clone()));
+        }
+        if let Some(s) = &self.sort {
+            params.push(("sort", s.clone()));
+        }
+        if self.order_desc {
+            params.push(("order", "desc".to_string()));
+        }
+        if let Some(l) = self.limit {
+            params.push(("limit", l.to_string()));
+        }
+        params
+    }
+}
+
+/// `POST /scripts` の結果
+#[derive(Debug, Clone)]
+pub(crate) struct ScriptOutput {
+    pub stdout: String,
+    pub error: String,
+}
+
 /// botcast-cms の REST API クライアント。
 ///
 /// - 認証は `X-Api-Key`（環境変数 `API_KEY` = botcast-cms の API_KEY と同じ値）によるサービス間認証
@@ -63,18 +99,70 @@ impl CmsClient {
             .with_context(|| format!("CMS collection '{name}' not found"))
     }
 
+    /// レコード全体 (`id` / `data` / `owner_id` / ...) を取得する
+    pub(crate) async fn get_record(
+        &self,
+        collection: &str,
+        record_id: &str,
+    ) -> anyhow::Result<serde_json::Value> {
+        let cid = self.collection_id(collection).await?;
+        Self::send(self.request(reqwest::Method::GET, &format!("/records/{cid}/{record_id}")))
+            .await
+    }
+
     /// レコードの `data` を取得する
     pub(crate) async fn get_record_data(
         &self,
         collection: &str,
         record_id: &str,
     ) -> anyhow::Result<serde_json::Value> {
+        Ok(self.get_record(collection, record_id).await?["data"].clone())
+    }
+
+    /// レコード一覧 (レコード全体の配列) を取得する
+    pub(crate) async fn list_records(
+        &self,
+        collection: &str,
+        query: &ListQuery,
+    ) -> anyhow::Result<Vec<serde_json::Value>> {
         let cid = self.collection_id(collection).await?;
-        let record = Self::send(
-            self.request(reqwest::Method::GET, &format!("/records/{cid}/{record_id}")),
+        let res = Self::send(
+            self.request(reqwest::Method::GET, &format!("/records/{cid}"))
+                .query(&query.to_params()),
         )
         .await?;
-        Ok(record["data"].clone())
+        Ok(res.as_array().cloned().unwrap_or_default())
+    }
+
+    /// レコードを作成し、ID を返す
+    pub(crate) async fn create_record(
+        &self,
+        collection: &str,
+        data: serde_json::Value,
+    ) -> anyhow::Result<String> {
+        let cid = self.collection_id(collection).await?;
+        let res = Self::send(
+            self.request(reqwest::Method::POST, &format!("/records/{cid}"))
+                .json(&serde_json::json!({ "data": data })),
+        )
+        .await?;
+        res["id"]
+            .as_str()
+            .map(str::to_string)
+            .context("id missing in create response")
+    }
+
+    /// Node.js のコードを CMS (Dify Sandbox) で実行する
+    pub(crate) async fn execute_script(&self, code: &str) -> anyhow::Result<ScriptOutput> {
+        let res = Self::send(
+            self.request(reqwest::Method::POST, "/scripts")
+                .json(&serde_json::json!({ "language": "nodejs", "code": code })),
+        )
+        .await?;
+        Ok(ScriptOutput {
+            stdout: res["data"]["stdout"].as_str().unwrap_or_default().to_string(),
+            error: res["data"]["error"].as_str().unwrap_or_default().to_string(),
+        })
     }
 
     /// レコードの `data` を置き換える
@@ -140,6 +228,26 @@ fn parse_collection_ids(collections: &serde_json::Value) -> HashMap<String, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn list_query_to_params() {
+        let q = ListQuery {
+            filter: Some("podcast_id:eq:p1".to_string()),
+            sort: Some("created_at".to_string()),
+            order_desc: true,
+            limit: Some(1),
+        };
+        assert_eq!(
+            q.to_params(),
+            vec![
+                ("filter", "podcast_id:eq:p1".to_string()),
+                ("sort", "created_at".to_string()),
+                ("order", "desc".to_string()),
+                ("limit", "1".to_string()),
+            ]
+        );
+        assert!(ListQuery::default().to_params().is_empty());
+    }
 
     #[test]
     fn parse_collection_ids_strips_prefix() {
