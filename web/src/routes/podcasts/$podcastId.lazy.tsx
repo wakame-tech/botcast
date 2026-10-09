@@ -17,7 +17,16 @@ export function Podcast() {
 	const { data: episodeRecords } = $cms.useQuery(
 		"get",
 		"/records/{collectionId}",
-		{ params: { path: { collectionId: "episodes" } } },
+		{
+			params: {
+				path: { collectionId: "episodes" },
+				query: {
+					filter: [`podcast_id:eq:${podcastId}`],
+					sort: "created_at",
+					order: "desc",
+				},
+			},
+		},
 	);
 
 	if (!podcastRecord) {
@@ -25,9 +34,7 @@ export function Podcast() {
 	}
 
 	const podcast = recordToPodcast(podcastRecord);
-	const episodes = (episodeRecords ?? [])
-		.map(recordToEpisode)
-		.filter((e) => e.podcast_id === podcastId);
+	const episodes = (episodeRecords ?? []).map(recordToEpisode);
 
 	return (
 		<>
