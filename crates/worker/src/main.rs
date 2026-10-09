@@ -29,7 +29,15 @@ async fn seed_cms_collections() -> anyhow::Result<()> {
             "title": { "type": "string" },
             "icon": { "type": "string" },
             "description": { "type": "string" },
-            "user_id": { "type": "string" }
+            "user_id": { "type": "string" },
+            "schedule": {
+                "type": "object",
+                "properties": {
+                    "cron": { "type": "string" },
+                    "script_id": { "type": "string" },
+                    "enabled": { "type": "boolean" }
+                }
+            }
         },
         "required": ["title", "icon", "user_id"]
     });
@@ -59,9 +67,22 @@ async fn seed_cms_collections() -> anyhow::Result<()> {
         "required": ["title", "template", "user_id"]
     });
 
+    let mails_schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "podcast_id": { "type": "string" },
+            "episode_id": { "type": "string" },
+            "radio_name": { "type": "string" },
+            "body": { "type": "string" },
+            "user_id": { "type": "string" }
+        },
+        "required": ["podcast_id", "episode_id", "radio_name", "body", "user_id"]
+    });
+
     client.ensure_collection("podcasts", podcasts_schema).await?;
     client.ensure_collection("episodes", episodes_schema).await?;
     client.ensure_collection("scripts", scripts_schema).await?;
+    client.ensure_collection("mails", mails_schema).await?;
     client.close().await?;
     Ok(())
 }
