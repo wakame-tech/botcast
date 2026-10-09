@@ -17,6 +17,9 @@ just worker
 # 型チェック
 cargo check
 
+# web 依存インストール（初回。web/node_modules が無いと上位の node_modules を拾う）
+cd web && npm ci
+
 # web 開発サーバー
 cd web && npm run dev
 

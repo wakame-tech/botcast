@@ -13,10 +13,15 @@ fi
 # Frontend: biome lint+format check (変更ファイルのみ)
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep "^web/src/.*\.\(ts\|tsx\)$" || true)
 if [ -n "$STAGED_TS" ]; then
+  # web/node_modules が無いと npx が上位ディレクトリや最新版の biome を拾ってしまう
+  if [ ! -x web/node_modules/.bin/biome ]; then
+    echo "web/node_modules がありません。'cd web && npm ci' を実行してください"
+    exit 1
+  fi
   echo "Running biome check on staged files..."
   # strip "web/" prefix since we cd into web/
   STAGED_TS_REL=$(echo "$STAGED_TS" | sed 's|^web/||')
-  cd web && npx @biomejs/biome check $STAGED_TS_REL 2>&1
+  cd web && ./node_modules/.bin/biome check $STAGED_TS_REL 2>&1
   BIOME_STATUS=$?
   cd ..
   if [ $BIOME_STATUS -ne 0 ]; then
