@@ -5,6 +5,9 @@ RUN npm ci
 COPY web/ ./
 ARG VITE_CMS_URL
 ENV VITE_CMS_URL=$VITE_CMS_URL
+# nginx が /api/ を worker に中継するので、既定は同一オリジンの /api
+ARG VITE_WORKER_URL=/api
+ENV VITE_WORKER_URL=$VITE_WORKER_URL
 RUN npx vite build --outDir dist
 
 FROM nginx:alpine

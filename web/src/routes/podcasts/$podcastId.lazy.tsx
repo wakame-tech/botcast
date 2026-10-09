@@ -1,4 +1,6 @@
 import Episode from "@/components/episode/EpisodeList.tsx";
+import { JobButton } from "@/components/job/JobButton";
+import { JobList } from "@/components/job/JobList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { $cms, recordToEpisode, recordToPodcast } from "@/lib/cms_client";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
@@ -62,6 +64,19 @@ export function Podcast() {
 
 					<h2>エピソード ({episodes.length})</h2>
 					<Episode.List podcastId={podcast.id} episodes={episodes} />
+
+					<h2>ジョブ</h2>
+					<JobButton
+						label="お便りエピソードを生成"
+						args={{ type: "generateEpisode", podcastId: podcast.id }}
+						disabled={!podcast.schedule?.script_id}
+					/>
+					{!podcast.schedule?.script_id && (
+						<p className="text-sm text-gray-500">
+							番組のスケジュールにスクリプトを設定すると生成できます
+						</p>
+					)}
+					<JobList />
 				</CardContent>
 			</Card>
 		</>
