@@ -101,9 +101,62 @@ const authMiddleware: Middleware = {
 	},
 };
 
+// botcast-cms の collection ID は自動採番のため、名前 → ID の対応を引いて解決する
+let collectionIds: Promise<Map<string, string>> | null = null;
+
+const fetchCollectionIds = async (): Promise<Map<string, string>> => {
+	const token = getToken();
+	const res = await fetch(`${CMS_URL}/collections`, {
+		headers: token ? { Authorization: `Bearer ${token}` } : {},
+	});
+	if (!res.ok) {
+		throw new Error(`failed to list collections: ${res.status}`);
+	}
+	const collections = (await res.json()) as { id: string; name: string }[];
+	return new Map(
+		collections.map((c) => [c.name, c.id.replace(/^collection:/, "")]),
+	);
+};
+
+const resolveCollectionId = async (name: string): Promise<string> => {
+	collectionIds ??= fetchCollectionIds();
+	let ids = await collectionIds.catch(() => null);
+	if (!ids?.has(name)) {
+		// 取得失敗・後から作られた collection に備えて一度だけ取り直す
+		collectionIds = fetchCollectionIds();
+		ids = await collectionIds.catch(() => null);
+	}
+	return ids?.get(name) ?? name;
+};
+
+const collectionNameMiddleware: Middleware = {
+	async onRequest({ request, schemaPath }) {
+		if (!schemaPath.startsWith("/records/{collectionId}")) {
+			return request;
+		}
+		const url = new URL(request.url);
+		const match = url.pathname.match(/^(.*\/records\/)([^/]+)(.*)$/);
+		if (!match) {
+			return request;
+		}
+		const [, prefix = "", name = "", rest = ""] = match;
+		const id = await resolveCollectionId(decodeURIComponent(name));
+		url.pathname = `${prefix}${encodeURIComponent(id)}${rest}`;
+		// body をストリームのまま引き継ぐと送信に失敗するため、Blob に読み出して作り直す
+		const hasBody = request.method !== "GET" && request.method !== "HEAD";
+		return new Request(url, {
+			method: request.method,
+			headers: request.headers,
+			body: hasBody ? await request.blob() : undefined,
+			signal: request.signal,
+		});
+	},
+};
+
 const fetchClient = createFetchClient<paths>({
 	baseUrl: CMS_URL,
 });
 fetchClient.use(authMiddleware);
+fetchClient.use(collectionNameMiddleware);
 
 export const $cms = createClient(fetchClient);

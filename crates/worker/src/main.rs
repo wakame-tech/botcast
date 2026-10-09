@@ -47,9 +47,21 @@ async fn seed_cms_collections() -> anyhow::Result<()> {
         },
         "required": ["title", "podcast_id", "user_id"]
     });
+    let scripts_schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "template": { "type": "string" },
+            "arguments": { "type": "object" },
+            "user_id": { "type": "string" }
+        },
+        "required": ["title", "template", "user_id"]
+    });
 
     client.ensure_collection("podcasts", podcasts_schema).await?;
     client.ensure_collection("episodes", episodes_schema).await?;
+    client.ensure_collection("scripts", scripts_schema).await?;
     client.close().await?;
     Ok(())
 }
