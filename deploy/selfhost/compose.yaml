@@ -5,11 +5,15 @@
 # - worker / web は GHCR のイメージ (.github/workflows/images.yml) を使う:
 #     docker compose pull && docker compose up -d --remove-orphans
 #   手元でビルドするときは docker compose up -d --build
+# - watchtower が GHCR の新しいイメージを 5 分ごとに確認し、ラベル付きのコンテナを入れ替える
+#   (botcast-cms の deploy/compose.yaml の api / web も対象)。compose ファイルの変更は手動で反映する
 name: botcast
 
 services:
   worker:
     image: ghcr.io/wakame-tech/botcast-worker:${BOTCAST_TAG:-latest}
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     build:
       context: ../..
       dockerfile: deploy/selfhost/Dockerfile.worker
@@ -75,6 +79,8 @@ services:
   web:
     # CMS_URL はビルド時に埋め込まれる。GHCR のイメージはリポジトリ変数 CMS_URL の値
     image: ghcr.io/wakame-tech/botcast-web:${BOTCAST_TAG:-latest}
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     build:
       context: ../..
       dockerfile: deploy/selfhost/Dockerfile.web
@@ -86,6 +92,19 @@ services:
       - "8081:80"
     depends_on:
       - worker
+
+  # GHCR の新しいイメージを pull して、ラベル付きのコンテナを再作成する
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # private な GHCR を pull するための docker login の認証情報
+      - ${DOCKER_CONFIG_FILE:-~/.docker/config.json}:/config.json:ro
+    environment:
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_POLL_INTERVAL=300
+      - WATCHTOWER_CLEANUP=true
 
 volumes:
   kafru_data:
