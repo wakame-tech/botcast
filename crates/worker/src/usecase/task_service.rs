@@ -1,4 +1,5 @@
 use super::agent_service::AgentService;
+use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
 use super::mcp_client::McpClient;
 use crate::error::Error;
@@ -11,6 +12,9 @@ use std::sync::Arc;
 use tracing::instrument;
 use uuid::Uuid;
 
+/// worker が処理する kafru のキュー名 (`{server}-{queue}`)
+pub(crate) const QUEUE_NAME: &str = "botcast-worker-default";
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
@@ -21,6 +25,10 @@ pub(crate) enum Args {
     GenerateScript {
         episode_id: String,
         prompt: String,
+    },
+    /// 番組のスクリプトで新しいエピソードを作り、音声まで生成する
+    GenerateEpisode {
+        podcast_id: String,
     },
 }
 
@@ -59,16 +67,19 @@ pub(crate) enum Args {
 #[derive(Clone)]
 pub(crate) struct TaskService {
     episode_service: EpisodeService,
+    episode_generation_service: EpisodeGenerationService,
     kafru_queue: Arc<Queue<'static>>,
 }
 
 impl TaskService {
     pub(crate) fn new(
         episode_service: EpisodeService,
+        episode_generation_service: EpisodeGenerationService,
         kafru_queue: Arc<Queue<'static>>,
     ) -> Self {
         Self {
             episode_service,
+            episode_generation_service,
             kafru_queue,
         }
     }
@@ -80,7 +91,7 @@ impl TaskService {
             serde_json::to_value(&args).map_err(|e| Error::Other(anyhow::anyhow!(e)))?,
         );
         let queue_data = QueueData {
-            queue: Some("botcast-worker-default".to_string()),
+            queue: Some(QUEUE_NAME.to_string()),
             name: Some("execute_task".to_string()),
             handler: Some("execute_task".to_string()),
             parameters: Some(params),
@@ -102,7 +113,7 @@ impl TaskService {
                     QueueStatus::Error.to_string(),
                     QueueStatus::Completed.to_string(),
                 ]),
-                queue: Some(vec!["botcast-worker-default".to_string()]),
+                queue: Some(vec![QUEUE_NAME.to_string()]),
                 limit: Some(100),
             })
             .await
@@ -128,6 +139,20 @@ impl TaskService {
     pub(crate) async fn execute_args(&self, args: Args) -> anyhow::Result<(), Error> {
         match args {
             Args::GenerateAudio { episode_id } => {
+                let work_dir = use_work_dir(&Uuid::new_v4())
+                    .context("Failed to create work dir")
+                    .map_err(Error::Other)?;
+                self.episode_service
+                    .generate_audio(&work_dir, &episode_id)
+                    .await
+            }
+            Args::GenerateEpisode { podcast_id } => {
+                let episode_id = self
+                    .episode_generation_service
+                    .generate(&podcast_id)
+                    .await
+                    .context("Failed to generate episode")
+                    .map_err(Error::Other)?;
                 let work_dir = use_work_dir(&Uuid::new_v4())
                     .context("Failed to create work dir")
                     .map_err(Error::Other)?;
@@ -240,6 +265,14 @@ mod tests {
         assert_eq!(json["type"], "generateScript");
         assert_eq!(json["prompt"], "テスト台本を生成してください");
         assert!(json["episodeId"].is_string());
+    }
+
+    #[test]
+    fn args_generate_episode_serializes_correctly() {
+        let args = Args::GenerateEpisode { podcast_id: "p1".to_string() };
+        let json = serde_json::to_value(&args).unwrap();
+        assert_eq!(json["type"], "generateEpisode");
+        assert_eq!(json["podcastId"], "p1");
     }
 
     #[test]

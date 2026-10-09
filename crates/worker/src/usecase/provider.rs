@@ -39,7 +39,11 @@ impl Provider {
     }
 
     pub(crate) fn task_service(&self) -> TaskService {
-        TaskService::new(self.episode_service(), self.kafru_queue.clone())
+        TaskService::new(
+            self.episode_service(),
+            self.episode_generation_service(),
+            self.kafru_queue.clone(),
+        )
     }
 
     pub(crate) fn episode_generation_service(&self) -> EpisodeGenerationService {
