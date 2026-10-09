@@ -3,15 +3,25 @@
 ARG CMS_MCP_IMAGE=ghcr.io/wakame-tech/botcast-cms-mcp:latest
 FROM ${CMS_MCP_IMAGE} AS mcp
 
-FROM rust:1.95-alpine AS builder
+# 依存のビルドを cargo-chef で別レイヤーに分ける。
+# CI の gha キャッシュには RUN --mount=type=cache の中身が残らないため、
+# Cargo.lock が変わらない限り依存のコンパイル済みレイヤーを再利用できるようにする。
+FROM rust:1.95-alpine AS chef
 WORKDIR /app
-RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static
-COPY rust-toolchain Cargo.toml Cargo.lock ./
+COPY rust-toolchain ./
+RUN apk add --no-cache musl-dev && cargo install cargo-chef --locked
+
+FROM chef AS planner
+COPY Cargo.toml Cargo.lock ./
 COPY crates crates
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    cargo build --release -p worker && \
-    cp /app/target/release/worker /app/worker-bin
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json -p worker
+COPY Cargo.toml Cargo.lock ./
+COPY crates crates
+RUN cargo build --release -p worker && cp target/release/worker /app/worker-bin
 
 FROM alpine:3.22
 WORKDIR /app
