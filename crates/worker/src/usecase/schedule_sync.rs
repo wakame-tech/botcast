@@ -1,6 +1,16 @@
+use super::cms_client::{CmsClient, ListQuery};
+use super::task_service::{Args, QUEUE_NAME};
 use anyhow::bail;
+use chrono::{Duration, Utc};
 use kafru::cron_schedule::CronSchedule;
+use kafru::database::Db;
+use kafru::schedule::{Schedule, ScheduleData, ScheduleListConditions, ScheduleStatus};
+use kafru::task::RecordId;
 use serde_json::Value;
+use std::{collections::HashMap, sync::Arc};
+
+const HANDLER: &str = "execute_task";
+const SYNC_INTERVAL_SECS: u64 = 60;
 
 /// 番組ごとの kafru スケジュール名
 pub(crate) fn schedule_name(podcast_id: &str) -> String {
@@ -100,6 +110,109 @@ pub(crate) fn diff_schedules(
         }
     }
     changes
+}
+
+/// CMS の `podcasts.data.schedule` を kafru のスケジュールへ同期する
+pub(crate) struct ScheduleSync {
+    cms: Arc<CmsClient>,
+    schedule: Schedule<'static>,
+}
+
+impl ScheduleSync {
+    pub(crate) async fn new(cms: Arc<CmsClient>, db: Arc<Db>) -> Self {
+        Self {
+            cms,
+            schedule: Schedule::new(Some(db)).await,
+        }
+    }
+
+    async fn current(&self) -> anyhow::Result<Vec<CurrentSchedule>> {
+        let list = self
+            .schedule
+            .list(ScheduleListConditions {
+                handler: Some(vec![HANDLER.to_string()]),
+                upcoming: None,
+                ..Default::default()
+            })
+            .await
+            .map_err(anyhow::Error::msg)?;
+        Ok(list
+            .into_iter()
+            .filter_map(|s| {
+                let name = s.name?;
+                if !name.starts_with("podcast:") {
+                    return None;
+                }
+                Some(CurrentSchedule {
+                    id: s.id?.to_string(),
+                    name,
+                    cron: s.cron_expression?.get_expression(),
+                })
+            })
+            .collect())
+    }
+
+    async fn create(&self, d: &DesiredSchedule) -> anyhow::Result<()> {
+        let args = serde_json::to_value(Args::GenerateEpisode {
+            podcast_id: d.podcast_id.clone(),
+        })?;
+        self.schedule
+            .create(ScheduleData {
+                name: Some(d.name.clone()),
+                queue: Some(QUEUE_NAME.to_string()),
+                cron_expression: Some(parse_cron(&d.cron)?),
+                handler: Some(HANDLER.to_string()),
+                parameters: Some(HashMap::from([("args".to_string(), args)])),
+                status: Some(ScheduleStatus::Enabled),
+                // kafru は until_schedule >= 現在 のスケジュールだけを発火させる
+                until_schedule: Some(Utc::now() + Duration::days(365 * 100)),
+                ..Default::default()
+            })
+            .await
+            .map_err(anyhow::Error::msg)?;
+        Ok(())
+    }
+
+    async fn remove(&self, id: &str) -> anyhow::Result<()> {
+        let id: RecordId = id
+            .parse()
+            .map_err(|e| anyhow::anyhow!("invalid schedule id {id}: {e}"))?;
+        self.schedule.remove(id).await.map_err(anyhow::Error::msg)?;
+        Ok(())
+    }
+
+    /// 1 回分の同期
+    pub(crate) async fn sync_once(&self) -> anyhow::Result<()> {
+        let podcasts = self
+            .cms
+            .list_records("podcasts", &ListQuery::default())
+            .await?;
+        let changes = diff_schedules(&desired_schedules(&podcasts), &self.current().await?);
+        for change in changes {
+            tracing::info!("schedule change: {change:?}");
+            match change {
+                ScheduleChange::Create(d) => self.create(&d).await?,
+                ScheduleChange::Recreate { id, desired } => {
+                    self.remove(&id).await?;
+                    self.create(&desired).await?;
+                }
+                ScheduleChange::Remove { id } => self.remove(&id).await?,
+            }
+        }
+        Ok(())
+    }
+
+    /// 起動時と、その後 60 秒ごとに同期する
+    pub(crate) async fn run(self) {
+        let mut interval =
+            tokio::time::interval(std::time::Duration::from_secs(SYNC_INTERVAL_SECS));
+        loop {
+            interval.tick().await;
+            if let Err(e) = self.sync_once().await {
+                tracing::warn!("schedule sync failed: {e:#}");
+            }
+        }
+    }
 }
 
 #[cfg(test)]

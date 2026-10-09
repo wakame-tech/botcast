@@ -8,7 +8,7 @@ use std::{str::FromStr, sync::Arc};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
-use worker::{api::start_api, usecase::Provider, worker::start_worker};
+use worker::{api::start_api, usecase::Provider, worker::{start_schedule_sync, start_worker}};
 use worker::usecase::mcp_client::McpClient;
 
 async fn seed_cms_collections() -> anyhow::Result<()> {
@@ -109,6 +109,7 @@ async fn main() -> anyhow::Result<()> {
     seed_cms_collections().await?;
 
     let provider = Arc::new(Provider::new(kafru_queue));
-    start_worker(provider.clone(), kafru_db);
+    start_worker(provider.clone(), kafru_db.clone());
+    start_schedule_sync(provider.clone(), kafru_db);
     start_api(provider).await
 }
