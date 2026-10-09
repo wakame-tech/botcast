@@ -37,6 +37,14 @@ cd web && npm run check
 
 ## 環境変数
 
-- DATABASE_URL: PostgreSQL 接続文字列
 - VITE_CMS_URL: botcast-cms URL（web）
-- VOICEVOX_ENDPOINT: VoiceVox エンジン URL（任意）
+- CMS_URL: botcast-cms URL（worker）
+- API_KEY: botcast-cms の API_KEY と同じ値。worker → CMS の `X-Api-Key` 認証に使い、MCP サーバーの子プロセスにもそのまま渡る
+- MCP_SERVER_ARGS: botcast-cms MCP サーバーの起動引数（例: `../botcast-cms/mcp/build/index.js`）
+- KAFRU_DB_HOST / KAFRU_DB_PORT / KAFRU_DB_USERNAME / KAFRU_DB_PASSWORD / KAFRU_DB_NAMESPACE / KAFRU_DB_NAME: ジョブキュー (kafru) の SurrealDB。ローカルは `just up` で 4030 番に起動
+- VOICEVOX_ENDPOINT: VoiceVox エンジン URL（音声生成に必要。例: `docker run -p 50021:50021 voicevox/voicevox_engine:cpu-latest`）
+- OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector
+
+## 音声ファイル
+
+生成した mp3 / srt は botcast-cms の `/records/{c}/{r}/images/{audio,srt}` に保存し、episode の `audio_url` / `srt_url` にその相対パスを入れる。web は認証付きで取得して Blob URL にして再生する（`useCmsFileUrl`）。

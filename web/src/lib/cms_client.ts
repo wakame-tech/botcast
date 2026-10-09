@@ -160,3 +160,21 @@ fetchClient.use(authMiddleware);
 fetchClient.use(collectionNameMiddleware);
 
 export const $cms = createClient(fetchClient);
+
+/** CMS に保存されたファイル (`/records/{c}/{r}/images/{field}`) を取得する */
+export const fetchCmsFile = async (path: string): Promise<Blob> => {
+	const token = getToken();
+	const res = await fetch(`${CMS_URL}${path}`, {
+		headers: token ? { Authorization: `Bearer ${token}` } : {},
+	});
+	if (!res.ok) {
+		throw new Error(`Failed to fetch ${path}: ${res.status}`);
+	}
+	// CMS はファイル本体を Base64 の JSON で返す
+	const { data, content_type } = (await res.json()) as {
+		data: string;
+		content_type: string;
+	};
+	const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+	return new Blob([bytes], { type: content_type });
+};

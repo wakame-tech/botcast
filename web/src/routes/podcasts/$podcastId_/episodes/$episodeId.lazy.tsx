@@ -2,7 +2,7 @@ import { SectionsComponent } from "@/components/episode/Sections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
-import { $cms, recordToEpisode } from "@/lib/cms_client";
+import { $cms, fetchCmsFile, recordToEpisode } from "@/lib/cms_client";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import Parser from "srt-parser-2";
@@ -15,11 +15,7 @@ export const Route = createLazyFileRoute(
 });
 
 const fetchSrt = async (url: string): Promise<Line[]> => {
-	const res = await fetch(url);
-	if (!res.ok) {
-		throw new Error(`Failed to fetch ${url}: ${res.status}`);
-	}
-	const srt = await res.text();
+	const srt = await (await fetchCmsFile(url)).text();
 	const parser = new Parser();
 	return parser.fromSrt(srt);
 };
@@ -37,7 +33,7 @@ function Episode() {
 	const episode = episodeRecord ? recordToEpisode(episodeRecord) : null;
 
 	const { data } = useQuery({
-		queryKey: ["lines"],
+		queryKey: ["lines", episode?.srt_url],
 		queryFn: () => {
 			const url = episode?.srt_url;
 			if (url) {

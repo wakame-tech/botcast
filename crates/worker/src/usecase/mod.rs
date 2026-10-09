@@ -1,4 +1,5 @@
 pub(crate) mod agent_service;
+pub(crate) mod cms_client;
 pub(crate) mod episode_service;
 pub mod mcp_client;
 pub(crate) mod provider;

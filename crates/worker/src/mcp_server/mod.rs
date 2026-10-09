@@ -8,16 +8,17 @@ use rmcp::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct GenerateAudioParams {
-    pub episode_id: Uuid,
+    /// botcast-cms の episodes レコード ID
+    pub episode_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct GenerateScriptParams {
-    pub episode_id: Uuid,
+    /// botcast-cms の episodes レコード ID
+    pub episode_id: String,
     pub prompt: String,
 }
 
