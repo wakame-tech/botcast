@@ -16,10 +16,10 @@ use uuid::Uuid;
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub(crate) enum Args {
     GenerateAudio {
-        episode_id: Uuid,
+        episode_id: String,
     },
     GenerateScript {
-        episode_id: Uuid,
+        episode_id: String,
         prompt: String,
     },
 }
@@ -141,7 +141,7 @@ impl TaskService {
 
     async fn run_generate_script(
         &self,
-        episode_id: &Uuid,
+        episode_id: &str,
         prompt: &str,
     ) -> anyhow::Result<String, Error> {
         let api_key = std::env::var("ANTHROPIC_API_KEY")
@@ -166,7 +166,7 @@ MCPツールを使用してエピソードの台本を生成し、CMSに保存�
 
         let full_prompt = format!(
             "エピソードID: {}\n\n{}",
-            episode_id.hyphenated(),
+            episode_id,
             prompt
         );
 
@@ -207,7 +207,6 @@ impl TryFrom<QueueData> for JobInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
 
     #[test]
     fn job_info_try_from_missing_id_returns_error() {
@@ -222,7 +221,7 @@ mod tests {
 
     #[test]
     fn args_generate_audio_serializes_correctly() {
-        let args = Args::GenerateAudio { episode_id: Uuid::nil() };
+        let args = Args::GenerateAudio { episode_id: "ep1".to_string() };
         let json = serde_json::to_value(&args).unwrap();
         assert_eq!(json["type"], "generateAudio");
         assert!(json["episodeId"].is_string());
@@ -231,7 +230,7 @@ mod tests {
     #[test]
     fn args_generate_script_serializes_correctly() {
         let args = Args::GenerateScript {
-            episode_id: Uuid::nil(),
+            episode_id: "ep1".to_string(),
             prompt: "テスト台本を生成してください".to_string(),
         };
         let json = serde_json::to_value(&args).unwrap();
@@ -244,7 +243,7 @@ mod tests {
     fn args_deserializes_generate_script() {
         let json = serde_json::json!({
             "type": "generateScript",
-            "episodeId": Uuid::nil().to_string(),
+            "episodeId": "ep1",
             "prompt": "プロンプト"
         });
         let args: Args = serde_json::from_value(json).unwrap();

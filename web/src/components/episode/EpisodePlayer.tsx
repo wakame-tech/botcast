@@ -1,8 +1,10 @@
+import { useCmsFileUrl } from "@/hooks/useCmsFileUrl";
 import { usePlayer } from "@/hooks/usePlayer";
 import { formatMmss } from "./EpisodeList";
 
 export function EpisodePlayer() {
 	const { state, playOrPause, render } = usePlayer();
+	const audioUrl = useCmsFileUrl(state.episode?.audio_url);
 	const icon = state.isPlaying ? "i-solar:pause-bold" : "i-solar:play-bold";
 	const iconColor = state.episode ? "text-white" : "text-gray-300";
 
@@ -23,7 +25,7 @@ export function EpisodePlayer() {
 					{formatMmss(state.episode?.duration_sec ?? null)}
 				</p>
 			</div>
-			{render(state.episode?.audio_url ?? null)}
+			{render(audioUrl)}
 		</div>
 	);
 }

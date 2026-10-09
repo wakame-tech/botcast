@@ -1,7 +1,7 @@
 use super::episode_service::EpisodeService;
 use super::task_service::TaskService;
+use super::cms_client::CmsClient;
 use kafru::queue::Queue;
-use crate::storage::provider::ProvideStorage;
 use std::sync::Arc;
 
 /// ユースケース層のサービスを組み立てるプロバイダー。
@@ -11,22 +11,27 @@ use std::sync::Arc;
 /// ```mermaid
 /// graph TD
 ///   worker --> audio_generator
-///   worker --> storage["storage (R2)"]\n///   worker --> openapi_client["openapi_client (Section 型)"]
+///   worker --> cms["botcast-cms (REST / MCP)"]
 ///   worker --> readable_text
 ///   api["api (別バイナリ)"]
 /// ```
 #[cfg_attr(doc, aquamarine::aquamarine)]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Provider {
-    pub(crate) provide_storage: Arc<dyn ProvideStorage>,
+    pub(crate) cms: Arc<CmsClient>,
     pub(crate) kafru_queue: Arc<Queue<'static>>,
+}
+
+impl std::fmt::Debug for Provider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Provider").finish()
+    }
 }
 
 impl Provider {
     pub fn new(kafru_queue: Arc<Queue<'static>>) -> Self {
-        let provider = crate::storage::provider::DefaultProvider::new();
         Self {
-            provide_storage: Arc::new(provider),
+            cms: Arc::new(CmsClient::from_env()),
             kafru_queue,
         }
     }
@@ -36,6 +41,6 @@ impl Provider {
     }
 
     pub(crate) fn episode_service(&self) -> EpisodeService {
-        EpisodeService::new(self.provide_storage.storage())
+        EpisodeService::new(self.cms.clone())
     }
 }
