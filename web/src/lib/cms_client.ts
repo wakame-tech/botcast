@@ -6,12 +6,20 @@ import type { components, paths } from "./cms_api";
 
 export type CmsRecord = components["schemas"]["Record_"];
 
+export interface PodcastSchedule {
+	/** Quartz 形式 7 フィールド (秒 分 時 日 月 曜日 年)、UTC */
+	cron: string;
+	script_id: string;
+	enabled: boolean;
+}
+
 export interface Podcast {
 	id: string;
 	title: string;
 	icon: string;
 	description: string;
 	user_id: string;
+	schedule?: PodcastSchedule;
 }
 
 export interface Episode {
@@ -64,6 +72,7 @@ export function recordToPodcast(record: CmsRecord): Podcast {
 		icon: d.icon as string,
 		description: (d.description as string) ?? "",
 		user_id: d.user_id as string,
+		schedule: d.schedule as PodcastSchedule | undefined,
 	};
 }
 

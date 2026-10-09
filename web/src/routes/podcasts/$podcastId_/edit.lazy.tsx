@@ -1,7 +1,13 @@
 import { PodcastForm } from "@/components/podcast/PodcastForm";
+import { ScheduleForm } from "@/components/podcast/ScheduleForm";
 import { Button } from "@/components/ui/button";
 import type { PodcastInput } from "@/lib/api_client";
-import { $cms, recordToPodcast, toRecordData } from "@/lib/cms_client";
+import {
+	$cms,
+	type PodcastSchedule,
+	recordToPodcast,
+	toRecordData,
+} from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId/edit")({
@@ -25,17 +31,26 @@ export default function EditPodcast() {
 		"/records/{collectionId}/{recordId}",
 	);
 
-	const handleSubmit = async (values: PodcastInput) => {
+	// data は丸ごと置き換わるため、既存の値 (user_id / schedule など) を保って更新する
+	const saveData = async (patch: Record<string, unknown>) => {
+		const current = (podcastRecord?.data ?? {}) as Record<string, unknown>;
 		await updatePodcast.mutateAsync({
 			params: { path: { collectionId: "podcasts", recordId: podcastId } },
-			body: {
-				data: toRecordData({
-					icon: values.icon,
-					title: values.title,
-					description: values.description,
-				}),
-			},
+			body: { data: toRecordData({ ...current, ...patch }) },
 		});
+	};
+
+	const handleSubmit = async (values: PodcastInput) => {
+		await saveData({
+			icon: values.icon,
+			title: values.title,
+			description: values.description,
+		});
+		navigate({ to: "/podcasts/$podcastId", params: { podcastId } });
+	};
+
+	const handleScheduleSubmit = async (schedule: PodcastSchedule) => {
+		await saveData({ schedule });
 		navigate({ to: "/podcasts/$podcastId", params: { podcastId } });
 	};
 
@@ -62,6 +77,8 @@ export default function EditPodcast() {
 					description: podcast.description,
 				}}
 			/>
+
+			<ScheduleForm value={podcast.schedule} onSubmit={handleScheduleSubmit} />
 
 			<div className="flex items-center">
 				<div className="flex-grow" />
