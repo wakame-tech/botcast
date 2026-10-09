@@ -112,3 +112,51 @@
 
 - コメント機能を削除
 - コーナー機能を実装
+
+## Sprint 2025-01-22
+
+- fix: Prisma v5 を使うように指定 [#73](https://github.com/wakame-tech/botcast/pull/73) [#74](https://github.com/wakame-tech/botcast/pull/74)
+
+## Sprint 2025-01-29
+
+- fix: サーバーとクライアントの tRPC バージョンを揃えた [#75](https://github.com/wakame-tech/botcast/pull/75)
+- fix: mailSchema [#77](https://github.com/wakame-tech/botcast/pull/77)
+
+## Sprint 2025-07-30
+
+- tRPC + Prisma から axum (OpenAPI 生成) + SeaORM に置き換え [#80](https://github.com/wakame-tech/botcast/pull/80)
+- chore: モノレポ化 [#83](https://github.com/wakame-tech/botcast/pull/83)
+- chore: PR テンプレートを追加 [#85](https://github.com/wakame-tech/botcast/pull/85)
+- feat: SeaORM マイグレーションでローカル開発環境をセットアップ
+- feat: ユーザー登録 API [#89](https://github.com/wakame-tech/botcast/pull/89)
+- fix: GET /secrets の 500 エラー修正とフロントエンド改善 [#92](https://github.com/wakame-tech/botcast/pull/92)
+
+## Sprint 2026-04-29
+
+- feat: リアーキテクチャ Phase 1-3 (botcast-cms 移行・kafru 導入・secrets/corners/script_runtime 削除) [#95](https://github.com/wakame-tech/botcast/pull/95)
+- feat: podcasts/episodes/scripts を botcast-cms に移行 [#96](https://github.com/wakame-tech/botcast/pull/96)
+- feat: スクリプト機能・タスク機能・Postgres アクセス層を削除 [#100](https://github.com/wakame-tech/botcast/pull/100) [#101](https://github.com/wakame-tech/botcast/pull/101) [#104](https://github.com/wakame-tech/botcast/pull/104)
+- feat: MCP client を実装 [#102](https://github.com/wakame-tech/botcast/pull/102)
+- chore: doc/ を rustdoc に移行 [#106](https://github.com/wakame-tech/botcast/pull/106)
+- feat: Supabase Auth を撤廃し botcast-cms の JWT 認証に移行 [#110](https://github.com/wakame-tech/botcast/pull/110)
+
+## Sprint 2026-05-06
+
+- feat: MCP 経由での CMS コレクション初期化 [#112](https://github.com/wakame-tech/botcast/pull/112)
+- chore: botcast-worker をルートに移動 [#113](https://github.com/wakame-tech/botcast/pull/113)
+- feat: worker に botcast MCP サーバー (`/mcp`) とジョブ一覧 (`/jobs`) を追加し、`/createTask` を削除
+
+## Sprint 2026-09-23
+
+- feat: docker compose によるセルフホスト構成 [#115](https://github.com/wakame-tech/botcast/pull/115)
+
+## Sprint 2026-10-07
+
+- feat(web): フロントエンドを botcast-cms に対応 [#116](https://github.com/wakame-tech/botcast/pull/116) [#119](https://github.com/wakame-tech/botcast/pull/119)
+- feat: 音声生成を作り直し、mp3/srt を botcast-cms に保存 [#120](https://github.com/wakame-tech/botcast/pull/120)
+- feat: お便りを読み上げるエピソードの定期生成 [#122](https://github.com/wakame-tech/botcast/pull/122)
+- feat: スクリプトの arguments を JSON Schema として扱う [#131](https://github.com/wakame-tech/botcast/pull/131)
+- feat: web からジョブ (音声・台本・お便りエピソード生成) を実行 [#132](https://github.com/wakame-tech/botcast/pull/132)
+- feat(web): 番組詳細のエピソード一覧を CMS のフィルタで取得 [#129](https://github.com/wakame-tech/botcast/pull/129)
+- feat(web): ユーザー設定画面にパスワード変更フォーム [#130](https://github.com/wakame-tech/botcast/pull/130)
+- chore: pre-commit・CI (rustdoc 公開) の整備、未使用コンポーネント削除 [#118](https://github.com/wakame-tech/botcast/pull/118) [#121](https://github.com/wakame-tech/botcast/pull/121) [#128](https://github.com/wakame-tech/botcast/pull/128)
