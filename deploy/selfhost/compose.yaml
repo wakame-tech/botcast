@@ -13,8 +13,8 @@ services:
     build:
       context: ../..
       dockerfile: deploy/selfhost/Dockerfile.worker
-      additional_contexts:
-        cms_mcp: ${CMS_MCP_DIR:-../../../botcast-cms/mcp}
+      args:
+        CMS_MCP_IMAGE: ${CMS_MCP_IMAGE:-ghcr.io/wakame-tech/botcast-cms-mcp:latest}
     restart: unless-stopped
     env_file:
       - path: ./worker.env
