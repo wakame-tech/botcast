@@ -40,7 +40,8 @@
 
 - `cron` は kafru の `CronSchedule` が使う Quartz 形式 7 フィールド
   （`秒 分 時 日 月 曜日 年`）。**UTC** で評価される（上の例は毎週金曜 21:00 JST）
-- `podcasts` コレクションのスキーマに `schedule` (object) を追加する。既存環境に反映するため、worker の `McpClient::ensure_collection` を「無ければ作成、スキーマが異なれば `CollectionApi_update` で更新」に変更する
+- worker の初期化処理で作る `podcasts` のスキーマに `schedule` (object) を追記する。CMS はスキーマを `additionalProperties: false` なしで検証するため、既存環境（スキーマ更新 API は無い）でもスキーマ外の `schedule` をそのまま保存できる
+- web の番組編集は `data` を丸ごと置き換えるため、既存の `data`（`user_id`・`schedule`）を保ったまま更新する
 
 ### スクリプト（既存の `scripts` レコード）
 
