@@ -1,5 +1,5 @@
 import { ScriptForm } from "@/components/script/ScriptForm";
-import { $api } from "@/lib/api_client";
+import { useSession } from "@/hooks/useSession";
 import type { ScriptInput } from "@/lib/api_client";
 import { $cms, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
@@ -10,7 +10,7 @@ export const Route = createLazyFileRoute("/scripts/new")({
 
 export function NewScript() {
 	const navigate = useNavigate();
-	const { data: me } = $api.useQuery("get", "/me");
+	const { userId } = useSession();
 	const newScript = $cms.useMutation("post", "/records/{collectionId}");
 
 	const handleSubmit = async (values: ScriptInput) => {
@@ -22,7 +22,7 @@ export function NewScript() {
 					description: values.description,
 					template: values.template,
 					arguments: {},
-					user_id: me?.id ?? "",
+					user_id: userId ?? "",
 				}),
 			},
 		});

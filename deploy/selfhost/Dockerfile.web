@@ -3,12 +3,8 @@ WORKDIR /app
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
-ARG VITE_API_URL
 ARG VITE_CMS_URL
-ARG VITE_CMS_API_URL
-ENV VITE_API_URL=$VITE_API_URL \
-    VITE_CMS_URL=$VITE_CMS_URL \
-    VITE_CMS_API_URL=$VITE_CMS_API_URL
+ENV VITE_CMS_URL=$VITE_CMS_URL
 RUN npx vite build --outDir dist
 
 FROM nginx:alpine

@@ -84,22 +84,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/jobs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["JobApi_list"];
-        put?: never;
-        post: operations["JobApi_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/records/{collectionId}": {
         parameters: {
             query?: never;
@@ -142,6 +126,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["RecordApi_mergeRecords"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{collectionId}/with-relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RecordApi_listWithRelations"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -191,6 +191,23 @@ export interface paths {
         put?: never;
         post: operations["RecordApi_uploadImage"];
         delete: operations["RecordApi_deleteImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{collectionId}/{recordId}/referenced-by": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List the records referencing this record through their `data` fields */
+        get: operations["RecordApi_referencedBy"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -270,10 +287,6 @@ export interface components {
             name: string;
             schema: Record<string, never>;
         };
-        CreateOrUpdateJob: {
-            name: string;
-            params: Record<string, never>;
-        };
         CreateOrUpdateRecord_: {
             data: Record<string, never>;
         };
@@ -323,11 +336,6 @@ export interface components {
             /** @description Image URL */
             url: string;
         };
-        Job: {
-            name: string;
-            params: Record<string, never>;
-            readonly status: string;
-        };
         JsonCanvasEdge: {
             id: string;
             fromNode: string;
@@ -358,16 +366,51 @@ export interface components {
             /** @description Whether to delete source records after merge (default: false) */
             delete_sources?: boolean;
         };
+        /**
+         * @example {
+         *       "code": "NOT_FOUND",
+         *       "message": "Resource not found"
+         *     }
+         */
         NotFoundError: {
             /** @enum {string} */
             code: "NOT_FOUND";
             message: string;
+        };
+        RecordWithRelations: {
+            id: string;
+            data: Record<string, never>;
+            created_at: string | null;
+            updated_at: string | null;
+            relations: components["schemas"]["RelatedRecord"][];
         };
         Record_: {
             readonly id: string;
             data: Record<string, never>;
             readonly created_at: string | null;
             readonly updated_at: string | null;
+        };
+        ReferencedByResponse: {
+            items: components["schemas"]["ReferencingRecord"][];
+        };
+        ReferencingRecord: {
+            /** @description Collection ID the referencing record belongs to */
+            collection_id: string;
+            /** @description Field path holding the reference (e.g. "user_id", "members[0].user_id") */
+            field: string;
+            record: components["schemas"]["Record_"];
+        };
+        RelatedRecord: {
+            /** @description Edge ID connecting the two records */
+            edge_id: string;
+            /** @description Edge label */
+            label: string;
+            /**
+             * @description Edge direction seen from the record holding this relation
+             * @enum {string}
+             */
+            direction: "outgoing" | "incoming";
+            record: components["schemas"]["Record_"];
         };
         SplitRecordRequest: {
             /** @description Split specifications: each object contains field names and values to subtract */
@@ -399,6 +442,12 @@ export interface components {
             /** @description Image URL */
             url: string;
         };
+        /**
+         * @example {
+         *       "code": "VALIDATION_ERROR",
+         *       "message": "Invalid input data"
+         *     }
+         */
         ValidationError: {
             /** @enum {string} */
             code: "VALIDATION_ERROR";
@@ -470,7 +519,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -606,49 +655,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    JobApi_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Job"][];
-                };
-            };
-        };
-    };
-    JobApi_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateOrUpdateJob"];
-            };
-        };
-        responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -757,6 +764,28 @@ export interface operations {
             };
         };
     };
+    RecordApi_listWithRelations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordWithRelations"][];
+                };
+            };
+        };
+    };
     RecordApi_read: {
         parameters: {
             query?: never;
@@ -819,7 +848,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -920,12 +949,40 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    RecordApi_referencedBy: {
+        parameters: {
+            query?: {
+                /** @description Restrict the search to a single collection */
+                collection_id?: string;
+                /** @description Restrict the results to a single field path */
+                field?: string;
+            };
+            header?: never;
+            path: {
+                collectionId: string;
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferencedByResponse"];
+                };
             };
         };
     };

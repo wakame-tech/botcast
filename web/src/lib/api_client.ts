@@ -1,27 +1,19 @@
-import { getToken } from "@/hooks/useSession";
-import createFetchClient, { type Middleware } from "openapi-fetch";
-import createClient from "openapi-react-query";
 import { z } from "zod";
-import type { components, paths } from "./api";
 
-const authMiddleware: Middleware = {
-	async onRequest({ request }) {
-		const token = getToken();
-		if (token) {
-			request.headers.set("Authorization", `Bearer ${token}`);
-		}
-		return request;
-	},
+export type SerifSection = {
+	type: "Serif";
+	speaker: string;
+	text: string;
 };
 
-const fetchClient = createFetchClient<paths>({
-	baseUrl: import.meta.env.VITE_API_URL,
-});
-fetchClient.use(authMiddleware);
-export const $api = createClient(fetchClient);
+export type AudioSection = {
+	type: "Audio";
+	url: string;
+	from?: number;
+	to?: number;
+};
 
-export type Section = components["schemas"]["Section"];
-export type User = components["schemas"]["User"];
+export type Section = SerifSection | AudioSection;
 
 export const PodcastInputSchema = z.object({
 	icon: z.string().regex(/\p{Emoji_Presentation}/gu),

@@ -27,12 +27,13 @@ cd web && npm run check
 ## 認証
 
 - botcast-cms の POST /auth/signin でトークン取得
-- web は localStorage にトークンを保存し Authorization: Bearer <token> で送信
+- web は localStorage にトークンを保存し Authorization: Bearer <token> で送信（`web/src/lib/cms_client.ts` の middleware）
+- ユーザー ID は JWT の `sub` から取得（`useSession().userId`）
+- CMS の型は `cd web && npm run generate` で `../botcast-cms` の openapi.yaml から再生成
 - 環境変数 VITE_CMS_URL に botcast-cms のエンドポイントを設定
 
 ## 環境変数
 
 - DATABASE_URL: PostgreSQL 接続文字列
-- VITE_API_URL: botcast-worker API URL（web）
 - VITE_CMS_URL: botcast-cms URL（web）
 - VOICEVOX_ENDPOINT: VoiceVox エンジン URL（任意）
