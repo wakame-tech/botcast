@@ -3,7 +3,7 @@ import type { ScriptInput } from "@/lib/api_client";
 import { $cms, recordToScript, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
-export const Route = createLazyFileRoute("/scripts/$scriptId_/edit")({
+export const Route = createLazyFileRoute("/scripts/$scriptId/edit")({
 	component: EditScript,
 });
 

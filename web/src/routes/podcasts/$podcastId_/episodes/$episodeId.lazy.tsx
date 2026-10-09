@@ -9,7 +9,7 @@ import Parser from "srt-parser-2";
 import type { Line } from "srt-parser-2";
 
 export const Route = createLazyFileRoute(
-	"/podcasts/$podcastId_/episodes/$episodeId",
+	"/podcasts/$podcastId/episodes/$episodeId",
 )({
 	component: Episode,
 });
