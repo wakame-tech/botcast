@@ -1,0 +1,73 @@
+name: Publish container images
+
+# セルフホスト用の worker / web イメージを GHCR に push する。
+# デプロイ先は `docker compose pull && docker compose up -d` するだけでよい (deploy/selfhost/compose.yaml)。
+on:
+  push:
+    branches: [main]
+  # PR ではビルドだけ確認する (push は main のみ)
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [worker, web]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # worker イメージは botcast-cms の MCP サーバー (mcp/) を同梱する。
+      # botcast-cms は private なので、読み取り権限のあるトークンを secrets.BOTCAST_CMS_TOKEN に置く
+      - uses: actions/checkout@v4
+        if: matrix.image == 'worker'
+        with:
+          repository: wakame-tech/botcast-cms
+          ref: develop
+          path: botcast-cms
+          token: ${{ secrets.BOTCAST_CMS_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/botcast-${{ matrix.image }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+            type=ref,event=pr
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/selfhost/Dockerfile.${{ matrix.image }}
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-contexts: ${{ matrix.image == 'worker' && 'cms_mcp=botcast-cms/mcp' || '' }}
+          # web は CMS の URL をビルド時に埋め込む (リポジトリ変数 CMS_URL)
+          build-args: |
+            VITE_CMS_URL=${{ vars.CMS_URL || 'https://cms.w4k4.me' }}
+            VITE_WORKER_URL=/api
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
