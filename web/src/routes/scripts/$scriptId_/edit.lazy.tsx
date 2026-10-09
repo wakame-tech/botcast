@@ -1,5 +1,8 @@
-import { ScriptForm } from "@/components/script/ScriptForm";
-import type { ScriptInput } from "@/lib/api_client";
+import {
+	ScriptForm,
+	type ScriptFormValues,
+	toScriptData,
+} from "@/components/script/ScriptForm";
 import { $cms, recordToScript, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
@@ -20,15 +23,13 @@ export function EditScript() {
 		"/records/{collectionId}/{recordId}",
 	);
 
-	const handleSubmit = async (values: ScriptInput) => {
+	const handleSubmit = async (values: ScriptFormValues) => {
+		// user_id など、フォームに無い既存の data を保ったまま更新する
+		const current = (scriptRecord?.data ?? {}) as Record<string, unknown>;
 		await updateScript.mutateAsync({
 			params: { path: { collectionId: "scripts", recordId: scriptId } },
 			body: {
-				data: toRecordData({
-					title: values.title,
-					description: values.description,
-					template: values.template,
-				}),
+				data: toRecordData({ ...current, ...toScriptData(values) }),
 			},
 		});
 		navigate({ to: "/scripts/$scriptId", params: { scriptId } });
@@ -47,6 +48,7 @@ export function EditScript() {
 					title: script.title,
 					description: script.description,
 					template: script.template,
+					arguments: JSON.stringify(script.arguments, null, 2),
 				}}
 				onSubmit={handleSubmit}
 			/>

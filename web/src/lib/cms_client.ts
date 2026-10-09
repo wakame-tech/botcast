@@ -11,6 +11,8 @@ export interface PodcastSchedule {
 	cron: string;
 	script_id: string;
 	enabled: boolean;
+	/** スクリプトに渡す引数の値 (スクリプトの `arguments` JSON Schema に従う) */
+	arguments?: Record<string, unknown>;
 }
 
 export interface Podcast {
