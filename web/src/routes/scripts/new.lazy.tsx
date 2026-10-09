@@ -1,6 +1,9 @@
-import { ScriptForm } from "@/components/script/ScriptForm";
+import {
+	ScriptForm,
+	type ScriptFormValues,
+	toScriptData,
+} from "@/components/script/ScriptForm";
 import { useSession } from "@/hooks/useSession";
-import type { ScriptInput } from "@/lib/api_client";
 import { $cms, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 
@@ -13,15 +16,12 @@ export function NewScript() {
 	const { userId } = useSession();
 	const newScript = $cms.useMutation("post", "/records/{collectionId}");
 
-	const handleSubmit = async (values: ScriptInput) => {
+	const handleSubmit = async (values: ScriptFormValues) => {
 		await newScript.mutateAsync({
 			params: { path: { collectionId: "scripts" } },
 			body: {
 				data: toRecordData({
-					title: values.title,
-					description: values.description,
-					template: values.template,
-					arguments: {},
+					...toScriptData(values),
 					user_id: userId ?? "",
 				}),
 			},

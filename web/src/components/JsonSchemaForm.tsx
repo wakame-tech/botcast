@@ -4,6 +4,9 @@ import validator from "@rjsf/validator-ajv8";
 
 interface JsonSchemaFormProps {
 	schema: RJSFSchema;
+	formData?: Record<string, unknown>;
+	/** 送信ボタンを出さない (他のフォームの中に値の入力欄として置くとき) */
+	hideSubmit?: boolean;
 	onChange?: (values: Record<string, unknown>) => void;
 	onSubmit?: (values: Record<string, unknown>) => void;
 }
@@ -34,8 +37,12 @@ export function JsonSchemaForm(props: JsonSchemaFormProps) {
 			schema={props.schema}
 			uiSchema={uiSchema}
 			validator={validator}
+			formData={props.formData}
+			tagName={props.hideSubmit ? "div" : undefined}
 			onChange={(e) => props.onChange?.(e.formData as Record<string, unknown>)}
 			onSubmit={(e) => props.onSubmit?.(e.formData as Record<string, unknown>)}
-		/>
+		>
+			{props.hideSubmit ? <></> : undefined}
+		</Form>
 	);
 }

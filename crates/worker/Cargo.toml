@@ -36,3 +36,4 @@ kafru = "1.0.4"
 rmcp = { version = "1.6.0", features = ["client", "server", "transport-child-process", "transport-streamable-http-server"] }
 schemars = { version = "1", features = ["uuid1"] }
 aquamarine = "0.6"
+jsonschema = { version = "0.26", default-features = false }

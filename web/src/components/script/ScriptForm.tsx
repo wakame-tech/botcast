@@ -5,29 +5,61 @@ import {
 	FormField,
 	FormItem,
 	FormLabel,
+	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { type ScriptInput, ScriptInputSchema } from "@/lib/api_client";
+import { ScriptInputSchema } from "@/lib/api_client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+/** JSON Schema として解釈できるオブジェクトの JSON 文字列か */
+const isJsonObject = (text: string): boolean => {
+	try {
+		const v = JSON.parse(text);
+		return typeof v === "object" && v !== null && !Array.isArray(v);
+	} catch {
+		return false;
+	}
+};
+
+const ScriptFormSchema = ScriptInputSchema.extend({
+	/** スクリプトが受け取る引数の JSON Schema (JSON 文字列) */
+	arguments: z.string().refine(isJsonObject, {
+		message: "JSON のオブジェクトとして不正です",
+	}),
+});
+
+export type ScriptFormValues = z.infer<typeof ScriptFormSchema>;
+
+/** フォームの値を CMS に保存する `data` の形に変換する */
+export function toScriptData(values: ScriptFormValues) {
+	return {
+		title: values.title,
+		description: values.description,
+		template: values.template,
+		arguments: JSON.parse(values.arguments) as Record<string, unknown>,
+	};
+}
 
 interface ScriptFormProps {
 	disabled?: boolean;
-	values?: ScriptInput;
-	onSubmit: (values: ScriptInput) => void;
+	values?: ScriptFormValues;
+	onSubmit: (values: ScriptFormValues) => void;
 }
 
 export function ScriptForm(props: ScriptFormProps) {
-	const form = useForm<ScriptInput>({
-		resolver: zodResolver(ScriptInputSchema),
+	const form = useForm<ScriptFormValues>({
+		resolver: zodResolver(ScriptFormSchema),
 		defaultValues:
 			props.values ??
 			({
 				title: "NewScript",
 				description: "",
 				template: "",
-			} satisfies ScriptInput),
+				arguments: "{}",
+			} satisfies ScriptFormValues),
 	});
 
 	return (
@@ -72,6 +104,25 @@ export function ScriptForm(props: ScriptFormProps) {
 							<FormControl>
 								<Textarea rows={10} placeholder="template" {...field} />
 							</FormControl>
+						</FormItem>
+					)}
+				/>
+
+				<FormField
+					control={form.control}
+					name="arguments"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>引数 (JSON Schema)</FormLabel>
+							<FormControl>
+								<Textarea
+									rows={8}
+									className="font-mono"
+									placeholder='{"type":"object","properties":{}}'
+									{...field}
+								/>
+							</FormControl>
+							<FormMessage />
 						</FormItem>
 					)}
 				/>

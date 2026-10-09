@@ -19,6 +19,25 @@ pub(crate) fn build_script_code(context: &Value, template: &str) -> String {
     format!("const context = {context};\n{template}")
 }
 
+/// 番組の引数の値 `arguments` をスクリプトの JSON Schema `schema` で検証する。
+///
+/// スキーマが無い (`null`) か空オブジェクト `{}` のときは常に通す。
+pub(crate) fn validate_arguments(schema: &Value, arguments: &Value) -> anyhow::Result<()> {
+    if schema.is_null() || schema.as_object().is_some_and(|o| o.is_empty()) {
+        return Ok(());
+    }
+    let validator = jsonschema::validator_for(schema)
+        .map_err(|e| anyhow::anyhow!("invalid arguments schema: {e}"))?;
+    let errors: Vec<String> = validator
+        .iter_errors(arguments)
+        .map(|e| format!("{} ({})", e, e.instance_path))
+        .collect();
+    if !errors.is_empty() {
+        bail!("arguments do not match schema: {}", errors.join("; "));
+    }
+    Ok(())
+}
+
 /// スクリプトが生成したエピソード
 #[derive(Debug, Clone)]
 pub(crate) struct GeneratedEpisode {
@@ -54,7 +73,9 @@ pub(crate) fn parse_script_output(
 
 /// 番組のスクリプトを実行して新しいエピソードを作るサービス。
 ///
-/// 前回エピソード (その番組で最新) 宛てのお便りを `context.mails` としてスクリプトに渡し、
+/// 前回エピソード (その番組で最新) 宛てのお便りを `context.mails`、
+/// 番組の `schedule.arguments` (スクリプトの `arguments` スキーマで検証済み) を
+/// `context.arguments` としてスクリプトに渡し、
 /// スクリプトの出力 `{ title?, sections }` からエピソードを作成する。
 #[derive(Clone)]
 pub(crate) struct EpisodeGenerationService {
@@ -77,6 +98,12 @@ impl EpisodeGenerationService {
         let template = script["data"]["template"]
             .as_str()
             .context("script has no template")?;
+        // スクリプトの `arguments` は JSON Schema、値は番組の `schedule.arguments`
+        let arguments = match &podcast["data"]["schedule"]["arguments"] {
+            Value::Null => serde_json::json!({}),
+            v => v.clone(),
+        };
+        validate_arguments(&script["data"]["arguments"], &arguments)?;
 
         // 件数 (タイトルの番号) と前回エピソードを同じ一覧から求める
         let episodes = self
@@ -111,7 +138,7 @@ impl EpisodeGenerationService {
             "podcast": record_view(&podcast),
             "previous_episode": previous.map(record_view),
             "mails": mails.iter().map(record_view).collect::<Vec<_>>(),
-            "arguments": script["data"].get("arguments").cloned().unwrap_or(serde_json::json!({})),
+            "arguments": arguments,
         });
         let output = self
             .cms
@@ -188,5 +215,41 @@ mod tests {
     fn parse_script_output_rejects_unknown_section() {
         let stdout = r#"{"sections":[{"type":"Unknown"}]}"#;
         assert!(parse_script_output(stdout, "", "第1回").is_err());
+    }
+
+    #[test]
+    fn validate_arguments_accepts_any_when_schema_is_empty() {
+        assert!(validate_arguments(&json!({}), &json!({ "x": 1 })).is_ok());
+        assert!(validate_arguments(&Value::Null, &json!({ "x": 1 })).is_ok());
+    }
+
+    #[test]
+    fn validate_arguments_accepts_valid_values() {
+        let schema = json!({
+            "type": "object",
+            "properties": { "speaker": { "type": "string" } },
+            "required": ["speaker"],
+        });
+        assert!(validate_arguments(&schema, &json!({ "speaker": "3" })).is_ok());
+    }
+
+    #[test]
+    fn validate_arguments_rejects_missing_required() {
+        let schema = json!({ "type": "object", "required": ["speaker"] });
+        assert!(validate_arguments(&schema, &json!({})).is_err());
+    }
+
+    #[test]
+    fn validate_arguments_rejects_wrong_type() {
+        let schema = json!({
+            "type": "object",
+            "properties": { "count": { "type": "integer" } },
+        });
+        assert!(validate_arguments(&schema, &json!({ "count": "a" })).is_err());
+    }
+
+    #[test]
+    fn validate_arguments_rejects_invalid_schema() {
+        assert!(validate_arguments(&json!({ "type": 1 }), &json!({})).is_err());
     }
 }

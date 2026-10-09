@@ -52,6 +52,8 @@ cd web && npm run check
 ## お便りエピソードの定期生成
 
 - お便りは CMS の `mails`（`podcast_id` / `episode_id` / `radio_name` / `body` / `user_id`）。web のエピソード画面から投稿する
-- 番組の `data.schedule = { cron, script_id, enabled }`（cron は Quartz 7 フィールド・UTC）を worker の `ScheduleSync` が 60 秒ごとに kafru のスケジュールへ同期する
-- 発火すると `GenerateEpisode` ジョブがスクリプト（Node.js）を CMS `/scripts` で実行する。スクリプトは `context = { podcast, previous_episode, mails, arguments }` を受け取り、`{ title?, sections }` を JSON で標準出力する
+- 番組の `data.schedule = { cron, script_id, enabled, arguments }`（cron は Quartz 7 フィールド・UTC）を worker の `ScheduleSync` が 60 秒ごとに kafru のスケジュールへ同期する
+- スクリプトの `data.arguments` は引数の **JSON Schema**、その **値** は番組の `schedule.arguments`。web の定期実行設定でスキーマから生成したフォームで入力する
+- 発火すると `GenerateEpisode` ジョブが `schedule.arguments`（無ければ `{}`）をスクリプトのスキーマで検証し（違反ならジョブ失敗）、スクリプト（Node.js）を CMS `/scripts` で実行する。スクリプトは `context = { podcast, previous_episode, mails, arguments }` を受け取り、`{ title?, sections }` を JSON で標準出力する
+- web のスクリプト詳細画面で、サンプルの context と入力した引数で試し実行できる
 - 手動実行は worker の MCP ツール `generate_episode(podcast_id)`
