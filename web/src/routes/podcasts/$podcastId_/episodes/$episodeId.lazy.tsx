@@ -1,4 +1,5 @@
 import { SectionsComponent } from "@/components/episode/Sections";
+import { EpisodeMails } from "@/components/mail/EpisodeMails";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
@@ -111,6 +112,7 @@ function Episode() {
 					</div>
 				</CardContent>
 			</Card>
+			<EpisodeMails podcastId={podcastId} episodeId={episodeId} />
 		</>
 	);
 }

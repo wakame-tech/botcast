@@ -35,6 +35,27 @@ export interface Script {
 	user_id: string;
 }
 
+export interface Mail {
+	id: string;
+	podcast_id: string;
+	episode_id: string;
+	radio_name: string;
+	body: string;
+	user_id: string;
+}
+
+export function recordToMail(record: CmsRecord): Mail {
+	const d = record.data as Record<string, unknown>;
+	return {
+		id: record.id,
+		podcast_id: d.podcast_id as string,
+		episode_id: d.episode_id as string,
+		radio_name: (d.radio_name as string) ?? "",
+		body: (d.body as string) ?? "",
+		user_id: d.user_id as string,
+	};
+}
+
 export function recordToPodcast(record: CmsRecord): Podcast {
 	const d = record.data as Record<string, unknown>;
 	return {

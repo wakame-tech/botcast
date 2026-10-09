@@ -272,7 +272,23 @@ export interface components {
             readonly id: string;
             name: string;
             schema: Record<string, never>;
+            access?: components["schemas"]["CollectionAccess"];
             readonly created_at: string;
+        };
+        /** @description Per-collection access policy. Defaults keep pre-existing behaviour. */
+        CollectionAccess: {
+            /**
+             * @description "public" = any authenticated user can read, "owner" = only the record owner
+             * @enum {string}
+             */
+            read: "public" | "owner";
+            /**
+             * @description "authenticated" = any authenticated user can write, "owner" = owner or a user listed in writers_field
+             * @enum {string}
+             */
+            write: "authenticated" | "owner";
+            /** @description Name of a `data` field holding an array of additionally-allowed writer IDs */
+            writers_field?: string;
         };
         CopyRecordRequest: {
             /** @description Target collection ID to copy the record to */
@@ -286,6 +302,7 @@ export interface components {
         CreateOrUpdateCollection: {
             name: string;
             schema: Record<string, never>;
+            access?: components["schemas"]["CollectionAccess"];
         };
         CreateOrUpdateRecord_: {
             data: Record<string, never>;
@@ -366,12 +383,6 @@ export interface components {
             /** @description Whether to delete source records after merge (default: false) */
             delete_sources?: boolean;
         };
-        /**
-         * @example {
-         *       "code": "NOT_FOUND",
-         *       "message": "Resource not found"
-         *     }
-         */
         NotFoundError: {
             /** @enum {string} */
             code: "NOT_FOUND";
@@ -380,6 +391,7 @@ export interface components {
         RecordWithRelations: {
             id: string;
             data: Record<string, never>;
+            owner_id: string | null;
             created_at: string | null;
             updated_at: string | null;
             relations: components["schemas"]["RelatedRecord"][];
@@ -387,6 +399,8 @@ export interface components {
         Record_: {
             readonly id: string;
             data: Record<string, never>;
+            /** @description Record owner's user ID, taken from the JWT subject at creation time */
+            readonly owner_id: string | null;
             readonly created_at: string | null;
             readonly updated_at: string | null;
         };
@@ -424,15 +438,16 @@ export interface components {
         };
         UpdateCollection: {
             name: string;
+            access?: components["schemas"]["CollectionAccess"];
         };
         UploadImageRequest: {
-            /** @description Base64 encoded image data */
+            /** @description Base64 encoded file data (image, audio or subtitle text) */
             data: string;
             /**
              * @description MIME type
              * @enum {string}
              */
-            content_type: "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+            content_type: "image/png" | "image/jpeg" | "image/webp" | "image/gif" | "audio/mpeg" | "audio/wav" | "text/plain";
             /** @description Optional filename */
             filename?: string;
         };
@@ -442,12 +457,6 @@ export interface components {
             /** @description Image URL */
             url: string;
         };
-        /**
-         * @example {
-         *       "code": "VALIDATION_ERROR",
-         *       "message": "Invalid input data"
-         *     }
-         */
         ValidationError: {
             /** @enum {string} */
             code: "VALIDATION_ERROR";
@@ -519,7 +528,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful. */
+            /** @description There is no content to send for this request, but the headers may be useful.  */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -655,7 +664,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful. */
+            /** @description There is no content to send for this request, but the headers may be useful.  */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -666,7 +675,18 @@ export interface operations {
     };
     RecordApi_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter conditions in `<field>:<op>:<value>` form, AND-combined. Ops: `eq`, `contains` */
+                filter?: string[];
+                /** @description Field name to sort by */
+                sort?: string;
+                /** @description Sort direction (default: asc) */
+                order?: "asc" | "desc";
+                /** @description Maximum number of records to return */
+                limit?: number;
+                /** @description Number of records to skip */
+                offset?: number;
+            };
             header?: never;
             path: {
                 collectionId: string;
@@ -848,7 +868,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful. */
+            /** @description There is no content to send for this request, but the headers may be useful.  */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -949,7 +969,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful. */
+            /** @description There is no content to send for this request, but the headers may be useful.  */
             204: {
                 headers: {
                     [name: string]: unknown;
