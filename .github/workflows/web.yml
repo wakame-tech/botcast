@@ -1,0 +1,38 @@
+name: Web
+
+# web の型チェック・lint・ビルドを確認する
+on:
+  push:
+    branches: [main]
+    paths:
+      - web/**
+      - .github/workflows/web.yml
+  pull_request:
+    paths:
+      - web/**
+      - .github/workflows/web.yml
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      # npm run check は --write で書き換えるので、CI では書き換えない biome ci を使う
+      - run: npx @biomejs/biome ci src
+
+      - run: npm run build

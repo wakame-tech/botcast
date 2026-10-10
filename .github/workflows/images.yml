@@ -5,8 +5,12 @@ name: Publish container images
 on:
   push:
     branches: [main]
-  # PR ではビルドだけ確認する (push は main のみ)
+  # PR では Dockerfile / compose / この workflow を変えたときだけビルドを確認する
+  # (アプリのコードの確認は docs.yml (Rust) と web.yml で行う)
   pull_request:
+    paths:
+      - deploy/selfhost/**
+      - .github/workflows/images.yml
   workflow_dispatch:
 
 permissions:
