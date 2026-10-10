@@ -105,6 +105,8 @@ services:
       - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_POLL_INTERVAL=300
       - WATCHTOWER_CLEANUP=true
+      # 任意: 更新時の通知先 (shoutrrr 形式。例: discord://<token>@<webhook id>)。.env に書く
+      - WATCHTOWER_NOTIFICATION_URL
 
 volumes:
   kafru_data:
