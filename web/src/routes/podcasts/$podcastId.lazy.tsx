@@ -2,7 +2,12 @@ import Episode from "@/components/episode/EpisodeList.tsx";
 import { JobButton } from "@/components/job/JobButton";
 import { JobList } from "@/components/job/JobList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { $cms, recordToEpisode, recordToPodcast } from "@/lib/cms_client";
+import {
+	$cms,
+	CMS_TENANT,
+	recordToEpisode,
+	recordToPodcast,
+} from "@/lib/cms_client";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/podcasts/$podcastId")({
@@ -13,15 +18,23 @@ export function Podcast() {
 	const { podcastId } = Route.useParams();
 	const { data: podcastRecord } = $cms.useQuery(
 		"get",
-		"/records/{collectionId}/{recordId}",
-		{ params: { path: { collectionId: "podcasts", recordId: podcastId } } },
+		"/t/{tenantId}/records/{collectionId}/{recordId}",
+		{
+			params: {
+				path: {
+					tenantId: CMS_TENANT,
+					collectionId: "podcasts",
+					recordId: podcastId,
+				},
+			},
+		},
 	);
 	const { data: episodeRecords } = $cms.useQuery(
 		"get",
-		"/records/{collectionId}",
+		"/t/{tenantId}/records/{collectionId}",
 		{
 			params: {
-				path: { collectionId: "episodes" },
+				path: { tenantId: CMS_TENANT, collectionId: "episodes" },
 				query: {
 					filter: [`podcast_id:eq:${podcastId}`],
 					sort: "created_at",

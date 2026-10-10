@@ -1,7 +1,7 @@
 import { PodcastForm } from "@/components/podcast/PodcastForm";
 import { useSession } from "@/hooks/useSession";
 import type { PodcastInput } from "@/lib/api_client";
-import { $cms, toRecordData } from "@/lib/cms_client";
+import { $cms, CMS_TENANT, toRecordData } from "@/lib/cms_client";
 import { useNavigate } from "@tanstack/react-router";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
@@ -12,11 +12,14 @@ export const Route = createLazyFileRoute("/podcasts/new")({
 export function NewPodcast() {
 	const navigate = useNavigate();
 	const { userId } = useSession();
-	const newPodcast = $cms.useMutation("post", "/records/{collectionId}");
+	const newPodcast = $cms.useMutation(
+		"post",
+		"/t/{tenantId}/records/{collectionId}",
+	);
 
 	const handleSubmit = async (values: PodcastInput) => {
 		await newPodcast.mutateAsync({
-			params: { path: { collectionId: "podcasts" } },
+			params: { path: { tenantId: CMS_TENANT, collectionId: "podcasts" } },
 			body: {
 				data: toRecordData({
 					title: values.title,

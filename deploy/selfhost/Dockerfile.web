@@ -5,6 +5,9 @@ RUN npm ci
 COPY web/ ./
 ARG VITE_CMS_URL
 ENV VITE_CMS_URL=$VITE_CMS_URL
+
+ARG VITE_CMS_TENANT=botcast
+ENV VITE_CMS_TENANT=$VITE_CMS_TENANT
 # nginx が /api/ を worker に中継するので、既定は同一オリジンの /api
 ARG VITE_WORKER_URL=/api
 ENV VITE_WORKER_URL=$VITE_WORKER_URL

@@ -113,6 +113,12 @@ export function toRecordData(
 
 export const CMS_URL = import.meta.env.VITE_CMS_URL ?? "http://localhost:3002";
 
+/**
+ * botcast-cms のテナント。CMS はマルチテナントで、全エンドポイントが
+ * `/t/{tenantId}/...` 配下にある。botcast が話す相手は常に自分のテナント 1 つ。
+ */
+export const CMS_TENANT = import.meta.env.VITE_CMS_TENANT ?? "botcast";
+
 const authMiddleware: Middleware = {
 	async onRequest({ request }) {
 		const token = getToken();
@@ -138,7 +144,7 @@ let collectionIds: Promise<Map<string, string>> | null = null;
 
 const fetchCollectionIds = async (): Promise<Map<string, string>> => {
 	const token = getToken();
-	const res = await fetch(`${CMS_URL}/collections`, {
+	const res = await fetch(`${CMS_URL}/t/${CMS_TENANT}/collections`, {
 		headers: token ? { Authorization: `Bearer ${token}` } : {},
 	});
 	if (!res.ok) {
@@ -163,7 +169,7 @@ const resolveCollectionId = async (name: string): Promise<string> => {
 
 const collectionNameMiddleware: Middleware = {
 	async onRequest({ request, schemaPath }) {
-		if (!schemaPath.startsWith("/records/{collectionId}")) {
+		if (!schemaPath.startsWith("/t/{tenantId}/records/{collectionId}")) {
 			return request;
 		}
 		const url = new URL(request.url);

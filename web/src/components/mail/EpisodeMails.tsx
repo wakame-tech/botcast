@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSession } from "@/hooks/useSession";
-import { $cms, recordToMail, toRecordData } from "@/lib/cms_client";
+import { $cms, CMS_TENANT, recordToMail, toRecordData } from "@/lib/cms_client";
 import { useState } from "react";
 
 interface EpisodeMailsProps {
@@ -17,21 +17,24 @@ export function EpisodeMails({ podcastId, episodeId }: EpisodeMailsProps) {
 	const [body, setBody] = useState("");
 	const { data: records, refetch } = $cms.useQuery(
 		"get",
-		"/records/{collectionId}",
+		"/t/{tenantId}/records/{collectionId}",
 		{
 			params: {
-				path: { collectionId: "mails" },
+				path: { tenantId: CMS_TENANT, collectionId: "mails" },
 				query: { filter: [`episode_id:eq:${episodeId}`] },
 			},
 		},
 	);
-	const createMail = $cms.useMutation("post", "/records/{collectionId}");
+	const createMail = $cms.useMutation(
+		"post",
+		"/t/{tenantId}/records/{collectionId}",
+	);
 	const mails = (records ?? []).map(recordToMail);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		await createMail.mutateAsync({
-			params: { path: { collectionId: "mails" } },
+			params: { path: { tenantId: CMS_TENANT, collectionId: "mails" } },
 			body: {
 				data: toRecordData({
 					podcast_id: podcastId,

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { PodcastInput } from "@/lib/api_client";
 import {
 	$cms,
+	CMS_TENANT,
 	type PodcastSchedule,
 	recordToPodcast,
 	toRecordData,
@@ -19,23 +20,37 @@ export default function EditPodcast() {
 	const navigate = Route.useNavigate();
 	const { data: podcastRecord } = $cms.useQuery(
 		"get",
-		"/records/{collectionId}/{recordId}",
-		{ params: { path: { collectionId: "podcasts", recordId: podcastId } } },
+		"/t/{tenantId}/records/{collectionId}/{recordId}",
+		{
+			params: {
+				path: {
+					tenantId: CMS_TENANT,
+					collectionId: "podcasts",
+					recordId: podcastId,
+				},
+			},
+		},
 	);
 	const updatePodcast = $cms.useMutation(
 		"put",
-		"/records/{collectionId}/{recordId}",
+		"/t/{tenantId}/records/{collectionId}/{recordId}",
 	);
 	const deletePodcast = $cms.useMutation(
 		"delete",
-		"/records/{collectionId}/{recordId}",
+		"/t/{tenantId}/records/{collectionId}/{recordId}",
 	);
 
 	// data は丸ごと置き換わるため、既存の値 (user_id / schedule など) を保って更新する
 	const saveData = async (patch: Record<string, unknown>) => {
 		const current = (podcastRecord?.data ?? {}) as Record<string, unknown>;
 		await updatePodcast.mutateAsync({
-			params: { path: { collectionId: "podcasts", recordId: podcastId } },
+			params: {
+				path: {
+					tenantId: CMS_TENANT,
+					collectionId: "podcasts",
+					recordId: podcastId,
+				},
+			},
 			body: { data: toRecordData({ ...current, ...patch }) },
 		});
 	};
@@ -56,7 +71,13 @@ export default function EditPodcast() {
 
 	const handleDelete = async () => {
 		await deletePodcast.mutateAsync({
-			params: { path: { collectionId: "podcasts", recordId: podcastId } },
+			params: {
+				path: {
+					tenantId: CMS_TENANT,
+					collectionId: "podcasts",
+					recordId: podcastId,
+				},
+			},
 		});
 		navigate({ to: "/podcasts" });
 	};

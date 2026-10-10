@@ -41,12 +41,16 @@ pub(crate) struct ScriptOutput {
 
 /// botcast-cms の REST API クライアント。
 ///
-/// - 認証は `X-Api-Key`（環境変数 `API_KEY` = botcast-cms の API_KEY と同じ値）によるサービス間認証
+/// - 認証は `X-Api-Key`（環境変数 `API_KEY` = botcast-cms の `API_KEY_<TENANT>` と同じ値）によるサービス間認証
+/// - CMS はマルチテナントで、全エンドポイントが `/t/{tenantId}/...` 配下にある。
+///   テナント (`CMS_TENANT`、既定 `botcast`) はクライアントが保持し、`request` が URL に付ける。
+///   そのため各メソッドは `/records/...` のようなテナントを含まないパスを書く。
 /// - collection ID は自動採番のため、名前から ID を `/collections` で解決してキャッシュする
 /// - 音声・字幕ファイルは `/records/{c}/{r}/images/{field}` に Base64 で保存する
 pub(crate) struct CmsClient {
     http: reqwest::Client,
     base_url: String,
+    tenant: String,
     api_key: Option<String>,
     collection_ids: Mutex<HashMap<String, String>>,
 }
@@ -55,21 +59,28 @@ impl CmsClient {
     pub(crate) fn from_env() -> Self {
         let base_url =
             std::env::var("CMS_URL").unwrap_or_else(|_| "http://localhost:3002".to_string());
+        let tenant = std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string());
         let api_key = std::env::var("API_KEY").ok();
-        Self::new(base_url, api_key)
+        Self::new(base_url, tenant, api_key)
     }
 
-    pub(crate) fn new(base_url: String, api_key: Option<String>) -> Self {
+    pub(crate) fn new(base_url: String, tenant: String, api_key: Option<String>) -> Self {
         Self {
             http: reqwest::Client::new(),
             base_url: base_url.trim_end_matches('/').to_string(),
+            tenant,
             api_key,
             collection_ids: Mutex::new(HashMap::new()),
         }
     }
 
+    /// テナントを含む最終的なリクエスト URL
+    pub(crate) fn url_for(&self, path: &str) -> String {
+        format!("{}/t/{}{}", self.base_url, self.tenant, path)
+    }
+
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
-        let req = self.http.request(method, format!("{}{}", self.base_url, path));
+        let req = self.http.request(method, self.url_for(path));
         match &self.api_key {
             Some(key) => req.header("X-Api-Key", key),
             None => req,
@@ -228,6 +239,21 @@ fn parse_collection_ids(collections: &serde_json::Value) -> HashMap<String, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn url_for_inserts_tenant_prefix() {
+        let cms = CmsClient::new("http://cms:3002".to_string(), "botcast".to_string(), None);
+        assert_eq!(
+            cms.url_for("/records/episodes"),
+            "http://cms:3002/t/botcast/records/episodes"
+        );
+    }
+
+    #[test]
+    fn url_for_trims_trailing_slash_of_base_url() {
+        let cms = CmsClient::new("http://cms:3002/".to_string(), "socia".to_string(), None);
+        assert_eq!(cms.url_for("/collections"), "http://cms:3002/t/socia/collections");
+    }
 
     #[test]
     fn list_query_to_params() {
