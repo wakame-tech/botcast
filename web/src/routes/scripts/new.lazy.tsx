@@ -4,7 +4,7 @@ import {
 	toScriptData,
 } from "@/components/script/ScriptForm";
 import { useSession } from "@/hooks/useSession";
-import { $cms, toRecordData } from "@/lib/cms_client";
+import { $cms, CMS_TENANT, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/scripts/new")({
@@ -14,11 +14,14 @@ export const Route = createLazyFileRoute("/scripts/new")({
 export function NewScript() {
 	const navigate = useNavigate();
 	const { userId } = useSession();
-	const newScript = $cms.useMutation("post", "/records/{collectionId}");
+	const newScript = $cms.useMutation(
+		"post",
+		"/t/{tenantId}/records/{collectionId}",
+	);
 
 	const handleSubmit = async (values: ScriptFormValues) => {
 		await newScript.mutateAsync({
-			params: { path: { collectionId: "scripts" } },
+			params: { path: { tenantId: CMS_TENANT, collectionId: "scripts" } },
 			body: {
 				data: toRecordData({
 					...toScriptData(values),

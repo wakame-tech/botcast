@@ -69,6 +69,6 @@ C4Component
   Rel(jobs, kafru, "dequeue")
   Rel(jobs, gen, "")
   Rel(jobs, audio, "")
-  Rel(gen, cms, "/scripts 実行・保存")
+  Rel(gen, cms, "/t/{tenantId}/scripts 実行・保存")
   Rel(audio, cms, "mp3 / srt 保存")
 ```

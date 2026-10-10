@@ -10,7 +10,22 @@ use tokio::process::Command;
 
 pub struct McpClient {
     service: RunningService<rmcp::RoleClient, ()>,
+    /// LLM に見せるツール定義。`tenantId` は取り除いてある
     tools: Vec<Tool>,
+    tenant: String,
+}
+
+/// CMS のツールは全て `tenantId` を要求するが、テナントは worker が固定するので
+/// LLM に見せる入力スキーマからは外す。LLM にテナントを選ばせない。
+fn strip_tenant_param(mut tool: Tool) -> Tool {
+    let schema = std::sync::Arc::make_mut(&mut tool.input_schema);
+    if let Some(Value::Object(props)) = schema.get_mut("properties") {
+        props.remove("tenantId");
+    }
+    if let Some(Value::Array(required)) = schema.get_mut("required") {
+        required.retain(|v| v.as_str() != Some("tenantId"));
+    }
+    tool
 }
 
 impl McpClient {
@@ -22,8 +37,14 @@ impl McpClient {
 
         let service = ().serve(transport).await.context("Failed to connect to MCP server")?;
         let tools = service.list_all_tools().await.context("Failed to list MCP tools")?;
+        let tenant = std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string());
+        let tools = tools.into_iter().map(strip_tenant_param).collect();
 
-        Ok(Self { service, tools })
+        Ok(Self {
+            service,
+            tools,
+            tenant,
+        })
     }
 
     pub fn tools(&self) -> &[Tool] {
@@ -35,10 +56,14 @@ impl McpClient {
         name: impl Into<std::borrow::Cow<'static, str>>,
         arguments: Value,
     ) -> anyhow::Result<String> {
-        let arguments = arguments
+        let mut arguments = arguments
             .as_object()
             .cloned()
             .unwrap_or_default();
+
+        // テナントは worker が決める。LLM の出力で上書きさせない
+        // (他テナントを指定されるとデータが越境する)
+        arguments.insert("tenantId".to_string(), Value::String(self.tenant.clone()));
 
         let result = self
             .service
@@ -129,6 +154,36 @@ mod tests {
         let start = result.find('{').expect("no JSON in result");
         let json: serde_json::Value = serde_json::from_str(&result[start..]).expect("invalid JSON");
         json["id"].as_str().expect("id field missing").to_string()
+    }
+
+    #[test]
+    fn strip_tenant_param_removes_tenant_from_schema() {
+        let schema = serde_json::json!({
+            "type": "object",
+            "properties": {
+                "tenantId": { "type": "string" },
+                "collectionId": { "type": "string" }
+            },
+            "required": ["tenantId", "collectionId"]
+        });
+        let schema = match schema {
+            serde_json::Value::Object(o) => o,
+            _ => unreachable!(),
+        };
+        let tool = Tool::new("RecordApi_list", "list records", std::sync::Arc::new(schema));
+
+        let tool = strip_tenant_param(tool);
+
+        let props = tool.input_schema["properties"].as_object().unwrap();
+        assert!(!props.contains_key("tenantId"), "tenantId を LLM に見せない");
+        assert!(props.contains_key("collectionId"));
+        let required: Vec<&str> = tool.input_schema["required"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect();
+        assert_eq!(required, vec!["collectionId"]);
     }
 
     #[tokio::test]

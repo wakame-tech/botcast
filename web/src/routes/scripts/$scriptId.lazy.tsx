@@ -1,6 +1,6 @@
 import { JsonSchemaForm } from "@/components/JsonSchemaForm";
 import { Button } from "@/components/ui/button";
-import { $cms, recordToScript } from "@/lib/cms_client";
+import { $cms, CMS_TENANT, recordToScript } from "@/lib/cms_client";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -51,15 +51,23 @@ export function Script() {
 	const { scriptId } = Route.useParams();
 	const { data: scriptRecord } = $cms.useQuery(
 		"get",
-		"/records/{collectionId}/{recordId}",
-		{ params: { path: { collectionId: "scripts", recordId: scriptId } } },
+		"/t/{tenantId}/records/{collectionId}/{recordId}",
+		{
+			params: {
+				path: {
+					tenantId: CMS_TENANT,
+					collectionId: "scripts",
+					recordId: scriptId,
+				},
+			},
+		},
 	);
 	const [parameters, setParameters] = useState<Record<string, unknown>>({});
 	const deleteScript = $cms.useMutation(
 		"delete",
-		"/records/{collectionId}/{recordId}",
+		"/t/{tenantId}/records/{collectionId}/{recordId}",
 	);
-	const executeScript = $cms.useMutation("post", "/scripts");
+	const executeScript = $cms.useMutation("post", "/t/{tenantId}/scripts");
 	const [executeError, setExecuteError] = useState<string>();
 
 	if (!scriptRecord) {
@@ -68,7 +76,13 @@ export function Script() {
 
 	const handleDelete = async () => {
 		await deleteScript.mutateAsync({
-			params: { path: { collectionId: "scripts", recordId: scriptId } },
+			params: {
+				path: {
+					tenantId: CMS_TENANT,
+					collectionId: "scripts",
+					recordId: scriptId,
+				},
+			},
 		});
 		navigate({ to: "/scripts" });
 	};
@@ -80,6 +94,7 @@ export function Script() {
 		setExecuteError(undefined);
 		try {
 			await executeScript.mutateAsync({
+				params: { path: { tenantId: CMS_TENANT } },
 				body: {
 					language: "nodejs",
 					code: `const context = ${JSON.stringify(context)};\n${script.template}`,

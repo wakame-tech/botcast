@@ -1,4 +1,4 @@
-import { $cms, recordToScript } from "@/lib/cms_client";
+import { $cms, CMS_TENANT, recordToScript } from "@/lib/cms_client";
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/scripts/")({
@@ -6,9 +6,13 @@ export const Route = createFileRoute("/scripts/")({
 });
 
 export function Scripts() {
-	const { data: records } = $cms.useQuery("get", "/records/{collectionId}", {
-		params: { path: { collectionId: "scripts" } },
-	});
+	const { data: records } = $cms.useQuery(
+		"get",
+		"/t/{tenantId}/records/{collectionId}",
+		{
+			params: { path: { tenantId: CMS_TENANT, collectionId: "scripts" } },
+		},
+	);
 	const scripts = (records ?? []).map(recordToScript);
 
 	return (

@@ -4,7 +4,26 @@
  */
 
 export interface paths {
-    "/canvas/edges": {
+    "/t/{tenantId}/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Run record writes atomically: either every operation is applied or none is.
+         *     Fails with 400 (validation), 403 (write not allowed), 404 (missing record),
+         *     409 (unique constraint) or 412 (version mismatch). */
+        post: operations["BatchApi_execute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/canvas/edges": {
         parameters: {
             query?: never;
             header?: never;
@@ -20,7 +39,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/canvas/edges/{edgeId}": {
+    "/t/{tenantId}/canvas/edges/{edgeId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -36,7 +55,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/canvas/query": {
+    "/t/{tenantId}/canvas/query": {
         parameters: {
             query?: never;
             header?: never;
@@ -52,7 +71,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/collections": {
+    "/t/{tenantId}/collections": {
         parameters: {
             query?: never;
             header?: never;
@@ -68,7 +87,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/collections/{collectionId}": {
+    "/t/{tenantId}/collections/{collectionId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -84,7 +103,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}": {
+    "/t/{tenantId}/records/{collectionId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -100,7 +119,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}/generate": {
+    "/t/{tenantId}/records/{collectionId}/generate": {
         parameters: {
             query?: never;
             header?: never;
@@ -116,7 +135,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}/merge": {
+    "/t/{tenantId}/records/{collectionId}/merge": {
         parameters: {
             query?: never;
             header?: never;
@@ -132,7 +151,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}/with-relations": {
+    "/t/{tenantId}/records/{collectionId}/with-relations": {
         parameters: {
             query?: never;
             header?: never;
@@ -148,7 +167,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}/{recordId}": {
+    "/t/{tenantId}/records/{collectionId}/{recordId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -164,7 +183,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}/{recordId}/copy": {
+    "/t/{tenantId}/records/{collectionId}/{recordId}/copy": {
         parameters: {
             query?: never;
             header?: never;
@@ -180,7 +199,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}/{recordId}/images/{fieldName}": {
+    "/t/{tenantId}/records/{collectionId}/{recordId}/images/{fieldName}": {
         parameters: {
             query?: never;
             header?: never;
@@ -196,7 +215,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}/{recordId}/referenced-by": {
+    "/t/{tenantId}/records/{collectionId}/{recordId}/referenced-by": {
         parameters: {
             query?: never;
             header?: never;
@@ -213,7 +232,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/{collectionId}/{recordId}/split": {
+    "/t/{tenantId}/records/{collectionId}/{recordId}/split": {
         parameters: {
             query?: never;
             header?: never;
@@ -229,7 +248,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/scripts": {
+    "/t/{tenantId}/scripts": {
         parameters: {
             query?: never;
             header?: never;
@@ -249,6 +268,31 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        BatchOperation: {
+            /** @enum {string} */
+            op: "create" | "update" | "delete";
+            collection_id: string;
+            /** @description Required for update / delete */
+            record_id?: string;
+            /** @description Required for create / update. Validated against the collection schema */
+            data?: Record<string, never>;
+            /**
+             * Format: int64
+             * @description Optimistic lock for update / delete. The whole batch fails (412) if the record has another version
+             */
+            expected_version?: number;
+        };
+        BatchRequest: {
+            operations: components["schemas"]["BatchOperation"][];
+        };
+        BatchResponse: {
+            /** @description One entry per operation, in order */
+            results: components["schemas"]["BatchResult"][];
+        };
+        BatchResult: {
+            /** @description The written record for create / update, null for delete */
+            record: components["schemas"]["Record_"] | null;
+        };
         CanvasQueryRequest: {
             /** @description Starting record ID in "table:id" format */
             record_id: string;
@@ -332,6 +376,12 @@ export interface components {
                 error: string;
             };
         };
+        /** @description 403: authenticated, but not allowed to perform the operation (e.g. writing someone else's record). Do not sign out. */
+        ForbiddenError: {
+            /** @enum {string} */
+            code: "FORBIDDEN";
+            message: string;
+        };
         GenerateRecordRequest: {
             prompt: string;
         };
@@ -394,6 +444,11 @@ export interface components {
             owner_id: string | null;
             created_at: string | null;
             updated_at: string | null;
+            /**
+             * Format: int64
+             * @description Same as `Record_.version`; pass it back as `If-Match` for optimistic locking
+             */
+            version: number;
             relations: components["schemas"]["RelatedRecord"][];
         };
         Record_: {
@@ -403,6 +458,12 @@ export interface components {
             readonly owner_id: string | null;
             readonly created_at: string | null;
             readonly updated_at: string | null;
+            /**
+             * Format: int64
+             * @description Monotonically increasing version, starting at 1 and incremented on every update.
+             *     Pass it back as `If-Match` (update / delete) or `expected_version` (batch) for optimistic locking.
+             */
+            readonly version: number;
         };
         ReferencedByResponse: {
             items: components["schemas"]["ReferencingRecord"][];
@@ -435,6 +496,12 @@ export interface components {
             original: components["schemas"]["Record_"];
             /** @description New records created from splits */
             splits: components["schemas"]["Record_"][];
+        };
+        /** @description 401: the token is missing, invalid or expired. Sign in again. */
+        UnauthorizedError: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED";
+            message: string;
         };
         UpdateCollection: {
             name: string;
@@ -471,13 +538,41 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    BatchApi_execute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchResponse"];
+                };
+            };
+        };
+    };
     CanvasApi_listEdges: {
         parameters: {
             query: {
                 record_id: string;
             };
             header?: never;
-            path?: never;
+            path: {
+                tenantId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -497,7 +592,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                tenantId: string;
+            };
             cookie?: never;
         };
         requestBody: {
@@ -522,6 +619,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 edgeId: string;
             };
             cookie?: never;
@@ -541,7 +639,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                tenantId: string;
+            };
             cookie?: never;
         };
         requestBody: {
@@ -565,7 +665,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                tenantId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -585,7 +687,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                tenantId: string;
+            };
             cookie?: never;
         };
         requestBody: {
@@ -610,6 +714,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
             };
             cookie?: never;
@@ -632,6 +737,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
             };
             cookie?: never;
@@ -658,6 +764,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
             };
             cookie?: never;
@@ -689,6 +796,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
             };
             cookie?: never;
@@ -711,6 +819,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
             };
             cookie?: never;
@@ -737,6 +846,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
             };
             cookie?: never;
@@ -763,6 +873,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
             };
             cookie?: never;
@@ -789,6 +900,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
             };
             cookie?: never;
@@ -811,6 +923,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
             };
@@ -832,8 +945,12 @@ export interface operations {
     RecordApi_update: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Expected `version`. If the record has a different version, nothing is written (412) */
+                "If-Match"?: string;
+            };
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
             };
@@ -859,8 +976,12 @@ export interface operations {
     RecordApi_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Expected `version`. If the record has a different version, nothing is deleted (412) */
+                "If-Match"?: string;
+            };
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
             };
@@ -882,6 +1003,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
             };
@@ -909,6 +1031,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
                 fieldName: string;
@@ -933,6 +1056,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
                 fieldName: string;
@@ -961,6 +1085,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
                 fieldName: string;
@@ -988,6 +1113,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
             };
@@ -1011,6 +1137,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                tenantId: string;
                 collectionId: string;
                 recordId: string;
             };
@@ -1037,7 +1164,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                tenantId: string;
+            };
             cookie?: never;
         };
         requestBody: {

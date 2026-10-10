@@ -1,7 +1,12 @@
 import { JsonSchemaForm } from "@/components/JsonSchemaForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { $cms, type PodcastSchedule, recordToScript } from "@/lib/cms_client";
+import {
+	$cms,
+	CMS_TENANT,
+	type PodcastSchedule,
+	recordToScript,
+} from "@/lib/cms_client";
 import { useState } from "react";
 
 interface ScheduleFormProps {
@@ -17,9 +22,13 @@ export function ScheduleForm({ value, onSubmit }: ScheduleFormProps) {
 	const [args, setArgs] = useState<Record<string, unknown>>(
 		value?.arguments ?? {},
 	);
-	const { data: records } = $cms.useQuery("get", "/records/{collectionId}", {
-		params: { path: { collectionId: "scripts" } },
-	});
+	const { data: records } = $cms.useQuery(
+		"get",
+		"/t/{tenantId}/records/{collectionId}",
+		{
+			params: { path: { tenantId: CMS_TENANT, collectionId: "scripts" } },
+		},
+	);
 	const scripts = (records ?? []).map(recordToScript);
 	const schema = scripts.find((s) => s.id === scriptId)?.arguments ?? {};
 

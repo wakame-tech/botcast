@@ -1,6 +1,6 @@
 import Podcast from "@/components/podcast/PodcastList";
 import { Button } from "@/components/ui/button";
-import { $cms, recordToPodcast } from "@/lib/cms_client";
+import { $cms, CMS_TENANT, recordToPodcast } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 
@@ -9,9 +9,13 @@ export const Route = createLazyFileRoute("/podcasts/")({
 });
 
 export default function Podcasts() {
-	const { data: records } = $cms.useQuery("get", "/records/{collectionId}", {
-		params: { path: { collectionId: "podcasts" } },
-	});
+	const { data: records } = $cms.useQuery(
+		"get",
+		"/t/{tenantId}/records/{collectionId}",
+		{
+			params: { path: { tenantId: CMS_TENANT, collectionId: "podcasts" } },
+		},
+	);
 	const podcasts = (records ?? []).map(recordToPodcast);
 
 	return (

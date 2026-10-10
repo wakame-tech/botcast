@@ -29,18 +29,20 @@ cd web && npm run check
 
 ## 認証
 
-- botcast-cms の POST /auth/signin でトークン取得
+- botcast-cms の POST /t/{tenantId}/auth/signin でトークン取得。JWT は発行元テナントでのみ有効
 - web は localStorage にトークンを保存し Authorization: Bearer <token> で送信（`web/src/lib/cms_client.ts` の middleware）
 - ユーザー ID は JWT の `sub` から取得（`useSession().userId`）
 - CMS の型は `cd web && npm run generate` で `../botcast-cms` の openapi.yaml から再生成
-- 環境変数 VITE_CMS_URL に botcast-cms のエンドポイントを設定
+- 環境変数 VITE_CMS_URL に botcast-cms のエンドポイント、VITE_CMS_TENANT にテナント ID を設定
 
 ## 環境変数
 
 - VITE_CMS_URL: botcast-cms URL（web）
-- VITE_WORKER_URL: worker URL（web。未設定時 `http://localhost:9001`。セルフホストでは nginx が中継する `/api`）。web は `POST /jobs` に botcast-cms のトークンを `Authorization: Bearer` で付け、worker が CMS の `GET /collections` で検証する
+- VITE_CMS_TENANT: botcast-cms のテナント ID（web。既定 `botcast`）。CMS は全エンドポイントが `/t/{tenantId}/...` 配下にある
+- VITE_WORKER_URL: worker URL（web。未設定時 `http://localhost:9001`。セルフホストでは nginx が中継する `/api`）。web は `POST /jobs` に botcast-cms のトークンを `Authorization: Bearer` で付け、worker が CMS の `GET /t/{tenantId}/collections` で検証する
 - CMS_URL: botcast-cms URL（worker）
-- API_KEY: botcast-cms の API_KEY と同じ値。worker → CMS の `X-Api-Key` 認証に使い、MCP サーバーの子プロセスにもそのまま渡る
+- CMS_TENANT: botcast-cms のテナント ID（worker。既定 `botcast`）
+- API_KEY: botcast-cms の `API_KEY_<TENANT>` と同じ値（キーはテナントごとに発行される）。worker → CMS の `X-Api-Key` 認証に使い、MCP サーバーの子プロセスにもそのまま渡る
 - MCP_SERVER_ARGS: botcast-cms MCP サーバーの起動引数（例: `../botcast-cms/mcp/build/index.js`）
 - KAFRU_DB_HOST / KAFRU_DB_PORT / KAFRU_DB_USERNAME / KAFRU_DB_PASSWORD / KAFRU_DB_NAMESPACE / KAFRU_DB_NAME: ジョブキュー (kafru) の SurrealDB。ローカルは `just up` で 4030 番に起動
 - VOICEVOX_ENDPOINT: VoiceVox エンジン URL（音声生成に必要。例: `docker run -p 50021:50021 voicevox/voicevox_engine:cpu-latest`）

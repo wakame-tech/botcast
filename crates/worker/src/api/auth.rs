@@ -42,22 +42,26 @@ pub(crate) fn token_status(status: StatusCode) -> anyhow::Result<TokenStatus> {
 pub(crate) struct CmsTokenVerifier {
     http: reqwest::Client,
     base_url: String,
+    /// CMS のテナント。全エンドポイントが `/t/{tenantId}/...` 配下にある
+    tenant: String,
 }
 
 impl CmsTokenVerifier {
     pub(crate) fn from_env() -> Self {
         let base_url =
             std::env::var("CMS_URL").unwrap_or_else(|_| "http://localhost:3002".to_string());
+        let tenant = std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string());
         Self {
             http: reqwest::Client::new(),
             base_url: base_url.trim_end_matches('/').to_string(),
+            tenant,
         }
     }
 
     pub(crate) async fn verify(&self, token: &str) -> anyhow::Result<TokenStatus> {
         let res = self
             .http
-            .get(format!("{}/collections", self.base_url))
+            .get(format!("{}/t/{}/collections", self.base_url, self.tenant))
             .bearer_auth(token)
             .send()
             .await

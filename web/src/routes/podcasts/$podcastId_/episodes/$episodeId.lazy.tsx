@@ -5,7 +5,12 @@ import { EpisodeMails } from "@/components/mail/EpisodeMails";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
-import { $cms, fetchCmsFile, recordToEpisode } from "@/lib/cms_client";
+import {
+	$cms,
+	CMS_TENANT,
+	fetchCmsFile,
+	recordToEpisode,
+} from "@/lib/cms_client";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import Parser from "srt-parser-2";
@@ -28,9 +33,15 @@ function Episode() {
 	const { podcastId, episodeId } = Route.useParams();
 	const { data: episodeRecord } = $cms.useQuery(
 		"get",
-		"/records/{collectionId}/{recordId}",
+		"/t/{tenantId}/records/{collectionId}/{recordId}",
 		{
-			params: { path: { collectionId: "episodes", recordId: episodeId } },
+			params: {
+				path: {
+					tenantId: CMS_TENANT,
+					collectionId: "episodes",
+					recordId: episodeId,
+				},
+			},
 		},
 	);
 	const episode = episodeRecord ? recordToEpisode(episodeRecord) : null;
@@ -49,7 +60,7 @@ function Episode() {
 
 	const deleteEpisode = $cms.useMutation(
 		"delete",
-		"/records/{collectionId}/{recordId}",
+		"/t/{tenantId}/records/{collectionId}/{recordId}",
 	);
 
 	const { state, setEpisode, playOrPause, seekTo } = usePlayer();
@@ -62,7 +73,13 @@ function Episode() {
 
 	const handleDelete = async () => {
 		await deleteEpisode.mutateAsync({
-			params: { path: { collectionId: "episodes", recordId: episodeId } },
+			params: {
+				path: {
+					tenantId: CMS_TENANT,
+					collectionId: "episodes",
+					recordId: episodeId,
+				},
+			},
 		});
 		navigate({
 			to: "/podcasts/$podcastId",

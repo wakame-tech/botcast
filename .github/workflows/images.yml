@@ -55,10 +55,11 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # web は CMS の URL をビルド時に埋め込む (リポジトリ変数 CMS_URL)
+          # web は CMS の URL とテナントをビルド時に埋め込む (リポジトリ変数 CMS_URL / CMS_TENANT)
           # worker は botcast-cms-mcp イメージから MCP サーバーを取り込む
           build-args: |
             VITE_CMS_URL=${{ vars.CMS_URL || 'https://cms.w4k4.me' }}
+            VITE_CMS_TENANT=${{ vars.CMS_TENANT || 'botcast' }}
             VITE_WORKER_URL=/api
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
