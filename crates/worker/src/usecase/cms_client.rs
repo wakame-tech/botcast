@@ -187,16 +187,7 @@ impl CmsClient {
         Ok(id)
     }
 
-    /// レコードを作成し、ID を返す
-    pub(crate) async fn create_record(
-        &self,
-        collection: &str,
-        data: serde_json::Value,
-    ) -> anyhow::Result<String> {
-        self.create_record_as(collection, data, None).await
-    }
-
-    /// `owner` を指定すると `X-On-Behalf-Of` でそのユーザーの所有として作成する
+    /// レコードを作成し、ID を返す。`owner` を指定すると `X-On-Behalf-Of` でそのユーザーの所有として作成する
     pub(crate) async fn create_record_as(
         &self,
         collection: &str,
