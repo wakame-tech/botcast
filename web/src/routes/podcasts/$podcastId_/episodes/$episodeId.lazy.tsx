@@ -5,10 +5,12 @@ import { EpisodeMails } from "@/components/mail/EpisodeMails";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlayer } from "@/hooks/usePlayer";
+import { useSession } from "@/hooks/useSession";
 import {
 	$cms,
 	CMS_TENANT,
 	fetchCmsFile,
+	isOwner,
 	recordToEpisode,
 } from "@/lib/cms_client";
 import { useQuery } from "@tanstack/react-query";
@@ -31,6 +33,7 @@ const fetchSrt = async (url: string): Promise<Line[]> => {
 function Episode() {
 	const navigate = useNavigate();
 	const { podcastId, episodeId } = Route.useParams();
+	const { userId } = useSession();
 	const { data: episodeRecord } = $cms.useQuery(
 		"get",
 		"/t/{tenantId}/records/{collectionId}/{recordId}",
@@ -70,6 +73,7 @@ function Episode() {
 	}
 
 	const isPlayingEpisode = state.isPlaying && episode.id === state.episode?.id;
+	const editable = isOwner(episode, userId);
 
 	const handleDelete = async () => {
 		await deleteEpisode.mutateAsync({
@@ -111,22 +115,26 @@ function Episode() {
 							<span className="grow pl-2 text-xl font-bold">
 								{episode.title}
 							</span>
-							<div className="text-sm">
-								<Button className="bg-red-500" onClick={handleDelete}>
-									削除
-								</Button>
-							</div>
+							{editable && (
+								<div className="text-sm">
+									<Button className="bg-red-500" onClick={handleDelete}>
+										削除
+									</Button>
+								</div>
+							)}
 						</div>
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="py-2 flex flex-col gap-2">
-						<JobButton
-							label="音声を生成"
-							args={{ type: "generateAudio", episodeId }}
-						/>
-						<GenerateScriptForm episodeId={episodeId} />
-					</div>
+					{editable && (
+						<div className="py-2 flex flex-col gap-2">
+							<JobButton
+								label="音声を生成"
+								args={{ type: "generateAudio", episodeId }}
+							/>
+							<GenerateScriptForm episodeId={episodeId} />
+						</div>
+					)}
 					<div className="py-2">
 						<SectionsComponent
 							isPlayingEpisode={isPlayingEpisode}
@@ -138,7 +146,7 @@ function Episode() {
 					</div>
 				</CardContent>
 			</Card>
-			<EpisodeMails podcastId={podcastId} episodeId={episodeId} />
+			<EpisodeMails episodeId={episodeId} />
 		</>
 	);
 }

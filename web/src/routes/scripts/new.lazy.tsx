@@ -3,7 +3,6 @@ import {
 	type ScriptFormValues,
 	toScriptData,
 } from "@/components/script/ScriptForm";
-import { useSession } from "@/hooks/useSession";
 import { $cms, CMS_TENANT, toRecordData } from "@/lib/cms_client";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 
@@ -13,7 +12,6 @@ export const Route = createLazyFileRoute("/scripts/new")({
 
 export function NewScript() {
 	const navigate = useNavigate();
-	const { userId } = useSession();
 	const newScript = $cms.useMutation(
 		"post",
 		"/t/{tenantId}/records/{collectionId}",
@@ -25,7 +23,6 @@ export function NewScript() {
 			body: {
 				data: toRecordData({
 					...toScriptData(values),
-					user_id: userId ?? "",
 				}),
 			},
 		});

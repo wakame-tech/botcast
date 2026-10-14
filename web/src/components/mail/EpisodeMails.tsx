@@ -1,18 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useSession } from "@/hooks/useSession";
 import { $cms, CMS_TENANT, recordToMail, toRecordData } from "@/lib/cms_client";
 import { useState } from "react";
 
 interface EpisodeMailsProps {
-	podcastId: string;
 	episodeId: string;
 }
 
 /** エピソード宛てのお便り一覧と投稿フォーム */
-export function EpisodeMails({ podcastId, episodeId }: EpisodeMailsProps) {
-	const { userId } = useSession();
+export function EpisodeMails({ episodeId }: EpisodeMailsProps) {
 	const [radioName, setRadioName] = useState("");
 	const [body, setBody] = useState("");
 	const { data: records, refetch } = $cms.useQuery(
@@ -37,11 +34,9 @@ export function EpisodeMails({ podcastId, episodeId }: EpisodeMailsProps) {
 			params: { path: { tenantId: CMS_TENANT, collectionId: "mails" } },
 			body: {
 				data: toRecordData({
-					podcast_id: podcastId,
 					episode_id: episodeId,
 					radio_name: radioName,
 					body,
-					user_id: userId ?? "",
 				}),
 			},
 		});
