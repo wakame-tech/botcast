@@ -33,8 +33,8 @@ botcast が botcast-cms に置くコレクション（podcasts / episodes / scri
 ### スキーマ更新
 
 - `UpdateCollection` に `schema?: Record<string>` を追加する
-- スキーマが変わる場合、既存の全レコードを新スキーマで検証する。違反が 1 件でもあれば 422（違反したレコード ID をメッセージに含める）で、何も変えない
-- `x-unique` が変わる場合は 422（インデックスの作り直しは対象外）
+- スキーマが変わる場合、既存の全レコードを新スキーマで検証する。違反が 1 件でもあれば 400（違反したレコード ID をメッセージに含める）で、何も変えない
+- `x-unique` が変わる場合は 400（インデックスの作り直しは対象外）
 - `x-reactive` の宣言はスキーマ作成時と同じ検証を通す
 
 ### 代理実行 (`X-On-Behalf-Of`)
@@ -56,7 +56,7 @@ botcast が botcast-cms に置くコレクション（podcasts / episodes / scri
 
 `x-ref` の値はコレクション名ではなくコレクション ID（環境ごとに異なるランダムなキー）。よって seed は参照先から順に `scripts → podcasts → episodes → mails` と ensure し、得た ID をスキーマに埋め込む。
 
-`ensure_collection(name, schema, access) -> id`: 無ければ作成、あればスキーマ・access を比べて差分があれば `CollectionApi_update` で更新する。更新が 422 なら起動を失敗させる。
+`ensure_collection(name, schema, access) -> id`: 無ければ作成、あればスキーマ・access を比べて差分があれば `CollectionApi_update` で更新する。更新が 400 なら起動を失敗させる。
 
 ## worker
 
@@ -77,10 +77,10 @@ botcast が botcast-cms に置くコレクション（podcasts / episodes / scri
 3. SurrealQL を流す（テーブル名はコレクションのキー。`SELECT id, name FROM collection` で引く）
    - podcasts / episodes / scripts / mails: `UPDATE <table> SET owner_id = data.user_id, data.user_id = NONE WHERE data.user_id != NONE`
    - mails: `UPDATE <table> SET data.podcast_id = NONE`
-4. 新 worker / web をデプロイする。起動時の seed がスキーマ・access を更新する。移行漏れがあれば 422 で起動に失敗して気付ける
+4. 新 worker / web をデプロイする。起動時の seed がスキーマ・access を更新する。移行漏れがあれば 400 で起動に失敗して気付ける
 
 ## テスト
 
-- CMS: スキーマ更新（成功・既存レコード違反で 422・`x-unique` 変更で 422）、`X-On-Behalf-Of`（API キー時のみ有効・owner_id が付く・JWT では無視・不正値 400）
+- CMS: スキーマ更新（成功・既存レコード違反で 400・`x-unique` 変更で 400）、`X-On-Behalf-Of`（API キー時のみ有効・owner_id が付く・JWT では無視・不正値 400）
 - worker: `ensure_collection` の差分更新、episode 作成時のヘッダー
 - web: 所有者以外に編集導線が出ない、作成時に `user_id` を送らない
