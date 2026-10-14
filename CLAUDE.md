@@ -32,6 +32,8 @@ cd web && npm run check
 - botcast-cms の POST /t/{tenantId}/auth/signin でトークン取得。JWT は発行元テナントでのみ有効
 - web は localStorage にトークンを保存し Authorization: Bearer <token> で送信（`web/src/lib/cms_client.ts` の middleware）
 - ユーザー ID は JWT の `sub` から取得（`useSession().userId`）
+- レコードの所有者は CMS の `owner_id`（作成したユーザーの `sub`）。`data` に `user_id` は持たない。コレクションは `access: {read: public, write: owner}` で、web は所有者にだけ編集・削除・ジョブの導線を出す（`isOwner`）
+- worker はお便りエピソードを `X-Api-Key` + `X-On-Behalf-Of: <番組の owner_id>` で作り、番組の所有者のレコードにする
 - CMS の型は `cd web && npm run generate` で `../botcast-cms` の openapi.yaml から再生成
 - 環境変数 VITE_CMS_URL に botcast-cms のエンドポイント、VITE_CMS_TENANT にテナント ID を設定
 
@@ -48,13 +50,19 @@ cd web && npm run check
 - VOICEVOX_ENDPOINT: VoiceVox エンジン URL（音声生成に必要。例: `docker run -p 50021:50021 voicevox/voicevox_engine:cpu-latest`）
 - OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector
 
+## CMS のコレクション
+
+- podcasts / episodes / scripts / mails のスキーマは `crates/worker/src/usecase/collections.rs` が唯一の情報源。worker の起動時に CMS へ反映する（無ければ作成、差分があれば `PUT /collections` で更新。既存レコードが新スキーマを満たさなければ起動に失敗する）
+- 参照は素のレコード ID で持ち、スキーマの `x-ref`（参照先コレクションの ID）で宣言する（`episodes.podcast_id` / `mails.episode_id` / `podcasts.schedule.script_id`）。コレクション ID は環境ごとに違うので、seed が参照先から順に作って埋め込む
+- データ移行は `deploy/selfhost/migrations/` の SurrealQL を CMS の SurrealDB（namespace = テナント ID）に流す
+
 ## 音声ファイル
 
 生成した mp3 / srt は botcast-cms の `/records/{c}/{r}/images/{audio,srt}` に保存し、episode の `audio_url` / `srt_url` にその相対パスを入れる。web は認証付きで取得して Blob URL にして再生する（`useCmsFileUrl`）。
 
 ## お便りエピソードの定期生成
 
-- お便りは CMS の `mails`（`podcast_id` / `episode_id` / `radio_name` / `body` / `user_id`）。web のエピソード画面から投稿する
+- お便りは CMS の `mails`（`episode_id` / `radio_name` / `body`。所有者は投稿者）。web のエピソード画面から投稿する
 - 番組の `data.schedule = { cron, script_id, enabled, arguments }`（cron は Quartz 7 フィールド・UTC）を worker の `ScheduleSync` が 60 秒ごとに kafru のスケジュールへ同期する
 - スクリプトの `data.arguments` は引数の **JSON Schema**、その **値** は番組の `schedule.arguments`。web の定期実行設定でスキーマから生成したフォームで入力する
 - 発火すると `GenerateEpisode` ジョブが `schedule.arguments`（無ければ `{}`）をスクリプトのスキーマで検証し（違反ならジョブ失敗）、スクリプト（Node.js）を CMS `/scripts` で実行する。スクリプトは `context = { podcast, previous_episode, mails, arguments }` を受け取り、`{ title?, sections }` を JSON で標準出力する

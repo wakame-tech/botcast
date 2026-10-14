@@ -165,6 +165,16 @@ mod tests {
         assert!(!valid(&s, json!({ "episode_id": "e", "radio_name": "r", "body": "b", "podcast_id": "p" })));
     }
 
+    /// `CMS_URL` / `CMS_TENANT` / `API_KEY` の CMS に seed する（既存コレクションの更新も確かめる）
+    #[tokio::test]
+    #[ignore = "requires a running botcast-cms"]
+    async fn seed_against_cms() {
+        let cms = CmsClient::from_env();
+        seed(&cms).await.unwrap();
+        // 2 回目は差分が無いので更新しない（冪等）
+        seed(&cms).await.unwrap();
+    }
+
     #[test]
     fn scripts_reject_user_id() {
         let s = scripts_schema();
