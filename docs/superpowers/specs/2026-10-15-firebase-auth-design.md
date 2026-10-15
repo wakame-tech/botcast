@@ -35,7 +35,7 @@ botcast-cms と botcast のメールアドレス + パスワード認証をや�
 
 ### `user` テーブル
 
-`SCHEMAFULL`: `uid: string`（UNIQUE インデックス）、`email: option<string>`、`name: option<string>`。旧フィールド（`pass`、`email` の UNIQUE インデックス）は移行で消す。
+`SCHEMAFULL`: `uid: option<string>`（UNIQUE インデックス。DEFINE INDEX が既存レコードを検証し直すので、移行前の旧ユーザーを許す option にする）、`email: option<string>`、`name: option<string>`。旧フィールド（`pass`、`email` の UNIQUE インデックス）は起動時に消す。
 
 ### 設定
 
@@ -68,7 +68,7 @@ botcast-cms と botcast のメールアドレス + パスワード認証をや�
 4. ユーザーが botcast web で Google ログインし、新しい `user:<id>` を作る
 5. 移行 SurrealQL（`deploy/selfhost/migrations/`）を流す
    - podcasts / episodes / scripts / mails の各テーブルで、旧ユーザー（`uid` が無い user）が持つレコードの `owner_id` を新ユーザーに付け替える
-   - `DELETE user WHERE uid = NONE`
+   - 旧ユーザーを削除（`uid = NONE` は UNIQUE インデックス経由だと NONE の行を拾えないので `type::is::none(uid)` で判定）。全体を 1 トランザクションにし、新ユーザーが 1 人でなければ THROW で取り消す
 
 ## テスト
 

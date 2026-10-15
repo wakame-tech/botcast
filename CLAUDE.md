@@ -29,7 +29,8 @@ cd web && npm run check
 
 ## 認証
 
-- botcast-cms の POST /t/{tenantId}/auth/signin でトークン取得。JWT は発行元テナントでのみ有効
+- ログインは Firebase Auth の Google のみ（`web/src/lib/firebase.ts`）。`signInWithPopup` で得た ID トークンを botcast-cms の POST /t/{tenantId}/auth/firebase で CMS の JWT に交換する。Firebase のセッションは持たない。JWT は発行元テナントでのみ有効
+- Firebase の Web config（プロジェクト `botcast-cms`）は公開値なのでコードの既定値に置き、`VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_AUTH_DOMAIN` / `VITE_FIREBASE_PROJECT_ID` で上書きできる。ログインするホストは Firebase の承認済みドメインに登録が必要
 - web は localStorage にトークンを保存し Authorization: Bearer <token> で送信（`web/src/lib/cms_client.ts` の middleware）
 - ユーザー ID は JWT の `sub` から取得（`useSession().userId`）
 - レコードの所有者は CMS の `owner_id`（作成したユーザーの `sub`）。`data` に `user_id` は持たない。コレクションは `access: {read: public, write: owner}` で、web は所有者にだけ編集・削除・ジョブの導線を出す（`isOwner`）
@@ -41,6 +42,7 @@ cd web && npm run check
 
 - VITE_CMS_URL: botcast-cms URL（web）
 - VITE_CMS_TENANT: botcast-cms のテナント ID（web。既定 `botcast`）。CMS は全エンドポイントが `/t/{tenantId}/...` 配下にある
+- VITE_FIREBASE_API_KEY / VITE_FIREBASE_AUTH_DOMAIN / VITE_FIREBASE_PROJECT_ID: Firebase の Web config（web。未設定時は `botcast-cms` プロジェクトの値）
 - VITE_WORKER_URL: worker URL（web。未設定時 `http://localhost:9001`。セルフホストでは nginx が中継する `/api`）。web は `POST /jobs` に botcast-cms のトークンを `Authorization: Bearer` で付け、worker が CMS の `GET /t/{tenantId}/collections` で検証する
 - CMS_URL: botcast-cms URL（worker）
 - CMS_TENANT: botcast-cms のテナント ID（worker。既定 `botcast`）

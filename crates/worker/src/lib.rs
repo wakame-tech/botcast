@@ -12,7 +12,7 @@
 //!
 //! ## 機能
 //!
-//! - ユーザー登録・サインイン (botcast-cms の `/auth/signup`・`/auth/signin`)
+//! - サインイン (web が Firebase の Google ログインで得た ID トークンを botcast-cms の `/auth/firebase` で JWT に交換)
 //! - ポッドキャスト (`Podcast`) / エピソード (`Episode`) の管理 (botcast-cms)
 //! - MCP ツール (`generate_audio` / `generate_script` / `list_jobs` / `get_job_status`) でジョブを投入・確認
 //! - LLM エージェント (Claude) が MCP 経由で台本を生成し CMS に保存
