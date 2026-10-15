@@ -151,24 +151,38 @@ impl EpisodeGenerationService {
         )?;
 
         self.cms
-            .create_record(
+            .create_record_as(
                 "episodes",
                 serde_json::json!({
                     "podcast_id": podcast_id,
                     "title": episode.title,
                     "description": "",
                     "sections": episode.sections,
-                    "user_id": podcast["data"]["user_id"],
                 }),
+                episode_owner(&podcast),
             )
             .await
     }
+}
+
+/// 生成するエピソードの所有者 = 番組の所有者。サービス所有の番組なら代理しない
+fn episode_owner(podcast: &Value) -> Option<&str> {
+    podcast["owner_id"]
+        .as_str()
+        .filter(|o| o.starts_with("user:"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn episode_owner_is_podcast_owner_unless_service() {
+        assert_eq!(episode_owner(&json!({ "owner_id": "user:a" })), Some("user:a"));
+        assert_eq!(episode_owner(&json!({ "owner_id": "service" })), None);
+        assert_eq!(episode_owner(&json!({ "owner_id": null })), None);
+    }
 
     #[test]
     fn record_view_merges_id_into_data() {

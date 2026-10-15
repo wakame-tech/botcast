@@ -40,7 +40,7 @@ export default function EditPodcast() {
 		"/t/{tenantId}/records/{collectionId}/{recordId}",
 	);
 
-	// data は丸ごと置き換わるため、既存の値 (user_id / schedule など) を保って更新する
+	// data は丸ごと置き換わるため、既存の値 (schedule など) を保って更新する
 	const saveData = async (patch: Record<string, unknown>) => {
 		const current = (podcastRecord?.data ?? {}) as Record<string, unknown>;
 		await updatePodcast.mutateAsync({

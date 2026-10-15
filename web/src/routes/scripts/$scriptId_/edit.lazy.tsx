@@ -37,7 +37,7 @@ export function EditScript() {
 	);
 
 	const handleSubmit = async (values: ScriptFormValues) => {
-		// user_id など、フォームに無い既存の data を保ったまま更新する
+		// フォームに無い既存の data があれば保ったまま更新する
 		const current = (scriptRecord?.data ?? {}) as Record<string, unknown>;
 		await updateScript.mutateAsync({
 			params: {

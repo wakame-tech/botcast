@@ -1,6 +1,7 @@
 import { JsonSchemaForm } from "@/components/JsonSchemaForm";
 import { Button } from "@/components/ui/button";
-import { $cms, CMS_TENANT, recordToScript } from "@/lib/cms_client";
+import { useSession } from "@/hooks/useSession";
+import { $cms, CMS_TENANT, isOwner, recordToScript } from "@/lib/cms_client";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -15,7 +16,6 @@ const sampleContext = (args: Record<string, unknown>) => ({
 		title: "サンプル番組",
 		icon: "",
 		description: "試し実行用の番組",
-		user_id: "sample-user",
 	},
 	previous_episode: {
 		id: "sample-episode",
@@ -23,24 +23,19 @@ const sampleContext = (args: Record<string, unknown>) => ({
 		podcast_id: "sample-podcast",
 		description: "",
 		sections: [],
-		user_id: "sample-user",
 	},
 	mails: [
 		{
 			id: "sample-mail-1",
-			podcast_id: "sample-podcast",
 			episode_id: "sample-episode",
 			radio_name: "ラジオネーム テスト",
 			body: "いつも楽しく聴いています。",
-			user_id: "sample-user",
 		},
 		{
 			id: "sample-mail-2",
-			podcast_id: "sample-podcast",
 			episode_id: "sample-episode",
 			radio_name: "匿名希望",
 			body: "次回のテーマを教えてください。",
-			user_id: "sample-user",
 		},
 	],
 	arguments: args,
@@ -49,6 +44,7 @@ const sampleContext = (args: Record<string, unknown>) => ({
 export function Script() {
 	const navigate = useNavigate();
 	const { scriptId } = Route.useParams();
+	const { userId } = useSession();
 	const { data: scriptRecord } = $cms.useQuery(
 		"get",
 		"/t/{tenantId}/records/{collectionId}/{recordId}",
@@ -111,10 +107,14 @@ export function Script() {
 
 			<p>{script.description}</p>
 
-			<Link to="/scripts/$scriptId/edit" params={{ scriptId }}>
-				<Button>edit</Button>
-			</Link>
-			<Button onClick={handleDelete}>delete</Button>
+			{isOwner(script, userId) && (
+				<>
+					<Link to="/scripts/$scriptId/edit" params={{ scriptId }}>
+						<Button>edit</Button>
+					</Link>
+					<Button onClick={handleDelete}>delete</Button>
+				</>
+			)}
 
 			<pre className="p-2 text-sm bg-gray-1">
 				<code>{script.template}</code>

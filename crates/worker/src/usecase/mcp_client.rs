@@ -87,32 +87,6 @@ impl McpClient {
         Ok(text)
     }
 
-    /// コレクションが存在しなければ作成する（冪等）。
-    pub async fn ensure_collection(
-        &self,
-        name: &str,
-        schema: serde_json::Value,
-    ) -> anyhow::Result<()> {
-        let list = self.call_tool("CollectionApi_list", serde_json::json!({})).await?;
-        let start = list.find('[').or_else(|| list.find('{')).context("no JSON in CollectionApi_list response")?;
-        let collections: serde_json::Value = serde_json::from_str(&list[start..])?;
-        let exists = collections
-            .as_array()
-            .map(|arr| arr.iter().any(|c| c["name"] == name))
-            .unwrap_or(false);
-        if exists {
-            tracing::info!("collection '{}' already exists, skipping", name);
-            return Ok(());
-        }
-        self.call_tool(
-            "CollectionApi_create",
-            serde_json::json!({ "requestBody": { "name": name, "schema": schema } }),
-        )
-        .await?;
-        tracing::info!("created collection '{}'", name);
-        Ok(())
-    }
-
     pub async fn close(self) -> anyhow::Result<()> {
         self.service.cancel().await.context("Failed to close MCP client")?;
         Ok(())
@@ -213,7 +187,7 @@ mod tests {
                 "RecordApi_create",
                 serde_json::json!({
                     "collectionId": col_id,
-                    "requestBody": { "data": { "title": "test podcast", "icon": "🎙️", "user_id": "test-user" } }
+                    "requestBody": { "data": { "title": "test podcast", "icon": "🎙️" } }
                 }),
             )
             .await
@@ -236,7 +210,7 @@ mod tests {
                 "RecordApi_create",
                 serde_json::json!({
                     "collectionId": podcast_col_id,
-                    "requestBody": { "data": { "title": "podcast for episode test", "icon": "🎙️", "user_id": "test-user" } }
+                    "requestBody": { "data": { "title": "podcast for episode test", "icon": "🎙️" } }
                 }),
             )
             .await
@@ -255,8 +229,7 @@ mod tests {
                     "requestBody": {
                         "data": {
                             "title": "test episode",
-                            "podcast_id": podcast_record_id,
-                            "user_id": "test-user"
+                            "podcast_id": podcast_record_id
                         }
                     }
                 }),

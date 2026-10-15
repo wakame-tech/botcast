@@ -119,6 +119,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/t/{tenantId}/records/{collectionId}/eval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Evaluate an `x-reactive` field of several records without returning the records.
+         *     Fails with 400 (not an `x-reactive` field, missing input, over the limits),
+         *     404 (missing record or input record) or 503 (Dify Sandbox unreachable). */
+        post: operations["RecordApi_eval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/t/{tenantId}/records/{collectionId}/generate": {
         parameters: {
             query?: never;
@@ -361,6 +380,32 @@ export interface components {
             label: string;
             readonly created_at: string;
         };
+        EvalRecordsRequest: {
+            /** @description Name of the `x-reactive` field to evaluate */
+            field: string;
+            /** @description Records of the collection to evaluate (at most 200) */
+            record_ids: string[];
+            /** @description Input record ID for each input name declared in the field's `x-reactive.inputs` */
+            input?: Record<string, never>;
+            /** @description Values passed to every script as `vars` (e.g. today's date) */
+            vars?: Record<string, never>;
+        };
+        EvalRecordsResponse: {
+            /** @description Results keyed by record ID, shaped like `Record_.evaluated[field]` */
+            results: Record<string, never>;
+            evaluated_with: components["schemas"]["EvaluatedWith"];
+        };
+        /** @description Result of one script call. Exactly one of `value` / `error` is set. */
+        EvalResult: {
+            /** @description Return value of the script's `main` */
+            value?: unknown;
+            /** @description Why the call failed (exception, invalid return value, `result_schema` violation, ...) */
+            error?: string;
+        };
+        EvaluatedWith: {
+            /** @description Version of each input record, keyed by input name. Pass it as `expected_version` to make sure the input has not changed since */
+            input: Record<string, never>;
+        };
         ExecuteScriptRequest: {
             /** @enum {string} */
             language: "python3" | "nodejs";
@@ -464,6 +509,12 @@ export interface components {
              *     Pass it back as `If-Match` (update / delete) or `expected_version` (batch) for optimistic locking.
              */
             readonly version: number;
+            /** @description Results of the `x-reactive` fields requested with `eval`, keyed by field name.
+             *     An array field holds one `EvalResult` per element; any other field holds one `EvalResult` (null if the field is absent).
+             *     Only present when `eval` is given. */
+            readonly evaluated?: Record<string, never>;
+            /** @description Versions of the input records used for `evaluated`. Only present when `eval` is given. */
+            readonly evaluated_with?: components["schemas"]["EvaluatedWith"];
         };
         ReferencedByResponse: {
             items: components["schemas"]["ReferencingRecord"][];
@@ -505,6 +556,9 @@ export interface components {
         };
         UpdateCollection: {
             name: string;
+            /** @description New JSON Schema. Every existing record must satisfy it (otherwise 400 and nothing changes).
+             *     `x-unique` cannot be changed. */
+            schema?: Record<string, never>;
             access?: components["schemas"]["CollectionAccess"];
         };
         UploadImageRequest: {
@@ -531,7 +585,15 @@ export interface components {
         };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        /** @description Comma-separated `x-reactive` field names to evaluate into `evaluated` */
+        "EvalQuery.eval": string;
+        /** @description Input records as a JSON object `{"<name>": "<record ID>"}`.
+         *     `input.<name>=<record ID>` query parameters are accepted as well. */
+        "EvalQuery.input": string;
+        /** @description JSON object passed to every script as `vars` */
+        "EvalQuery.vars": string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -793,6 +855,13 @@ export interface operations {
                 limit?: number;
                 /** @description Number of records to skip */
                 offset?: number;
+                /** @description Comma-separated `x-reactive` field names to evaluate into `evaluated` */
+                eval?: components["parameters"]["EvalQuery.eval"];
+                /** @description Input records as a JSON object `{"<name>": "<record ID>"}`.
+                 *     `input.<name>=<record ID>` query parameters are accepted as well. */
+                input?: components["parameters"]["EvalQuery.input"];
+                /** @description JSON object passed to every script as `vars` */
+                vars?: components["parameters"]["EvalQuery.vars"];
             };
             header?: never;
             path: {
@@ -837,6 +906,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Record_"];
+                };
+            };
+        };
+    };
+    RecordApi_eval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                collectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalRecordsRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRecordsResponse"];
                 };
             };
         };
@@ -920,7 +1016,15 @@ export interface operations {
     };
     RecordApi_read: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Comma-separated `x-reactive` field names to evaluate into `evaluated` */
+                eval?: components["parameters"]["EvalQuery.eval"];
+                /** @description Input records as a JSON object `{"<name>": "<record ID>"}`.
+                 *     `input.<name>=<record ID>` query parameters are accepted as well. */
+                input?: components["parameters"]["EvalQuery.input"];
+                /** @description JSON object passed to every script as `vars` */
+                vars?: components["parameters"]["EvalQuery.vars"];
+            };
             header?: never;
             path: {
                 tenantId: string;

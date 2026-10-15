@@ -20,7 +20,8 @@ export interface Podcast {
 	title: string;
 	icon: string;
 	description: string;
-	user_id: string;
+	/** 所有者 (JWT の sub)。CMS のレコードの owner_id */
+	owner_id: string | null;
 	schedule?: PodcastSchedule;
 }
 
@@ -33,7 +34,7 @@ export interface Episode {
 	srt_url?: string;
 	sections: Section[];
 	duration_sec?: number;
-	user_id: string;
+	owner_id: string | null;
 }
 
 export interface Script {
@@ -42,27 +43,25 @@ export interface Script {
 	description: string;
 	template: string;
 	arguments: Record<string, unknown>;
-	user_id: string;
+	owner_id: string | null;
 }
 
 export interface Mail {
 	id: string;
-	podcast_id: string;
 	episode_id: string;
 	radio_name: string;
 	body: string;
-	user_id: string;
+	owner_id: string | null;
 }
 
 export function recordToMail(record: CmsRecord): Mail {
 	const d = record.data as Record<string, unknown>;
 	return {
 		id: record.id,
-		podcast_id: d.podcast_id as string,
 		episode_id: d.episode_id as string,
 		radio_name: (d.radio_name as string) ?? "",
 		body: (d.body as string) ?? "",
-		user_id: d.user_id as string,
+		owner_id: record.owner_id,
 	};
 }
 
@@ -73,7 +72,7 @@ export function recordToPodcast(record: CmsRecord): Podcast {
 		title: d.title as string,
 		icon: d.icon as string,
 		description: (d.description as string) ?? "",
-		user_id: d.user_id as string,
+		owner_id: record.owner_id,
 		schedule: d.schedule as PodcastSchedule | undefined,
 	};
 }
@@ -89,7 +88,7 @@ export function recordToEpisode(record: CmsRecord): Episode {
 		srt_url: d.srt_url as string | undefined,
 		sections: (d.sections as Section[]) ?? [],
 		duration_sec: d.duration_sec as number | undefined,
-		user_id: d.user_id as string,
+		owner_id: record.owner_id,
 	};
 }
 
@@ -101,8 +100,16 @@ export function recordToScript(record: CmsRecord): Script {
 		description: (d.description as string) ?? "",
 		template: (d.template as string) ?? "",
 		arguments: (d.arguments as Record<string, unknown>) ?? {},
-		user_id: d.user_id as string,
+		owner_id: record.owner_id,
 	};
+}
+
+/** サインイン中のユーザーがレコードの所有者か（編集・削除の導線を出すか） */
+export function isOwner(
+	record: { owner_id: string | null },
+	userId: string | null,
+): boolean {
+	return userId !== null && record.owner_id === userId;
 }
 
 export function toRecordData(

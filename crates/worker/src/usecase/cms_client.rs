@@ -145,18 +145,63 @@ impl CmsClient {
         Ok(res.as_array().cloned().unwrap_or_default())
     }
 
-    /// レコードを作成し、ID を返す
-    pub(crate) async fn create_record(
+    /// コレクションを作成し、既にあればスキーマ・access を合わせる。ID を返す
+    pub(crate) async fn ensure_collection(
+        &self,
+        name: &str,
+        schema: serde_json::Value,
+        access: serde_json::Value,
+    ) -> anyhow::Result<String> {
+        let collections = Self::send(self.request(reqwest::Method::GET, "/collections")).await?;
+        let existing = collections
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|c| c["name"] == name)
+            .cloned();
+        let body = serde_json::json!({ "name": name, "schema": schema, "access": access });
+        let collection = match existing {
+            Some(c) if collection_needs_update(&c, &schema, &access) => {
+                let id = collection_key(&c).context("id missing in collection")?;
+                tracing::info!("updating collection '{name}'");
+                Self::send(
+                    self.request(reqwest::Method::PUT, &format!("/collections/{id}"))
+                        .json(&body),
+                )
+                .await
+                .with_context(|| format!("Failed to update collection '{name}'"))?
+            }
+            Some(c) => c,
+            None => {
+                tracing::info!("creating collection '{name}'");
+                Self::send(self.request(reqwest::Method::POST, "/collections").json(&body))
+                    .await
+                    .with_context(|| format!("Failed to create collection '{name}'"))?
+            }
+        };
+        let id = collection_key(&collection).context("id missing in collection response")?;
+        self.collection_ids
+            .lock()
+            .await
+            .insert(name.to_string(), id.clone());
+        Ok(id)
+    }
+
+    /// レコードを作成し、ID を返す。`owner` を指定すると `X-On-Behalf-Of` でそのユーザーの所有として作成する
+    pub(crate) async fn create_record_as(
         &self,
         collection: &str,
         data: serde_json::Value,
+        owner: Option<&str>,
     ) -> anyhow::Result<String> {
         let cid = self.collection_id(collection).await?;
-        let res = Self::send(
-            self.request(reqwest::Method::POST, &format!("/records/{cid}"))
-                .json(&serde_json::json!({ "data": data })),
-        )
-        .await?;
+        let mut req = self
+            .request(reqwest::Method::POST, &format!("/records/{cid}"))
+            .json(&serde_json::json!({ "data": data }));
+        if let Some(owner) = owner {
+            req = req.header("X-On-Behalf-Of", owner);
+        }
+        let res = Self::send(req).await?;
         res["id"]
             .as_str()
             .map(str::to_string)
@@ -220,19 +265,27 @@ impl CmsClient {
     }
 }
 
+/// コレクションの ID（`collection:` 接頭辞なし）
+fn collection_key(collection: &serde_json::Value) -> Option<String> {
+    let id = collection["id"].as_str()?;
+    Some(id.strip_prefix("collection:").unwrap_or(id).to_string())
+}
+
+/// 既存コレクションのスキーマ・access が望む値と違うか
+fn collection_needs_update(
+    current: &serde_json::Value,
+    schema: &serde_json::Value,
+    access: &serde_json::Value,
+) -> bool {
+    &current["schema"] != schema || &current["access"] != access
+}
+
 fn parse_collection_ids(collections: &serde_json::Value) -> HashMap<String, String> {
     collections
         .as_array()
         .into_iter()
         .flatten()
-        .filter_map(|c| {
-            let name = c["name"].as_str()?;
-            let id = c["id"].as_str()?;
-            Some((
-                name.to_string(),
-                id.strip_prefix("collection:").unwrap_or(id).to_string(),
-            ))
-        })
+        .filter_map(|c| Some((c["name"].as_str()?.to_string(), collection_key(c)?)))
         .collect()
 }
 
@@ -286,5 +339,18 @@ mod tests {
         assert_eq!(ids.get("episodes").map(String::as_str), Some("abc"));
         assert_eq!(ids.get("podcasts").map(String::as_str), Some("def"));
         assert!(!ids.contains_key("broken"));
+    }
+
+    #[test]
+    fn collection_needs_update_when_schema_or_access_differs() {
+        let schema = serde_json::json!({ "type": "object" });
+        let access = serde_json::json!({ "read": "public", "write": "owner" });
+        let same = serde_json::json!({ "name": "p", "schema": schema, "access": access });
+        assert!(!collection_needs_update(&same, &schema, &access));
+        let other_schema =
+            serde_json::json!({ "name": "p", "schema": { "type": "string" }, "access": access });
+        assert!(collection_needs_update(&other_schema, &schema, &access));
+        let no_access = serde_json::json!({ "name": "p", "schema": schema });
+        assert!(collection_needs_update(&no_access, &schema, &access));
     }
 }
