@@ -39,8 +39,9 @@ botcast-cms と botcast のメールアドレス + パスワード認証をや�
 
 ### 設定
 
-- 環境変数 `FIREBASE_PROJECT_ID`（api）
-- CMS web のビルド時変数 `VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_AUTH_DOMAIN` / `VITE_FIREBASE_PROJECT_ID`（公開値。GHCR のイメージビルドではリポジトリ変数から渡す）
+- 環境変数 `FIREBASE_PROJECT_ID`（api。deploy の compose で既定 `botcast-cms`）。テスト用に JWKS の URL を `FIREBASE_JWKS_URL` で差し替えられる
+- web の Firebase config（`apiKey` / `authDomain` / `projectId`）は公開値なので、`VITE_FIREBASE_*` で上書きできる既定値としてコードに置く。ビルド引数・リポジトリ変数は増やさない
+- `user` のスキーマ変更（`pass` / `idx_user_email` / `DEFINE ACCESS` の削除、`uid` の追加）は起動時の `init_auth_schema` で冪等に行う
 
 ### CMS web
 
@@ -50,24 +51,24 @@ botcast-cms と botcast のメールアドレス + パスワード認証をや�
 
 ### その他
 
-`spec/main.tsp` → openapi / MCP の再生成、spec カード（認証）、CLAUDE.md を更新。
+認証エンドポイントは TypeSpec の外（手書きのルート）なので openapi / MCP の再生成は不要。spec カード（認証・パスワード変更）、README / ARCHITECTURE / CLAUDE.md を更新。
 
 ## botcast
 
 - `web/src/routes/signin.lazy.tsx` を Google ログインボタンのみにする（流れは CMS web と同じ。最後は既存の `saveToken`）
 - `web/src/components/user/ChangePasswordForm.tsx` とその導線を削除
-- `VITE_FIREBASE_*` を web のビルド引数（`deploy/selfhost/compose.yaml`、Dockerfile.web、GHCR のワークフロー）に追加
-- `npm run generate` で CMS の型を再生成。CLAUDE.md と `crates/worker/src/lib.rs` の説明を更新
+- ユーザー設定画面（`users/$userId`）はユーザー ID の表示のみにする
+- CLAUDE.md と `crates/worker/src/lib.rs` の説明を更新
 
 ## 本番移行（cdfy-dev、1 回）
 
 1. ユーザーが Firebase プロジェクトを作り、Google プロバイダを有効化し、承認済みドメインに cdfy-dev の CMS web / botcast web のホストを追加。Web アプリの config を共有する
-2. リポジトリ変数・`.env` に `FIREBASE_PROJECT_ID` / `VITE_FIREBASE_*` を設定し、新 CMS / web をリリース
+2. cdfy-dev の CMS の compose に `FIREBASE_PROJECT_ID` を反映し、新 CMS / web をリリース
 3. SurrealDB をバックアップ
 4. ユーザーが botcast web で Google ログインし、新しい `user:<id>` を作る
 5. 移行 SurrealQL（`deploy/selfhost/migrations/`）を流す
-   - podcasts / episodes / scripts / mails の各テーブルで `UPDATE <table> SET owner_id = $new WHERE owner_id = $old`
-   - `DELETE user WHERE uid = NONE`、`REMOVE FIELD pass ON user`、`REMOVE INDEX idx_user_email ON user`
+   - podcasts / episodes / scripts / mails の各テーブルで、旧ユーザー（`uid` が無い user）が持つレコードの `owner_id` を新ユーザーに付け替える
+   - `DELETE user WHERE uid = NONE`
 
 ## テスト
 
