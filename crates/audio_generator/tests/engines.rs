@@ -354,6 +354,14 @@ fn irodori_voices_responder(
     }
 }
 
+fn ref_audio(hash: &str, bytes: &[u8]) -> RefAudio {
+    RefAudio {
+        hash: hash.to_string(),
+        bytes: Arc::from(bytes),
+        content_type: "audio/wav".to_string(),
+    }
+}
+
 #[tokio::test]
 async fn openai_ensure_voice_uploads_only_when_needed() {
     let voices = Arc::new(Mutex::new(HashSet::new()));
@@ -381,7 +389,7 @@ async fn openai_ensure_voice_uploads_only_when_needed() {
 
     // サーバーに無い → POST（multipart の file と、ハッシュの先頭 12 文字を付けた voice_id）
     engine
-        .ensure_voice("t1", "alice", hash_1, b"RIFF-alice")
+        .ensure_voice("t1", "alice", &ref_audio(hash_1, b"RIFF-alice"))
         .await
         .unwrap();
     let requests = take();
@@ -406,14 +414,14 @@ async fn openai_ensure_voice_uploads_only_when_needed() {
 
     // 同じハッシュ → 何もしない
     engine
-        .ensure_voice("t1", "alice", hash_1, b"RIFF-alice")
+        .ensure_voice("t1", "alice", &ref_audio(hash_1, b"RIFF-alice"))
         .await
         .unwrap();
     assert!(take().is_empty());
 
     // ハッシュが違う → 別の ID で POST する（前の版は上書きしない）
     engine
-        .ensure_voice("t1", "alice", hash_2, b"RIFF-alice-2")
+        .ensure_voice("t1", "alice", &ref_audio(hash_2, b"RIFF-alice-2"))
         .await
         .unwrap();
     let requests = take();
@@ -430,7 +438,7 @@ async fn openai_ensure_voice_uploads_only_when_needed() {
     // 別のプロセス（エンジン）からは、サーバーにあれば上書きしない（一覧を見るだけ）
     let other = OpenAiEngine::new(format!("{url}/v1"), None, None, TIMEOUT).unwrap();
     other
-        .ensure_voice("t1", "alice", hash_1, b"RIFF-alice-other")
+        .ensure_voice("t1", "alice", &ref_audio(hash_1, b"RIFF-alice-other"))
         .await
         .unwrap();
     assert_eq!(
@@ -440,7 +448,7 @@ async fn openai_ensure_voice_uploads_only_when_needed() {
 
     // 別の名前空間（テナント）の同じ slug は別の ID でアップロードする
     other
-        .ensure_voice("t2", "alice", hash_1, b"RIFF-alice-t2")
+        .ensure_voice("t2", "alice", &ref_audio(hash_1, b"RIFF-alice-t2"))
         .await
         .unwrap();
     let requests = take();
@@ -458,6 +466,7 @@ async fn openai_synthesize_uses_versioned_voice_id() {
         ref_audio: Some(RefAudio {
             hash: "0123456789abcdef".to_string(),
             bytes: Arc::from(b"RIFF".to_vec()),
+            content_type: "audio/wav".to_string(),
         }),
         ..Default::default()
     };
@@ -497,7 +506,7 @@ async fn voicevox_ensure_voice_is_noop() {
     let (url, captured) = spawn_server(voicevox_responder).await;
     let engine = VoicevoxEngine::new(&url, TIMEOUT).unwrap();
     engine
-        .ensure_voice("t1", "3", "hash", b"RIFF")
+        .ensure_voice("t1", "3", &ref_audio("hash", b"RIFF"))
         .await
         .unwrap();
     assert!(captured.lock().unwrap().is_empty());

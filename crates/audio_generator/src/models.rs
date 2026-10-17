@@ -82,6 +82,8 @@ pub struct VoiceParams {
 pub struct RefAudio {
     pub hash: String,
     pub bytes: Arc<[u8]>,
+    /// MIME タイプ（`audio/wav` など。エンジンに渡すファイルの拡張子に使う）
+    pub content_type: String,
 }
 
 impl std::fmt::Debug for RefAudio {
@@ -89,6 +91,7 @@ impl std::fmt::Debug for RefAudio {
         f.debug_struct("RefAudio")
             .field("hash", &self.hash)
             .field("bytes", &format_args!("{} bytes", self.bytes.len()))
+            .field("content_type", &self.content_type)
             .finish()
     }
 }

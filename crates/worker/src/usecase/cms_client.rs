@@ -18,6 +18,24 @@ pub(crate) struct ListQuery {
     pub limit: Option<u32>,
 }
 
+/// CMS から取得・アップロードするファイルの大きさの上限（web のアップロードも同じ値）
+pub(crate) const MAX_FILE_SIZE: usize = 20 * 1024 * 1024;
+
+/// レコードのファイルのフィールド（CMS が `/images/{field}` のアップロードで書き込む
+/// `pointer` / `content_type` / `size` / `url`）のうち worker が使うもの
+#[derive(Debug, Clone, serde::Deserialize)]
+pub(crate) struct FileField {
+    pub content_type: String,
+    pub size: u64,
+}
+
+/// 取得したファイルの中身
+#[derive(Debug, Clone)]
+pub(crate) struct FileContent {
+    pub bytes: Vec<u8>,
+    pub content_type: String,
+}
+
 /// `POST /scripts` の結果
 #[derive(Debug, Clone)]
 pub(crate) struct ScriptOutput {
@@ -272,13 +290,15 @@ impl CmsClient {
         Ok(())
     }
 
-    /// レコードのフィールドに保存したファイル（`/records/{c}/{r}/images/{field}`）の中身を取得する
+    /// レコードのフィールドに保存したファイル（`/records/{c}/{r}/images/{field}`）の中身を取得する。
+    /// `max_size` バイトより大きければデコードせずにエラーにする
     pub(crate) async fn get_file(
         &self,
         collection: &str,
         record_id: &str,
         field: &str,
-    ) -> anyhow::Result<Vec<u8>> {
+        max_size: usize,
+    ) -> anyhow::Result<FileContent> {
         let res = record_api::record_api_get_image(
             &self.config,
             record_api::RecordApiGetImageParams {
@@ -291,7 +311,7 @@ impl CmsClient {
         )
         .await
         .map_err(cms_error)?;
-        decode_file(res)
+        decode_file(res, max_size)
     }
 
     /// ファイルをレコードのフィールドに保存し、取得用の URL（CMS からの相対パス）を返す
@@ -337,12 +357,25 @@ pub(crate) fn cms_error<T: Debug>(e: CmsError<T>) -> anyhow::Error {
 }
 
 /// `GET .../images/{field}` の応答（Base64 の JSON）からファイルの中身を取り出す
-fn decode_file(res: serde_json::Value) -> anyhow::Result<Vec<u8>> {
+fn decode_file(res: serde_json::Value, max_size: usize) -> anyhow::Result<FileContent> {
     let file: models::GetImageResponse =
         serde_json::from_value(res).context("unexpected file response from CMS")?;
-    BASE64
+    // Base64 は 3 バイトを 4 文字にする
+    if usize::try_from(file.size).map_or(true, |size| size > max_size)
+        || file.data.len() > max_size.div_ceil(3) * 4
+    {
+        anyhow::bail!(
+            "file from CMS is too large ({} bytes; limit {max_size} bytes)",
+            file.size
+        );
+    }
+    let bytes = BASE64
         .decode(file.data)
-        .context("file from CMS is not valid Base64")
+        .context("file from CMS is not valid Base64")?;
+    Ok(FileContent {
+        bytes,
+        content_type: file.content_type,
+    })
 }
 
 fn list_params(
@@ -470,9 +503,37 @@ mod tests {
     #[test]
     fn decode_file_reads_base64_body() {
         let res = json!({ "data": BASE64.encode(b"RIFF"), "content_type": "audio/wav", "size": 4 });
-        assert_eq!(decode_file(res).unwrap(), b"RIFF");
-        assert!(decode_file(json!({ "data": "!!", "content_type": "audio/wav", "size": 1 })).is_err());
-        assert!(decode_file(json!({ "url": "/x" })).is_err());
+        let file = decode_file(res, 4).unwrap();
+        assert_eq!(
+            (file.bytes.as_slice(), file.content_type.as_str()),
+            (&b"RIFF"[..], "audio/wav")
+        );
+        assert!(decode_file(
+            json!({ "data": "!!", "content_type": "audio/wav", "size": 1 }),
+            4
+        )
+        .is_err());
+        assert!(decode_file(json!({ "url": "/x" }), 4).is_err());
+    }
+
+    #[test]
+    fn decode_file_rejects_files_over_the_limit_before_decoding() {
+        // 申告の size が上限を超える
+        let res = json!({ "data": BASE64.encode(b"RIFF"), "content_type": "audio/wav", "size": 5 });
+        let err = decode_file(res, 4).unwrap_err().to_string();
+        assert!(err.contains("too large"), "{err}");
+        // size を偽っても Base64 の長さで弾く
+        let res =
+            json!({ "data": BASE64.encode(b"RIFFRIFF"), "content_type": "audio/wav", "size": 1 });
+        assert!(decode_file(res, 4)
+            .unwrap_err()
+            .to_string()
+            .contains("too large"));
+        assert!(decode_file(
+            json!({ "data": "", "content_type": "audio/wav", "size": -1 }),
+            4
+        )
+        .is_err());
     }
 
     #[test]

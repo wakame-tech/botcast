@@ -12,6 +12,28 @@ fn access() -> Value {
     json!({ "read": "public", "write": "owner" })
 }
 
+/// 声: 参照音声は人の声のサンプルなので、読めるのも所有者（とサービス）だけ
+fn voices_access() -> Value {
+    json!({ "read": "owner", "write": "owner" })
+}
+
+/// Serif の `style` の長さの上限
+const STYLE_MAX_LENGTH: u32 = 200;
+
+/// CMS がファイルのアップロード（`/images/{field}`）で書き込むフィールド
+fn file_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "pointer": { "type": "string" },
+            "content_type": { "type": "string" },
+            "size": { "type": "integer", "minimum": 0 },
+            "url": { "type": "string" }
+        },
+        "required": ["pointer", "content_type", "size", "url"]
+    })
+}
+
 pub(crate) fn scripts_schema() -> Value {
     json!({
         "type": "object",
@@ -42,7 +64,7 @@ pub(crate) fn voices_schema() -> Value {
             // VOICEVOX 互換で使う、style の名前 → スタイル ID
             "styles": { "type": "object", "additionalProperties": { "type": "string" } },
             // 声の複製に使う参照音声（CMS が `/images/ref_audio` のアップロードで書き込む）
-            "ref_audio": { "type": "object" },
+            "ref_audio": file_schema(),
             "params": {
                 "type": "object",
                 "properties": {
@@ -59,7 +81,7 @@ pub(crate) fn voices_schema() -> Value {
             // 声の説明（OpenAI 互換では台本に style が無いセリフの caption に使う）
             "caption": { "type": "string" },
             // 試聴用の音声（CMS が `/images/sample` のアップロードで書き込む）
-            "sample": { "type": "object" }
+            "sample": file_schema()
         },
         "required": ["slug", "name", "engine"],
         "additionalProperties": false,
@@ -86,8 +108,13 @@ pub(crate) fn podcasts_schema(scripts_id: &str) -> Value {
                 "required": ["cron", "script_id", "enabled"],
                 "additionalProperties": false
             },
-            // 配役: 台本の `speaker` に書く別名 → voices の slug
-            "cast": { "type": "object", "additionalProperties": { "type": "string" } }
+            // 配役: 台本の `speaker` に書く別名 → voices の slug。
+            // 数字だけの別名は旧形式の speaker（VOICEVOX のスタイル ID）と紛らわしいので禁止する
+            "cast": {
+                "type": "object",
+                "propertyNames": { "minLength": 1, "not": { "pattern": "^[0-9]+$" } },
+                "additionalProperties": { "type": "string" }
+            }
         },
         "required": ["title", "icon"],
         "additionalProperties": false
@@ -113,7 +140,7 @@ pub(crate) fn episodes_schema(podcasts_id: &str) -> Value {
                                 "speaker": { "type": "string" },
                                 "text": { "type": "string" },
                                 // 口調・感情の指定（自由文）
-                                "style": { "type": "string" }
+                                "style": { "type": "string", "maxLength": STYLE_MAX_LENGTH }
                             },
                             "required": ["type", "speaker", "text"],
                             "additionalProperties": false
@@ -160,7 +187,7 @@ pub(crate) fn mails_schema(episodes_id: &str) -> Value {
 
 /// 参照先から順に作成・更新し、得た ID を参照元の `x-ref` に埋め込む
 pub(crate) async fn seed(cms: &CmsClient) -> anyhow::Result<()> {
-    cms.ensure_collection("voices", voices_schema(), access())
+    cms.ensure_collection("voices", voices_schema(), voices_access())
         .await?;
     let scripts = cms.ensure_collection("scripts", scripts_schema(), access()).await?;
     let podcasts = cms
@@ -212,6 +239,11 @@ mod tests {
         assert!(!valid(&s, json!({ "title": "t", "podcast_id": "p", "sections": [
             { "type": "Serif", "speaker": "host", "text": "a", "style": 1 }
         ]})));
+        let style = |n: usize| json!({ "title": "t", "podcast_id": "p", "sections": [
+            { "type": "Serif", "speaker": "host", "text": "a", "style": "あ".repeat(n) }
+        ]});
+        assert!(valid(&s, style(STYLE_MAX_LENGTH as usize)));
+        assert!(!valid(&s, style(STYLE_MAX_LENGTH as usize + 1)));
     }
 
     #[test]
@@ -220,6 +252,10 @@ mod tests {
         assert!(valid(&s, json!({ "title": "t", "icon": "🎙️" })));
         assert!(valid(&s, json!({ "title": "t", "icon": "🎙️", "cast": { "ホスト": "zundamon" } })));
         assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "cast": { "ホスト": 3 } })));
+        // 数字だけの別名は旧形式の speaker と取り違えるので不可
+        assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "cast": { "3": "zundamon" } })));
+        assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "cast": { "": "zundamon" } })));
+        assert!(valid(&s, json!({ "title": "t", "icon": "🎙️", "cast": { "3号": "zundamon" } })));
     }
 
     #[test]
@@ -238,6 +274,18 @@ mod tests {
         assert!(!valid(&s, json!({ "slug": "3", "name": "n", "engine": "e" })));
         assert!(!valid(&s, json!({ "slug": "a", "name": "n", "engine": "e", "params": { "rate": 1 } })));
         assert!(!valid(&s, json!({ "slug": "a", "name": "n", "engine": "e", "user_id": "u" })));
+        // ファイルのフィールドは CMS のファイルの形だけ
+        for field in ["ref_audio", "sample"] {
+            assert!(!valid(&s, json!({ "slug": "a", "name": "n", "engine": "e", field: {} })));
+            assert!(!valid(&s, json!({ "slug": "a", "name": "n", "engine": "e", field: { "url": "/x" } })));
+        }
+    }
+
+    #[test]
+    fn voices_are_readable_only_by_owner() {
+        let access = voices_access();
+        assert_eq!(access, json!({ "read": "owner", "write": "owner" }));
+        serde_json::from_value::<cms_client::models::CollectionAccess>(access).unwrap();
     }
 
     #[test]

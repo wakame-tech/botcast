@@ -10,7 +10,7 @@
 //! - 絵文字は口調・効果音の指定になるのでそのまま渡す
 
 use super::{error_body, SynthesisRequest, TtsEngine};
-use crate::config::Secret;
+use crate::{config::Secret, models::RefAudio};
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use reqwest::{multipart, RequestBuilder, StatusCode};
@@ -76,8 +76,17 @@ impl std::fmt::Debug for OpenAiEngine {
     }
 }
 
-/// 参照音声の拡張子を中身から決める（サーバーは拡張子で形式を判断する）。
-fn audio_extension(bytes: &[u8]) -> &'static str {
+/// 参照音声の拡張子を MIME タイプから決め、分からなければ中身から決める（サーバーは拡張子で形式を判断する）。
+fn audio_extension(content_type: &str, bytes: &[u8]) -> &'static str {
+    let mime = content_type.split(';').next().unwrap_or_default().trim();
+    match mime.to_ascii_lowercase().as_str() {
+        "audio/wav" | "audio/wave" | "audio/x-wav" | "audio/vnd.wave" => return "wav",
+        "audio/flac" | "audio/x-flac" => return "flac",
+        "audio/ogg" | "audio/opus" => return "ogg",
+        "audio/mpeg" | "audio/mp3" => return "mp3",
+        "audio/mp4" | "audio/m4a" | "audio/x-m4a" => return "m4a",
+        _ => {}
+    }
     if bytes.starts_with(b"RIFF") {
         "wav"
     } else if bytes.starts_with(b"fLaC") {
@@ -189,18 +198,19 @@ impl OpenAiEngine {
             .is_some_and(|voices| voices.iter().any(|v| v["id"] == voice_id)))
     }
 
-    fn voice_file(voice_id: &str, bytes: &[u8]) -> Result<multipart::Part> {
-        let file_name = format!("{voice_id}.{}", audio_extension(bytes));
-        Ok(multipart::Part::bytes(bytes.to_vec())
+    fn voice_file(voice_id: &str, ref_audio: &RefAudio) -> Result<multipart::Part> {
+        let extension = audio_extension(&ref_audio.content_type, &ref_audio.bytes);
+        let file_name = format!("{voice_id}.{extension}");
+        Ok(multipart::Part::bytes(ref_audio.bytes.to_vec())
             .file_name(file_name)
             .mime_str("application/octet-stream")?)
     }
 
     /// 参照音声を POST する。他のジョブが先に同じ版を上げていた（409）ときもそのまま使う。
-    async fn upload_voice(&self, voice_id: &str, bytes: &[u8]) -> Result<()> {
+    async fn upload_voice(&self, voice_id: &str, ref_audio: &RefAudio) -> Result<()> {
         let url = format!("{}/audio/voices", self.endpoint);
         let form = multipart::Form::new()
-            .part("file", Self::voice_file(voice_id, bytes)?)
+            .part("file", Self::voice_file(voice_id, ref_audio)?)
             .text("voice_id", voice_id.to_string());
         let res = self
             .auth(self.client.post(&url))
@@ -241,21 +251,20 @@ impl TtsEngine for OpenAiEngine {
         Ok(res.bytes().await?.to_vec())
     }
 
-    #[instrument(skip(self, bytes))]
+    #[instrument(skip(self, ref_audio))]
     async fn ensure_voice(
         &self,
         namespace: &str,
         voice_id: &str,
-        hash: &str,
-        bytes: &[u8],
+        ref_audio: &RefAudio,
     ) -> Result<()> {
-        let server_id = server_voice_id(namespace, voice_id, hash);
+        let server_id = server_voice_id(namespace, voice_id, &ref_audio.hash);
         if self.synced_voices.lock().unwrap().contains(&server_id) {
             return Ok(());
         }
         // 版ごとに ID が違うので、既にあれば同じ参照音声。上書きしない
         if !self.has_voice(&server_id).await? {
-            self.upload_voice(&server_id, bytes).await?;
+            self.upload_voice(&server_id, ref_audio).await?;
             tracing::info!("uploaded reference audio of voice {voice_id} as {server_id}");
         }
         self.synced_voices.lock().unwrap().insert(server_id);
@@ -286,11 +295,20 @@ mod tests {
 
     #[test]
     fn detects_audio_extension() {
-        assert_eq!(audio_extension(b"RIFF....WAVE"), "wav");
-        assert_eq!(audio_extension(b"fLaC...."), "flac");
-        assert_eq!(audio_extension(b"ID3....."), "mp3");
-        assert_eq!(audio_extension(b"OggS...."), "ogg");
-        assert_eq!(audio_extension(b"????"), "wav");
+        assert_eq!(audio_extension("", b"RIFF....WAVE"), "wav");
+        assert_eq!(audio_extension("", b"fLaC...."), "flac");
+        assert_eq!(audio_extension("", b"ID3....."), "mp3");
+        assert_eq!(audio_extension("", b"OggS...."), "ogg");
+        assert_eq!(audio_extension("audio/unknown", b"????"), "wav");
+    }
+
+    #[test]
+    fn audio_extension_prefers_content_type() {
+        assert_eq!(audio_extension("audio/mpeg", b"RIFF....WAVE"), "mp3");
+        assert_eq!(audio_extension("audio/x-wav", b"ID3....."), "wav");
+        assert_eq!(audio_extension("audio/flac", b""), "flac");
+        assert_eq!(audio_extension("audio/ogg; codecs=opus", b""), "ogg");
+        assert_eq!(audio_extension("audio/x-m4a", b""), "m4a");
     }
 
     #[test]

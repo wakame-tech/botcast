@@ -50,6 +50,8 @@ export function CastForm({ value, onSubmit }: CastFormProps) {
 	const aliases = rows.map((r) => r.alias.trim()).filter((a) => a !== "");
 	const duplicated = aliases.length !== new Set(aliases).size;
 	const missingAlias = rows.some((r) => r.alias.trim() === "" && r.slug !== "");
+	// 数字だけの別名は旧形式の speaker (VOICEVOX のスタイル ID) と取り違えるので使えない
+	const numericAlias = aliases.some((a) => /^[0-9]+$/.test(a));
 
 	const update = (key: number, patch: Partial<Row>) =>
 		setRows(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -122,7 +124,15 @@ export function CastForm({ value, onSubmit }: CastFormProps) {
 			{missingAlias && (
 				<p className="text-sm text-red-500">別名が空の配役があります</p>
 			)}
-			<Button type="submit" disabled={duplicated || missingAlias}>
+			{numericAlias && (
+				<p className="text-sm text-red-500">
+					数字だけの別名は使えません (旧形式の speaker と区別するため)
+				</p>
+			)}
+			<Button
+				type="submit"
+				disabled={duplicated || missingAlias || numericAlias}
+			>
 				配役を保存
 			</Button>
 		</form>

@@ -85,6 +85,9 @@ C4Component
 
 - 声は CMS の `voices`（`slug` / `name` / `engine` / `voice_id` / `styles` / `ref_audio` / `params` / `seed` / `caption` / `sample`）、番組の配役は `podcasts.cast`（別名 → 声の slug）
 - worker（`usecase/voices.rs` の `SpeakerResolver`）が音声生成の前に、台本の `speaker` を 配役の別名 → `voices` の slug → 数字だけなら旧形式（`TTS_DEFAULT_ENGINE` の VOICEVOX のスタイル ID）の順で `ResolvedVoice` にする。解決できなければ、どのセクションのどの speaker かを書いたエラーでジョブを失敗させる
-- 参照音声（`voices.ref_audio`）は、声のエンジンが OpenAI 互換のときだけ CMS から取得してハッシュを付け、audio_generator がエンジンに同期する。同じジョブで同じ声は 1 度だけ取得する
+- 使える声は番組の持ち主（podcast の `owner_id`）の声だけ（配役経由・slug 直接の両方）。他人の声・同じ slug が複数ある声・slug の形でない配役の値は、その speaker のエラーにする。`voices` は `read: owner`（参照音声は人の声のサンプルなので本人とサービス以外は読めない）
+- 配役の別名に数字だけの文字列は使えない（旧形式の speaker と区別するため。スキーマと web の両方で弾く）
+- 参照音声（`voices.ref_audio`）は、声のエンジンが OpenAI 互換のときだけ CMS から取得してハッシュを付け、audio_generator がエンジンに同期する。音声（`audio/*`）で 20MB 以下に限る。声のレコードの `version` と大きさが同じなら、プロセス内のキャッシュ（上限 16 件）でジョブをまたいで使い回す
+- 台本生成（LLM）には配役を、改行を除き 40 字までにした名前・style の名前の JSON としてユーザーメッセージで渡す（システムプロンプトに埋め込まない）
 - Serif の `style`（口調・感情の自由文）は、VOICEVOX 互換では声の `styles` で引き、OpenAI 互換では caption に渡す。OpenAI 互換で style が無いセリフは声の `caption` を使う
-- 番組が見つからないエピソードは配役なしで解決する（旧形式の speaker はそのまま作れる）
+- 番組が見つからないエピソードは配役なしで解決する（旧形式の speaker はそのまま作れる。持ち主が分からないので声は使えない）

@@ -1,5 +1,7 @@
 use super::cms_client::CmsClient;
-use super::voices::{podcast_cast, Engines, SpeakerResolver, Voice, VoiceStore};
+use super::voices::{
+    find_owned_voice, podcast_cast, Engines, RefAudioCache, SpeakerResolver, Voice,
+};
 use crate::error::Error;
 use anyhow::Context;
 use audio_generator::{
@@ -45,6 +47,8 @@ pub(crate) struct EpisodeService {
     engines: Arc<Engines>,
     /// TTS のキャッシュの名前空間（CMS のテナント ID）
     tenant: String,
+    /// 参照音声（ジョブをまたいで使い回す）
+    ref_audios: Arc<RefAudioCache>,
 }
 
 impl EpisodeService {
@@ -59,10 +63,11 @@ impl EpisodeService {
             tts,
             engines,
             tenant,
+            ref_audios: Default::default(),
         }
     }
 
-    /// エピソードの番組の配役（別名 → 声。声が見つからなければ `None`）
+    /// エピソードの番組の配役（別名 → 声。番組の持ち主の声が見つからなければ `None`）
     pub(crate) async fn cast_of_episode(
         &self,
         episode_id: &str,
@@ -71,10 +76,12 @@ impl EpisodeService {
         let podcast_id = data["podcast_id"]
             .as_str()
             .context("episode has no podcast_id")?;
-        let cast = podcast_cast(&self.cms.get_record("podcasts", podcast_id).await?)?;
-        let mut voices = Vec::with_capacity(cast.len());
-        for (alias, slug) in cast {
-            voices.push((alias, self.cms.find_voice(&slug).await?));
+        let podcast = self.cms.get_record("podcasts", podcast_id).await?;
+        let owner = podcast["owner_id"].as_str();
+        let mut voices = vec![];
+        for (alias, slug) in podcast_cast(&podcast)? {
+            let voice = find_owned_voice(self.cms.as_ref(), &slug, owner).await?;
+            voices.push((alias, voice.ok().flatten()));
         }
         Ok(voices)
     }
@@ -101,21 +108,30 @@ impl EpisodeService {
             .as_str()
             .context("episode has no podcast_id")
             .map_err(Error::Other)?;
-        let cast = match self.cms.get_record("podcasts", podcast_id).await {
-            Ok(podcast) => podcast_cast(&podcast).map_err(Error::Other)?,
+        let podcast = match self.cms.get_record("podcasts", podcast_id).await {
+            Ok(podcast) => podcast,
             // 番組が消えたエピソードも、旧形式の speaker なら今までどおり作れるようにする
             Err(e) if e.to_string().contains("CMS returned 404") => {
                 tracing::warn!("podcast {podcast_id} not found; resolving speakers without cast");
-                Default::default()
+                serde_json::Value::Null
             }
             Err(e) => {
                 return Err(Error::Other(e.context("Failed to fetch podcast")));
             }
         };
-        let sections = SpeakerResolver::new(self.cms.as_ref(), &cast, &self.engines)
-            .resolve_sections(sections)
-            .await
-            .map_err(Error::Other)?;
+        let cast = podcast_cast(&podcast).map_err(Error::Other)?;
+        // 声は番組の持ち主のものだけを使う
+        let owner = podcast["owner_id"].as_str();
+        let sections = SpeakerResolver::new(
+            self.cms.as_ref(),
+            &cast,
+            &self.engines,
+            owner,
+            &self.ref_audios,
+        )
+        .resolve_sections(sections)
+        .await
+        .map_err(Error::Other)?;
 
         let SynthesisResult {
             out_path,

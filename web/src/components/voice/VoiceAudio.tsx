@@ -4,6 +4,7 @@ import {
 	$cms,
 	CMS_TENANT,
 	type CmsFile,
+	MAX_FILE_SIZE,
 	audioContentType,
 	fileToBase64,
 } from "@/lib/cms_client";
@@ -56,6 +57,12 @@ export function VoiceAudioField(props: VoiceAudioFieldProps) {
 		const contentType = audioContentType(file);
 		if (!contentType) {
 			setError("wav か mp3 のファイルを選んでください");
+			return;
+		}
+		if (file.size > MAX_FILE_SIZE) {
+			setError(
+				`ファイルが大きすぎます (上限 ${MAX_FILE_SIZE / 1024 / 1024}MB)`,
+			);
 			return;
 		}
 		setError(undefined);

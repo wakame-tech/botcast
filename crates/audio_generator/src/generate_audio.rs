@@ -308,12 +308,7 @@ pub async fn generate_audio_in_dir(
         if synced.insert((&voice.engine, &voice.voice_id, &ref_audio.hash)) {
             entry
                 .engine
-                .ensure_voice(
-                    cache_namespace,
-                    &voice.voice_id,
-                    &ref_audio.hash,
-                    &ref_audio.bytes,
-                )
+                .ensure_voice(cache_namespace, &voice.voice_id, ref_audio)
                 .await
                 .with_context(|| {
                     format!(
@@ -436,6 +431,7 @@ mod tests {
                     ref_audio: Some(crate::models::RefAudio {
                         hash: "abc".to_string(),
                         bytes: Arc::from(vec![1u8]),
+                        content_type: "audio/wav".to_string(),
                     }),
                     ..voice.clone()
                 },

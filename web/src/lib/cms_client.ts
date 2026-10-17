@@ -276,6 +276,9 @@ export const audioContentType = (
 	return null;
 };
 
+/** アップロードするファイルの大きさの上限 (worker の `MAX_FILE_SIZE` と同じ値) */
+export const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
 /** ファイルを Base64 にする (CMS のアップロードの形式) */
 export const fileToBase64 = async (file: Blob): Promise<string> => {
 	const bytes = new Uint8Array(await file.arrayBuffer());
