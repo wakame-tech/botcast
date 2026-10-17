@@ -8,8 +8,8 @@ use super::cms_client::{CmsClient, ListQuery};
 use anyhow::{bail, Context};
 use async_trait::async_trait;
 use audio_generator::{
+    config::{EngineKind, TtsConfig},
     models::{RefAudio, ResolvedSection, ResolvedVoice, Section, VoiceParams},
-    registry::TtsRegistry,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -103,15 +103,23 @@ impl VoiceStore for CmsClient {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Engines {
     pub names: BTreeSet<String>,
+    /// 参照音声と caption を使うエンジン（OpenAI 互換）
+    pub openai: BTreeSet<String>,
     /// 旧形式の speaker に使うエンジン
     pub default: Option<String>,
 }
 
 impl Engines {
-    pub(crate) fn from_registry(registry: &TtsRegistry) -> Self {
+    pub(crate) fn from_config(config: &TtsConfig) -> Self {
         Self {
-            names: registry.engine_names().map(str::to_string).collect(),
-            default: registry.default_engine().ok().map(str::to_string),
+            names: config.engines.iter().map(|e| e.name.clone()).collect(),
+            openai: config
+                .engines
+                .iter()
+                .filter(|e| e.kind == EngineKind::OpenAi)
+                .map(|e| e.name.clone())
+                .collect(),
+            default: config.default_engine.clone(),
         }
     }
 }
@@ -161,15 +169,17 @@ impl<'a> SpeakerResolver<'a> {
         let resolved = match self.store.find_voice(slug).await? {
             None => None,
             Some(voice) => {
+                // 参照音声と caption は OpenAI 互換のエンジンだけが使う（VOICEVOX 互換では取得しない）
+                let openai = self.engines.openai.contains(&voice.engine);
                 let ref_audio = match &voice.ref_audio {
-                    Some(_) => {
+                    Some(_) if openai => {
                         let bytes = self.store.fetch_ref_audio(&voice).await?;
                         Some(RefAudio {
                             hash: ref_audio_hash(&bytes),
                             bytes: bytes.into(),
                         })
                     }
-                    None => None,
+                    _ => None,
                 };
                 // 参照音声を使う声は voice_id を省略でき、slug をエンジンの voice 名にする
                 let voice_id = match (&voice.voice_id, &ref_audio) {
@@ -178,7 +188,7 @@ impl<'a> SpeakerResolver<'a> {
                     (None, None) => bail!("voice {slug:?} has neither voice_id nor ref_audio"),
                 };
                 self.captions
-                    .insert(slug.to_string(), voice.caption.clone());
+                    .insert(slug.to_string(), voice.caption.clone().filter(|_| openai));
                 Some(Arc::new(ResolvedVoice {
                     engine: voice.engine,
                     voice_id,
@@ -321,6 +331,7 @@ mod tests {
     fn engines() -> Engines {
         Engines {
             names: ["voicevox", "irodori"].map(str::to_string).into(),
+            openai: ["irodori"].map(str::to_string).into(),
             default: Some("voicevox".to_string()),
         }
     }
@@ -523,6 +534,50 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("neither voice_id nor ref_audio"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn voicevox_voice_ignores_ref_audio_and_caption() {
+        let store = FakeStore {
+            voices: vec![voice(
+                "v",
+                json!({
+                    "slug": "zundamon", "name": "ずんだもん", "engine": "voicevox", "voice_id": "3",
+                    "caption": "元気な声",
+                    "ref_audio": { "pointer": "p", "content_type": "audio/wav", "size": 1, "url": "/x" }
+                }),
+            )],
+            ..Default::default()
+        };
+        let cast = Cast::new();
+        let engines = engines();
+        let resolved = SpeakerResolver::new(&store, &cast, &engines)
+            .resolve_sections(vec![serif("zundamon", None)])
+            .await
+            .unwrap();
+        let v = voice_of(&resolved[0]);
+        assert_eq!((v.style.as_ref(), v.ref_audio.as_ref()), (None, None));
+        assert!(store.fetches.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn engines_from_config_marks_openai_engines() {
+        let config = TtsConfig::from_lookup(|key| {
+            match key {
+                "TTS_ENGINES" => Some("voicevox,irodori"),
+                "TTS_ENGINE_VOICEVOX_KIND" => Some("voicevox"),
+                "TTS_ENGINE_VOICEVOX_ENDPOINT" => Some("http://vv:50021"),
+                "TTS_ENGINE_IRODORI_KIND" => Some("openai"),
+                "TTS_ENGINE_IRODORI_ENDPOINT" => Some("http://gpu:8088/v1"),
+                _ => None,
+            }
+            .map(str::to_string)
+        })
+        .unwrap();
+        let engines = Engines::from_config(&config);
+        assert_eq!(engines.names.len(), 2);
+        assert!(engines.openai.contains("irodori") && !engines.openai.contains("voicevox"));
+        assert_eq!(engines.default.as_deref(), Some("voicevox"));
     }
 
     #[test]

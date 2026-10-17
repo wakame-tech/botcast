@@ -49,6 +49,7 @@ export function CastForm({ value, onSubmit }: CastFormProps) {
 	);
 	const aliases = rows.map((r) => r.alias.trim()).filter((a) => a !== "");
 	const duplicated = aliases.length !== new Set(aliases).size;
+	const missingAlias = rows.some((r) => r.alias.trim() === "" && r.slug !== "");
 
 	const update = (key: number, patch: Partial<Row>) =>
 		setRows(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -118,7 +119,10 @@ export function CastForm({ value, onSubmit }: CastFormProps) {
 			{duplicated && (
 				<p className="text-sm text-red-500">別名が重複しています</p>
 			)}
-			<Button type="submit" disabled={duplicated}>
+			{missingAlias && (
+				<p className="text-sm text-red-500">別名が空の配役があります</p>
+			)}
+			<Button type="submit" disabled={duplicated || missingAlias}>
 				配役を保存
 			</Button>
 		</form>

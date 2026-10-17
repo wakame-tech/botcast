@@ -11,6 +11,7 @@ import {
 	$cms,
 	CMS_TENANT,
 	isOwner,
+	recordToPodcast,
 	recordToVoice,
 	toRecordData,
 } from "@/lib/cms_client";
@@ -38,6 +39,11 @@ export function VoiceDetail() {
 		"put",
 		"/t/{tenantId}/records/{collectionId}/{recordId}",
 	);
+	const { data: podcastRecords } = $cms.useQuery(
+		"get",
+		"/t/{tenantId}/records/{collectionId}",
+		{ params: { path: { tenantId: CMS_TENANT, collectionId: "podcasts" } } },
+	);
 	const deleteVoice = $cms.useMutation(
 		"delete",
 		"/t/{tenantId}/records/{collectionId}/{recordId}",
@@ -48,6 +54,10 @@ export function VoiceDetail() {
 	}
 	const voice = recordToVoice(record);
 	const editable = isOwner(voice, userId);
+	// この声を配役に使っている番組 (削除すると音声生成が失敗する)
+	const castIn = (podcastRecords ?? [])
+		.map(recordToPodcast)
+		.filter((p) => Object.values(p.cast).includes(voice.slug));
 
 	const handleSubmit = async (input: VoiceInput) => {
 		// data は丸ごと置き換わるため、ファイルのフィールド (ref_audio / sample) を保って入れ直す
@@ -92,11 +102,13 @@ export function VoiceDetail() {
 
 			{editable && (
 				<>
-					<VoiceForm
-						key={record.updated_at ?? voiceId}
-						value={voice}
-						onSubmit={handleSubmit}
-					/>
+					<VoiceForm value={voice} onSubmit={handleSubmit} />
+					{castIn.length > 0 && (
+						<p className="text-sm text-red-500">
+							この声は次の番組の配役に使われています。削除すると、配役を直すまで音声を生成できません:{" "}
+							{castIn.map((p) => p.title).join("、")}
+						</p>
+					)}
 					<div className="flex items-center">
 						<div className="flex-grow" />
 						<Button className="bg-red-400" onClick={handleDelete}>

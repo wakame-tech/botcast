@@ -223,7 +223,6 @@ MCPツールを使用してエピソードの台本を生成し、CMSに保存�
 台本はsectionsフィールドに格納され、各セクションは\
 SerifSection {\"type\": \"Serif\", \"speaker\", \"text\", \"style\"(任意)} または\
 AudioSection {\"type\": \"Audio\", \"url\", \"from\"(任意), \"to\"(任意)} の形式です。\n\
-speaker には番組の配役の別名を書き、TTS エンジン固有の ID（数字など）は書かないでください。\
 style は口調・感情の指定で、自由文で書けます（例: 「楽しそうに」「ささやくように」）。不要なら省略してください。\n",
     );
     if cast.is_empty() {
@@ -232,7 +231,10 @@ style は口調・感情の指定で、自由文で書けます（例: 「楽し
         );
         return prompt;
     }
-    prompt.push_str("この番組の配役（speaker に書く別名）:\n");
+    prompt.push_str(
+        "speaker には番組の配役の別名を書き、TTS エンジン固有の ID（数字など）は書かないでください。\n\
+この番組の配役（speaker に書く別名）:\n",
+    );
     for (alias, voice) in cast {
         match voice {
             Some(voice) if voice.styles.is_empty() => {
@@ -308,6 +310,8 @@ mod tests {
     fn script_system_prompt_without_cast() {
         let prompt = script_system_prompt(&[]);
         assert!(prompt.contains("配役がありません"), "{prompt}");
+        // 配役の無い番組は既存の speaker（旧形式の数字など）を使い続けられるようにする
+        assert!(!prompt.contains("書かないでください"), "{prompt}");
         assert!(prompt.contains("SerifSection"), "{prompt}");
     }
 

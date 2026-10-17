@@ -85,5 +85,6 @@ C4Component
 
 - 声は CMS の `voices`（`slug` / `name` / `engine` / `voice_id` / `styles` / `ref_audio` / `params` / `seed` / `caption` / `sample`）、番組の配役は `podcasts.cast`（別名 → 声の slug）
 - worker（`usecase/voices.rs` の `SpeakerResolver`）が音声生成の前に、台本の `speaker` を 配役の別名 → `voices` の slug → 数字だけなら旧形式（`TTS_DEFAULT_ENGINE` の VOICEVOX のスタイル ID）の順で `ResolvedVoice` にする。解決できなければ、どのセクションのどの speaker かを書いたエラーでジョブを失敗させる
-- 参照音声（`voices.ref_audio`）は CMS から取得してハッシュを付け、audio_generator が OpenAI 互換のエンジンに同期する。同じジョブで同じ声は 1 度だけ取得する
-- Serif の `style`（口調・感情の自由文）は、VOICEVOX 互換では声の `styles` で引き、OpenAI 互換では caption に渡す。style が無いセリフは声の `caption` を使う
+- 参照音声（`voices.ref_audio`）は、声のエンジンが OpenAI 互換のときだけ CMS から取得してハッシュを付け、audio_generator がエンジンに同期する。同じジョブで同じ声は 1 度だけ取得する
+- Serif の `style`（口調・感情の自由文）は、VOICEVOX 互換では声の `styles` で引き、OpenAI 互換では caption に渡す。OpenAI 互換で style が無いセリフは声の `caption` を使う
+- 番組が見つからないエピソードは配役なしで解決する（旧形式の speaker はそのまま作れる）

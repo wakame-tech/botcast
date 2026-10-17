@@ -148,6 +148,8 @@ export function VoiceForm({ value, onSubmit }: VoiceFormProps) {
 				value={slug}
 				onChange={(e) => setSlug(e.target.value)}
 				pattern={SLUG_PATTERN}
+				// 配役・台本は slug で声を参照するので、作成後は変えない
+				readOnly={value !== undefined}
 				required
 			/>
 			<label className="text-sm" htmlFor="voice-name">

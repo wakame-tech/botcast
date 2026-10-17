@@ -42,13 +42,24 @@ const EPISODES: &str = "episodes";
 pub(crate) struct EpisodeService {
     cms: Arc<CmsClient>,
     tts: Arc<TtsRegistry>,
+    engines: Arc<Engines>,
     /// TTS のキャッシュの名前空間（CMS のテナント ID）
     tenant: String,
 }
 
 impl EpisodeService {
-    pub(crate) fn new(cms: Arc<CmsClient>, tts: Arc<TtsRegistry>, tenant: String) -> Self {
-        Self { cms, tts, tenant }
+    pub(crate) fn new(
+        cms: Arc<CmsClient>,
+        tts: Arc<TtsRegistry>,
+        engines: Arc<Engines>,
+        tenant: String,
+    ) -> Self {
+        Self {
+            cms,
+            tts,
+            engines,
+            tenant,
+        }
     }
 
     /// エピソードの番組の配役（別名 → 声。声が見つからなければ `None`）
@@ -90,15 +101,18 @@ impl EpisodeService {
             .as_str()
             .context("episode has no podcast_id")
             .map_err(Error::Other)?;
-        let podcast = self
-            .cms
-            .get_record("podcasts", podcast_id)
-            .await
-            .context("Failed to fetch podcast")
-            .map_err(Error::Other)?;
-        let cast = podcast_cast(&podcast).map_err(Error::Other)?;
-        let engines = Engines::from_registry(&self.tts);
-        let sections = SpeakerResolver::new(self.cms.as_ref(), &cast, &engines)
+        let cast = match self.cms.get_record("podcasts", podcast_id).await {
+            Ok(podcast) => podcast_cast(&podcast).map_err(Error::Other)?,
+            // 番組が消えたエピソードも、旧形式の speaker なら今までどおり作れるようにする
+            Err(e) if e.to_string().contains("CMS returned 404") => {
+                tracing::warn!("podcast {podcast_id} not found; resolving speakers without cast");
+                Default::default()
+            }
+            Err(e) => {
+                return Err(Error::Other(e.context("Failed to fetch podcast")));
+            }
+        };
+        let sections = SpeakerResolver::new(self.cms.as_ref(), &cast, &self.engines)
             .resolve_sections(sections)
             .await
             .map_err(Error::Other)?;
