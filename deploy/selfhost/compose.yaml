@@ -1,7 +1,7 @@
 # セルフホスト構成 (docker compose 1 台構成)
 # - CMS は外部 (CMS_URL) を使う
 # - 音声・字幕ファイルは CMS に保存する
-# - VOICEVOX は起動しない (VOICEVOX_ENDPOINT を設定すれば外部のものを使える)
+# - TTS エンジンは起動しない (worker.env の TTS_ENGINES / VOICEVOX_ENDPOINT で外部のものを使う)
 # - worker / web は GHCR のイメージ (.github/workflows/images.yml) を使う:
 #     docker compose pull && docker compose up -d --remove-orphans
 #   手元でビルドするときは docker compose up -d --build
@@ -31,7 +31,7 @@ services:
       - CMS_TENANT=${CMS_TENANT:-botcast}
       - API_KEY=${API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # ANTHROPIC_MODEL / VOICEVOX_ENDPOINT は空文字だとそのまま使われるため
+      # ANTHROPIC_MODEL / VOICEVOX_ENDPOINT / TTS_* は空文字だとそのまま使われるため
       # 必要なときだけ env_file (worker.env) 経由で渡す
       - OTLP_COLLECTOR_ENDPOINT=http://otel-collector:4317
       - KAFRU_DB_HOST=kafru-db

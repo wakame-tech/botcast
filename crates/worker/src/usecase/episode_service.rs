@@ -4,6 +4,7 @@ use anyhow::Context;
 use audio_generator::{
     generate_audio::{generate_audio, SynthesisResult},
     models::Section,
+    registry::TtsRegistry,
     workdir::WorkDir,
 };
 use std::sync::Arc;
@@ -20,14 +21,14 @@ const EPISODES: &str = "episodes";
 ///   participant kafru as kafru
 ///   participant worker as worker
 ///   participant cms as botcast-cms
-///   participant vv as VoiceVox
+///   participant tts as TTS エンジン
 ///
 ///   kafru->>worker: execute job (generateAudio)
 ///   worker->>cms: GET /records/{episodes の collection ID}/{id}
 ///   cms-->>worker: sections
-///   worker->>vv: 音声合成 (各セクション)
-///   vv-->>worker: wav
-///   worker->>worker: wav 結合 → mp3 / SRT 生成
+///   worker->>tts: 音声合成 (各文。エンジンごとの同時実行数まで並列)
+///   tts-->>worker: 音声
+///   worker->>worker: 正規化 (44.1kHz・s16・2ch) → 結合 → mp3 / SRT 生成
 ///   worker->>cms: POST .../images/audio, .../images/srt (Base64)
 ///   worker->>cms: PUT /records/{episodes の collection ID}/{id} (audio_url, srt_url, duration_sec)
 /// ```
@@ -35,11 +36,14 @@ const EPISODES: &str = "episodes";
 #[derive(Clone)]
 pub(crate) struct EpisodeService {
     cms: Arc<CmsClient>,
+    tts: Arc<TtsRegistry>,
+    /// TTS のキャッシュの名前空間（CMS のテナント ID）
+    tenant: String,
 }
 
 impl EpisodeService {
-    pub(crate) fn new(cms: Arc<CmsClient>) -> Self {
-        Self { cms }
+    pub(crate) fn new(cms: Arc<CmsClient>, tts: Arc<TtsRegistry>, tenant: String) -> Self {
+        Self { cms, tts, tenant }
     }
 
     #[instrument(skip(self, work_dir), ret)]
@@ -59,11 +63,17 @@ impl EpisodeService {
             .context("Failed to parse sections")
             .map_err(Error::Other)?;
 
+        // 旧形式の speaker（VOICEVOX のスタイル ID）は既定のエンジンの声として扱う
+        let sections = self
+            .tts
+            .resolve_legacy_sections(sections)
+            .map_err(Error::Other)?;
+
         let SynthesisResult {
             out_path,
             srt,
             duration_sec,
-        } = generate_audio(work_dir, sections)
+        } = generate_audio(work_dir, &self.tts, &self.tenant, sections)
             .await
             .context("Failed to generate audio")
             .map_err(Error::Other)?;

@@ -1,7 +1,8 @@
+use super::cms_client::CmsClient;
 use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
 use super::task_service::TaskService;
-use super::cms_client::CmsClient;
+use audio_generator::registry::TtsRegistry;
 use kafru::queue::Queue;
 use std::sync::Arc;
 
@@ -15,13 +16,16 @@ use std::sync::Arc;
 ///   worker --> cms["botcast-cms (REST / MCP)"]
 ///   worker --> kafru["kafru (SurrealDB ジョブキュー)"]
 ///   worker --> readable_text
-///   audio_generator --> voicevox["VoiceVox Engine"]
+///   audio_generator --> tts["TTS エンジン (VOICEVOX 互換 / OpenAI 互換)"]
 /// ```
 #[cfg_attr(doc, aquamarine::aquamarine)]
 #[derive(Clone)]
 pub struct Provider {
     pub(crate) cms: Arc<CmsClient>,
     pub(crate) kafru_queue: Arc<Queue<'static>>,
+    pub(crate) tts: Arc<TtsRegistry>,
+    /// CMS のテナント ID（TTS のキャッシュをテナントごとに分ける）
+    pub(crate) tenant: String,
 }
 
 impl std::fmt::Debug for Provider {
@@ -31,10 +35,12 @@ impl std::fmt::Debug for Provider {
 }
 
 impl Provider {
-    pub fn new(kafru_queue: Arc<Queue<'static>>) -> Self {
+    pub fn new(kafru_queue: Arc<Queue<'static>>, tts: Arc<TtsRegistry>) -> Self {
         Self {
             cms: Arc::new(CmsClient::from_env()),
             kafru_queue,
+            tts,
+            tenant: std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string()),
         }
     }
 
@@ -51,6 +57,6 @@ impl Provider {
     }
 
     pub(crate) fn episode_service(&self) -> EpisodeService {
-        EpisodeService::new(self.cms.clone())
+        EpisodeService::new(self.cms.clone(), self.tts.clone(), self.tenant.clone())
     }
 }
