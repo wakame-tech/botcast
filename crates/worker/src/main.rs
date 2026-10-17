@@ -8,7 +8,11 @@ use std::{str::FromStr, sync::Arc};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
-use worker::{api::start_api, usecase::Provider, worker::{start_schedule_sync, start_worker}};
+use worker::{
+    api::start_api,
+    usecase::Provider,
+    worker::{start_schedule_sync, start_worker},
+};
 
 fn init_tracing(otlp_collector_endpoint: String) -> anyhow::Result<()> {
     let crate_name = env!("CARGO_CRATE_NAME");
@@ -52,7 +56,9 @@ async fn main() -> anyhow::Result<()> {
 
     worker::usecase::collections::seed_from_env().await?;
 
-    let provider = Arc::new(Provider::new(kafru_queue));
+    // TTS エンジンの設定は起動時に検証する
+    let tts = Arc::new(audio_generator::registry::TtsRegistry::from_env()?);
+    let provider = Arc::new(Provider::new(kafru_queue, tts));
     start_worker(provider.clone(), kafru_db.clone());
     start_schedule_sync(provider.clone(), kafru_db);
     start_api(provider).await

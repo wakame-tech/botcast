@@ -49,7 +49,13 @@ cd web && npm run check
 - API_KEY: botcast-cms の `API_KEY_<TENANT>` と同じ値（キーはテナントごとに発行される）。worker → CMS の `X-Api-Key` 認証に使い、MCP サーバーの子プロセスにもそのまま渡る
 - MCP_SERVER_ARGS: botcast-cms MCP サーバーの起動引数（例: `../botcast-cms/mcp/build/index.js`）
 - KAFRU_DB_HOST / KAFRU_DB_PORT / KAFRU_DB_USERNAME / KAFRU_DB_PASSWORD / KAFRU_DB_NAMESPACE / KAFRU_DB_NAME: ジョブキュー (kafru) の SurrealDB。ローカルは `just up` で 4030 番に起動
-- VOICEVOX_ENDPOINT: VoiceVox エンジン URL（音声生成に必要。例: `docker run -p 50021:50021 voicevox/voicevox_engine:cpu-latest`）
+- VOICEVOX_ENDPOINT: VoiceVox エンジン URL（互換。`TTS_ENGINES` が無いときに `voicevox` だけのエンジンとして扱う。例: `docker run -p 50021:50021 voicevox/voicevox_engine:cpu-latest`）
+- TTS_ENGINES: 使う TTS エンジンの名前（カンマ区切り。例: `voicevox,irodori`）。無ければ `VOICEVOX_ENDPOINT` を読む。どちらも無ければ音声生成のジョブが失敗する
+- TTS_DEFAULT_ENGINE: 台本の `speaker`（VOICEVOX のスタイル ID）に使うエンジン（既定: `TTS_ENGINES` の先頭）
+- TTS_ENGINE_<NAME>_KIND / _ENDPOINT: エンジンの種類（`voicevox` | `openai`）と URL（必須。`<NAME>` はエンジン名を大文字にし `-` を `_` にしたもの。OpenAI 互換は `/v1` まで含める）
+- TTS_ENGINE_<NAME>_TOKEN / _MODEL: OpenAI 互換の bearer トークンと `model`（任意。model の既定は `irodori-tts`）。トークンはログに出さない
+- TTS_ENGINE_<NAME>_MAX_CONCURRENCY / _TIMEOUT_SEC: 同時に投げる数（既定 1）とタイムアウト（既定 120 秒）
+- TTS_CACHE_DIR: 合成結果のキャッシュの置き場（任意。既定はジョブのワークディレクトリ）
 - OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector
 
 ## CMS のコレクション
