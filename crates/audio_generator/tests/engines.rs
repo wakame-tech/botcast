@@ -2,7 +2,7 @@
 
 use audio_generator::{
     config::{Secret, TtsConfig},
-    models::{ResolvedVoice, VoiceParams},
+    models::{RefAudio, ResolvedVoice, VoiceParams},
     registry::TtsRegistry,
     tts::{openai::OpenAiEngine, voicevox::VoicevoxEngine, SynthesisRequest, TtsEngine},
 };
@@ -192,6 +192,27 @@ async fn voicevox_unknown_style_uses_default_and_strips_emoji() {
 }
 
 #[tokio::test]
+async fn engine_version_for_cache_key() {
+    let (url, _) = spawn_server(voicevox_responder).await;
+    assert_eq!(
+        VoicevoxEngine::new(&url, TIMEOUT).unwrap().version().await,
+        "0.14.0"
+    );
+    // 取れなければ空
+    let (ng_url, _) = spawn_server(|_| (StatusCode::INTERNAL_SERVER_ERROR, vec![])).await;
+    assert_eq!(
+        VoicevoxEngine::new(&ng_url, TIMEOUT)
+            .unwrap()
+            .version()
+            .await,
+        ""
+    );
+    // OpenAI 互換は model
+    let openai = OpenAiEngine::new(&url, None, Some("irodori-v3".to_string()), TIMEOUT).unwrap();
+    assert_eq!(openai.version().await, "irodori-v3");
+}
+
+#[tokio::test]
 async fn openai_request_shape_with_token() {
     let (url, captured) = spawn_server(|c| match c.path.as_str() {
         "/v1/audio/speech" => (StatusCode::OK, b"RIFF-fake-wav".to_vec()),
@@ -324,9 +345,6 @@ fn irodori_voices_responder(
                 }
                 (StatusCode::CREATED, b"{}".to_vec())
             }
-            (&Method::PUT, path) if path.starts_with("/v1/audio/voices/") => {
-                (StatusCode::OK, b"{}".to_vec())
-            }
             _ => (StatusCode::NOT_FOUND, vec![]),
         }
     }
@@ -344,23 +362,26 @@ async fn openai_ensure_voice_uploads_only_when_needed() {
     )
     .unwrap();
     let take = || std::mem::take(&mut *captured.lock().unwrap());
+    let methods = |requests: &[Captured]| {
+        requests
+            .iter()
+            .map(|c| (c.method.clone(), c.path.clone()))
+            .collect::<Vec<_>>()
+    };
+    let list_and_post = vec![
+        (Method::GET, "/v1/audio/voices".to_string()),
+        (Method::POST, "/v1/audio/voices".to_string()),
+    ];
+    let hash_1 = "0123456789abcdef";
+    let hash_2 = "fedcba9876543210";
 
-    // サーバーに無い → POST（multipart の file と voice_id）
+    // サーバーに無い → POST（multipart の file と、ハッシュの先頭 12 文字を付けた voice_id）
     engine
-        .ensure_voice("alice", "hash-1", b"RIFF-alice")
+        .ensure_voice("alice", hash_1, b"RIFF-alice")
         .await
         .unwrap();
     let requests = take();
-    assert_eq!(
-        requests
-            .iter()
-            .map(|c| (c.method.clone(), c.path.as_str()))
-            .collect::<Vec<_>>(),
-        vec![
-            (Method::GET, "/v1/audio/voices"),
-            (Method::POST, "/v1/audio/voices")
-        ]
-    );
+    assert_eq!(methods(&requests), list_and_post);
     let upload = &requests[1];
     assert!(upload.auth.as_deref() == Some("Bearer secret-token"));
     assert!(upload
@@ -370,48 +391,91 @@ async fn openai_ensure_voice_uploads_only_when_needed() {
         .starts_with("multipart/form-data"));
     let body = String::from_utf8_lossy(&upload.body);
     assert!(
-        body.contains("name=\"file\"; filename=\"alice.wav\""),
+        body.contains("name=\"file\"; filename=\"alice-0123456789ab.wav\""),
         "{body}"
     );
     assert!(body.contains("RIFF-alice"));
     assert!(
-        body.contains("name=\"voice_id\"\r\n\r\nalice\r\n"),
+        body.contains("name=\"voice_id\"\r\n\r\nalice-0123456789ab\r\n"),
         "{body}"
     );
-    assert!(voices.lock().unwrap().contains("alice"));
 
     // 同じハッシュ → 何もしない
     engine
-        .ensure_voice("alice", "hash-1", b"RIFF-alice")
+        .ensure_voice("alice", hash_1, b"RIFF-alice")
         .await
         .unwrap();
     assert!(take().is_empty());
 
-    // ハッシュが違う → 置き換える
+    // ハッシュが違う → 別の ID で POST する（前の版は上書きしない）
     engine
-        .ensure_voice("alice", "hash-2", b"RIFF-alice-2")
+        .ensure_voice("alice", hash_2, b"RIFF-alice-2")
         .await
         .unwrap();
     let requests = take();
+    assert_eq!(methods(&requests), list_and_post);
+    assert!(String::from_utf8_lossy(&requests[1].body).contains("alice-fedcba987654"));
     assert_eq!(
-        requests
-            .iter()
-            .map(|c| (c.method.clone(), c.path.as_str()))
-            .collect::<Vec<_>>(),
-        vec![
-            (Method::GET, "/v1/audio/voices"),
-            (Method::PUT, "/v1/audio/voices/alice")
-        ]
+        *voices.lock().unwrap(),
+        HashSet::from([
+            "alice-0123456789ab".to_string(),
+            "alice-fedcba987654".to_string()
+        ])
     );
-    assert!(String::from_utf8_lossy(&requests[1].body).contains("RIFF-alice-2"));
 
-    // 別のプロセス（エンジン）からはハッシュが分からないので、サーバーにあっても置き換える
+    // 別のプロセス（エンジン）からは、サーバーにあれば上書きしない（一覧を見るだけ）
     let other = OpenAiEngine::new(format!("{url}/v1"), None, None, TIMEOUT).unwrap();
     other
-        .ensure_voice("alice", "hash-2", b"RIFF-alice-2")
+        .ensure_voice("alice", hash_1, b"RIFF-alice-other")
         .await
         .unwrap();
-    assert_eq!(take()[1].method, Method::PUT);
+    assert_eq!(
+        methods(&take()),
+        vec![(Method::GET, "/v1/audio/voices".to_string())]
+    );
+}
+
+#[tokio::test]
+async fn openai_synthesize_uses_versioned_voice_id() {
+    let (url, captured) = spawn_server(|_| (StatusCode::OK, b"RIFF-fake-wav".to_vec())).await;
+    let engine = OpenAiEngine::new(&url, None, None, TIMEOUT).unwrap();
+    let voice = ResolvedVoice {
+        engine: "irodori".to_string(),
+        voice_id: "alice".to_string(),
+        ref_audio: Some(RefAudio {
+            hash: "0123456789abcdef".to_string(),
+            bytes: Arc::from(b"RIFF".to_vec()),
+        }),
+        ..Default::default()
+    };
+    engine
+        .synthesize(SynthesisRequest {
+            text: "こんにちは",
+            voice: &voice,
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        captured.lock().unwrap()[0].json()["voice"],
+        "alice-0123456789ab"
+    );
+}
+
+#[test]
+fn endpoint_with_credentials_is_rejected() {
+    let vars = BTreeMap::from([
+        ("TTS_ENGINES", "irodori"),
+        ("TTS_ENGINE_IRODORI_KIND", "openai"),
+        (
+            "TTS_ENGINE_IRODORI_ENDPOINT",
+            "https://user:secret@gpu:8088/v1",
+        ),
+    ]);
+    let err = TtsConfig::from_lookup(|k| vars.get(k).map(|v| v.to_string()))
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("TTS_ENGINE_IRODORI_TOKEN"), "{err}");
+    assert!(!err.contains("secret"), "{err}");
 }
 
 #[tokio::test]

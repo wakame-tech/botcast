@@ -152,6 +152,13 @@ impl TtsConfig {
             if !matches!(url.scheme(), "http" | "https") {
                 bail!("invalid {endpoint_var} (http or https only)");
             }
+            // URL の認証情報はエラーやログに出やすいので受け付けない（トークンは TOKEN に書く）
+            if !url.username().is_empty() || url.password().is_some() {
+                bail!(
+                    "invalid {endpoint_var} (credentials in URL are not allowed; use {} for a bearer token)",
+                    var("TOKEN")
+                );
+            }
 
             let max_concurrency = match get(&var("MAX_CONCURRENCY")) {
                 Some(v) => match v.parse::<usize>() {
@@ -307,6 +314,10 @@ mod tests {
             with(&[("TTS_ENGINE_VV_ENDPOINT", "")]).contains("TTS_ENGINE_VV_ENDPOINT is required")
         );
         assert!(with(&[("TTS_ENGINE_VV_ENDPOINT", "vv:50021")]).contains("TTS_ENGINE_VV_ENDPOINT"));
+        let err = with(&[("TTS_ENGINE_VV_ENDPOINT", "http://user:pass@vv:50021")]);
+        assert!(err.contains("credentials in URL are not allowed"), "{err}");
+        assert!(!err.contains("pass"), "{err}");
+        assert!(with(&[("TTS_ENGINE_VV_ENDPOINT", "http://user@vv:50021")]).contains("credentials"));
         assert!(with(&[("TTS_ENGINE_VV_MAX_CONCURRENCY", "0")]).contains("MAX_CONCURRENCY"));
         assert!(with(&[("TTS_ENGINE_VV_TIMEOUT_SEC", "abc")]).contains("TIMEOUT_SEC"));
         assert!(with(&[("TTS_DEFAULT_ENGINE", "other")]).contains("TTS_DEFAULT_ENGINE"));

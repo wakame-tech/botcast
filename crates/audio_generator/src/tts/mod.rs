@@ -37,8 +37,9 @@ pub trait TtsEngine: Send + Sync + std::fmt::Debug {
         text.to_string()
     }
 
-    /// キャッシュのキーに足す、エンジンの出力を変える設定（OpenAI 互換の model など）。
-    fn cache_salt(&self) -> String {
+    /// キャッシュのキーに足すエンジンの版（VOICEVOX 互換は `GET /version`、OpenAI 互換は model）。
+    /// 取れなければ空文字。
+    async fn version(&self) -> String {
         String::new()
     }
 }

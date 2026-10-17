@@ -118,8 +118,32 @@ impl TtsEngine for VoicevoxEngine {
         Ok(())
     }
 
+    async fn version(&self) -> String {
+        let url = format!("{}/version", self.endpoint);
+        let res = async {
+            let version: String = self
+                .client
+                .get(&url)
+                .send()
+                .await?
+                .error_for_status()?
+                .json()
+                .await?;
+            anyhow::Ok(version)
+        }
+        .await;
+        res.unwrap_or_else(|e| {
+            tracing::warn!("failed to get version of VOICEVOX engine: {e}");
+            String::new()
+        })
+    }
+
     fn prepare_text(&self, text: &str) -> String {
-        strip_emoji(text).trim().to_string()
+        let prepared = strip_emoji(text).trim().to_string();
+        if prepared != text.trim() {
+            tracing::debug!("removed emoji: {text:?} -> {prepared:?}");
+        }
+        prepared
     }
 }
 

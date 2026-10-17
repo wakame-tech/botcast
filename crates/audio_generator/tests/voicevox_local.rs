@@ -22,7 +22,7 @@ async fn legacy_sections_with_local_voicevox() {
 
     let dir = std::env::temp_dir().join(format!("voicevox_local_{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&dir).unwrap();
-    let result = generate_audio_in_dir(&dir, &registry, sections)
+    let result = generate_audio_in_dir(&dir, &registry, "local", sections)
         .await
         .unwrap();
     println!("{}", result.srt);

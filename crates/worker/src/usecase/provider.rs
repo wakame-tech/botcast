@@ -24,6 +24,8 @@ pub struct Provider {
     pub(crate) cms: Arc<CmsClient>,
     pub(crate) kafru_queue: Arc<Queue<'static>>,
     pub(crate) tts: Arc<TtsRegistry>,
+    /// CMS のテナント ID（TTS のキャッシュをテナントごとに分ける）
+    pub(crate) tenant: String,
 }
 
 impl std::fmt::Debug for Provider {
@@ -38,6 +40,7 @@ impl Provider {
             cms: Arc::new(CmsClient::from_env()),
             kafru_queue,
             tts,
+            tenant: std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string()),
         }
     }
 
@@ -54,6 +57,6 @@ impl Provider {
     }
 
     pub(crate) fn episode_service(&self) -> EpisodeService {
-        EpisodeService::new(self.cms.clone(), self.tts.clone())
+        EpisodeService::new(self.cms.clone(), self.tts.clone(), self.tenant.clone())
     }
 }

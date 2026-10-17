@@ -52,10 +52,10 @@ cd web && npm run check
 - VOICEVOX_ENDPOINT: VoiceVox エンジン URL（互換。`TTS_ENGINES` が無いときに `voicevox` だけのエンジンとして扱う。例: `docker run -p 50021:50021 voicevox/voicevox_engine:cpu-latest`）
 - TTS_ENGINES: 使う TTS エンジンの名前（カンマ区切り。例: `voicevox,irodori`）。無ければ `VOICEVOX_ENDPOINT` を読む。どちらも無ければ音声生成のジョブが失敗する
 - TTS_DEFAULT_ENGINE: 台本の `speaker`（VOICEVOX のスタイル ID）に使うエンジン（既定: `TTS_ENGINES` の先頭）
-- TTS_ENGINE_<NAME>_KIND / _ENDPOINT: エンジンの種類（`voicevox` | `openai`）と URL（必須。`<NAME>` はエンジン名を大文字にし `-` を `_` にしたもの。OpenAI 互換は `/v1` まで含める）
+- TTS_ENGINE_<NAME>_KIND / _ENDPOINT: エンジンの種類（`voicevox` | `openai`）と URL（必須。`<NAME>` はエンジン名を大文字にし `-` を `_` にしたもの。OpenAI 互換は `/v1` まで含める。URL に認証情報 `user:pass@` は書けない。トークンは `_TOKEN` に書く）
 - TTS_ENGINE_<NAME>_TOKEN / _MODEL: OpenAI 互換の bearer トークンと `model`（任意。model の既定は `irodori-tts`）。トークンはログに出さない
 - TTS_ENGINE_<NAME>_MAX_CONCURRENCY / _TIMEOUT_SEC: 同時に投げる数（既定 1）とタイムアウト（既定 120 秒）
-- TTS_CACHE_DIR: 合成結果のキャッシュの置き場（任意。既定はジョブのワークディレクトリ）
+- TTS_CACHE_DIR: 合成結果のキャッシュの置き場（任意。既定はジョブのワークディレクトリ）。その下の `<CMS_TENANT>/` にテナントごとに置く
 - OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector
 
 ## CMS のコレクション

@@ -14,6 +14,9 @@ use wavers::Wav;
 pub const SAMPLE_RATE: u32 = 44100;
 pub const CHANNELS: u16 = 2;
 
+/// ffmpeg 1 回の実行のタイムアウト（超えたらプロセスを止めて失敗にする）
+pub const FFMPEG_TIMEOUT: Duration = Duration::from_secs(120);
+
 /// 正規化の出力の引数
 fn normalized_wav_args(output: &Path) -> Vec<String> {
     [
@@ -38,11 +41,15 @@ fn normalized_wav_args(output: &Path) -> Vec<String> {
 }
 
 async fn run_ffmpeg(args: Vec<String>, what: &str) -> Result<()> {
-    let res = Command::new("ffmpeg")
+    // タイムアウトやジョブの失敗で future が捨てられたら、ffmpeg のプロセスも止める
+    let output = Command::new("ffmpeg")
         .args(["-y", "-hide_banner", "-loglevel", "error"])
         .args(&args)
-        .output()
+        .kill_on_drop(true)
+        .output();
+    let res = tokio::time::timeout(FFMPEG_TIMEOUT, output)
         .await
+        .map_err(|_| anyhow::anyhow!("ffmpeg timed out after {FFMPEG_TIMEOUT:?} ({what})"))?
         .with_context(|| format!("failed to run ffmpeg ({what})"))?;
     if !res.status.success() {
         bail!(

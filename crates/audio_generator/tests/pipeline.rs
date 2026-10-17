@@ -22,6 +22,9 @@ use std::{
 };
 use wavers::Wav;
 
+/// キャッシュの名前空間（テナント ID 相当）
+const NS: &str = "test";
+
 fn has_ffmpeg() -> bool {
     let ok = std::process::Command::new("ffmpeg")
         .arg("-version")
@@ -91,6 +94,9 @@ struct FakeEngine {
     max_in_flight: AtomicUsize,
     texts: Mutex<Vec<String>>,
     ensured: Mutex<Vec<(String, String, usize)>>,
+    version: Mutex<String>,
+    /// この本文を受けたら失敗する
+    fail_on: Mutex<Option<String>>,
 }
 
 impl FakeEngine {
@@ -105,6 +111,8 @@ impl FakeEngine {
             max_in_flight: AtomicUsize::new(0),
             texts: Mutex::default(),
             ensured: Mutex::default(),
+            version: Mutex::new("1.0".to_string()),
+            fail_on: Mutex::default(),
         })
     }
 }
@@ -118,7 +126,14 @@ impl TtsEngine for FakeEngine {
         self.max_in_flight.fetch_max(now, Ordering::SeqCst);
         tokio::time::sleep(self.delay).await;
         self.in_flight.fetch_sub(1, Ordering::SeqCst);
+        if self.fail_on.lock().unwrap().as_deref() == Some(req.text) {
+            anyhow::bail!("fake failure");
+        }
         Ok(wav_bytes(self.sample_rate, self.secs))
+    }
+
+    async fn version(&self) -> String {
+        self.version.lock().unwrap().clone()
     }
 
     async fn ensure_voice(&self, voice_id: &str, hash: &str, bytes: &[u8]) -> Result<()> {
@@ -173,6 +188,7 @@ async fn normalized_duration_and_srt() {
     let result = generate_audio_in_dir(
         dir.path(),
         &registry,
+        NS,
         vec![
             serif("voicevox", "3", "こんにちは。"),
             serif("irodori", "alice", "やった🎉"),
@@ -196,7 +212,7 @@ async fn normalized_duration_and_srt() {
     assert!(result.out_path.ends_with("episode.mp3"));
     assert!(result.out_path.exists());
 
-    let cached: Vec<PathBuf> = std::fs::read_dir(dir.path().join("tts_cache"))
+    let cached: Vec<PathBuf> = std::fs::read_dir(dir.path().join("tts_cache").join(NS))
         .unwrap()
         .map(|e| e.unwrap().path())
         .collect();
@@ -232,14 +248,14 @@ async fn cache_is_reused() {
         ]
     };
 
-    generate_audio_in_dir(dir.path(), &registry, sections())
+    generate_audio_in_dir(dir.path(), &registry, NS, sections())
         .await
         .unwrap();
     assert_eq!(engine.calls.load(Ordering::SeqCst), 1 + 1);
     assert_eq!(engine.health_calls.load(Ordering::SeqCst), 1);
 
     // 同じ入力ならエンジンを呼ばない（ヘルスチェックもしない）
-    let result = generate_audio_in_dir(dir.path(), &registry, sections())
+    let result = generate_audio_in_dir(dir.path(), &registry, NS, sections())
         .await
         .unwrap();
     assert_eq!(engine.calls.load(Ordering::SeqCst), 2);
@@ -250,11 +266,86 @@ async fn cache_is_reused() {
     generate_audio_in_dir(
         dir.path(),
         &registry,
+        NS,
         vec![serif("voicevox", "2", "三つ目。")],
     )
     .await
     .unwrap();
     assert_eq!(engine.calls.load(Ordering::SeqCst), 3);
+
+    // エンジンの版が変われば合成し直す
+    *engine.version.lock().unwrap() = "2.0".to_string();
+    generate_audio_in_dir(
+        dir.path(),
+        &registry,
+        NS,
+        vec![serif("voicevox", "2", "三つ目。")],
+    )
+    .await
+    .unwrap();
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 4);
+
+    // 名前空間（テナント）が違えばキャッシュを共有しない
+    generate_audio_in_dir(
+        dir.path(),
+        &registry,
+        "other",
+        vec![serif("voicevox", "2", "三つ目。")],
+    )
+    .await
+    .unwrap();
+    assert_eq!(engine.calls.load(Ordering::SeqCst), 5);
+    assert!(cache.path().join("other").is_dir());
+    assert!(cache.path().join(NS).is_dir());
+
+    // パスに使えない名前空間は受け付けない
+    let err = generate_audio_in_dir(dir.path(), &registry, "../x", sections())
+        .await
+        .err()
+        .unwrap();
+    assert!(err.to_string().contains("namespace"), "{err}");
+}
+
+#[tokio::test]
+async fn temp_files_are_removed_on_failure() {
+    if !has_ffmpeg() {
+        return;
+    }
+    let dir = TempDir::new();
+    let cache = TempDir::new();
+    let engine = FakeEngine::new(24000, 0.1);
+    *engine.fail_on.lock().unwrap() = Some("失敗。".to_string());
+    let registry = TtsRegistry::default()
+        .with_engine("voicevox", engine.clone(), 4)
+        .with_cache_dir(cache.path());
+    let mut sections: Vec<ResolvedSection> = (0..8)
+        .map(|i| serif("voicevox", &i.to_string(), "成功。"))
+        .collect();
+    sections.insert(4, serif("voicevox", "x", "失敗。"));
+
+    let err = generate_audio_in_dir(dir.path(), &registry, NS, sections)
+        .await
+        .err()
+        .unwrap();
+    assert!(format!("{err:#}").contains("fake failure"), "{err:#}");
+
+    // 実行ごとのディレクトリにもキャッシュにも途中のファイルを残さない
+    let mut leftovers = vec![];
+    for root in [dir.path().to_path_buf(), cache.path().join(NS)] {
+        let mut stack = vec![root];
+        while let Some(d) = stack.pop() {
+            for e in std::fs::read_dir(&d).unwrap() {
+                let path = e.unwrap().path();
+                let name = path.file_name().unwrap().to_string_lossy().into_owned();
+                if path.is_dir() {
+                    stack.push(path);
+                } else if name.starts_with("raw_") || name.ends_with(".tmp") {
+                    leftovers.push(path);
+                }
+            }
+        }
+    }
+    assert!(leftovers.is_empty(), "{leftovers:?}");
 }
 
 #[tokio::test]
@@ -278,7 +369,7 @@ async fn concurrency_is_limited_per_engine() {
     }
     sections.push(serif("fast", "a", &text));
 
-    let result = generate_audio_in_dir(dir.path(), &registry, sections)
+    let result = generate_audio_in_dir(dir.path(), &registry, NS, sections)
         .await
         .unwrap();
     assert_eq!(fast.calls.load(Ordering::SeqCst), 7);
@@ -324,7 +415,7 @@ async fn ensure_voice_once_per_reference_audio() {
             text: "三つ目。".to_string(),
         },
     ];
-    generate_audio_in_dir(dir.path(), &registry, sections.clone())
+    generate_audio_in_dir(dir.path(), &registry, NS, sections.clone())
         .await
         .unwrap();
     assert_eq!(
@@ -333,7 +424,7 @@ async fn ensure_voice_once_per_reference_audio() {
     );
 
     // すべてキャッシュにあれば同期しない
-    generate_audio_in_dir(dir.path(), &registry, sections)
+    generate_audio_in_dir(dir.path(), &registry, NS, sections)
         .await
         .unwrap();
     assert_eq!(engine.ensured.lock().unwrap().len(), 1);
@@ -346,6 +437,7 @@ async fn unknown_engine_fails() {
     let err = generate_audio_in_dir(
         dir.path(),
         &registry,
+        NS,
         vec![serif("irodori", "a", "こんにちは。")],
     )
     .await
@@ -382,6 +474,7 @@ async fn audio_section_is_sliced_and_normalized() {
     let result = generate_audio_in_dir(
         dir.path(),
         &registry,
+        NS,
         vec![
             audio(Some(0.2), Some(0.7)),
             serif("voicevox", "3", "こんにちは。"),

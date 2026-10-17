@@ -37,11 +37,13 @@ const EPISODES: &str = "episodes";
 pub(crate) struct EpisodeService {
     cms: Arc<CmsClient>,
     tts: Arc<TtsRegistry>,
+    /// TTS のキャッシュの名前空間（CMS のテナント ID）
+    tenant: String,
 }
 
 impl EpisodeService {
-    pub(crate) fn new(cms: Arc<CmsClient>, tts: Arc<TtsRegistry>) -> Self {
-        Self { cms, tts }
+    pub(crate) fn new(cms: Arc<CmsClient>, tts: Arc<TtsRegistry>, tenant: String) -> Self {
+        Self { cms, tts, tenant }
     }
 
     #[instrument(skip(self, work_dir), ret)]
@@ -71,7 +73,7 @@ impl EpisodeService {
             out_path,
             srt,
             duration_sec,
-        } = generate_audio(work_dir, &self.tts, sections)
+        } = generate_audio(work_dir, &self.tts, &self.tenant, sections)
             .await
             .context("Failed to generate audio")
             .map_err(Error::Other)?;

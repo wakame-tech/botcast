@@ -3,10 +3,10 @@
 //! - 本文: `model`・`input`・`voice`・`response_format: wav`・`speed`・`irodori: { seed, caption }`
 //!   （caption は声の `style`）。`params.extra` は本文にそのまま足す
 //! - 認証: `TOKEN` があれば `Authorization: Bearer`
-//! - 参照音声の同期（Irodori）: `GET {endpoint}/audio/voices` に `voice_id` が無ければ
-//!   `POST {endpoint}/audio/voices`（multipart の `file` と `voice_id`）。サーバーはハッシュを持たないので、
-//!   このプロセスで同期したハッシュと違う（またはまだ同期していない）ときは
-//!   `PUT {endpoint}/audio/voices/{voice_id}` で置き換える
+//! - 参照音声の同期（Irodori）: サーバー側の声の ID は `{voice_id}-{ハッシュの先頭 12 文字}`
+//!   （[`server_voice_id`]）。`GET {endpoint}/audio/voices` に無ければ `POST {endpoint}/audio/voices`
+//!   （multipart の `file` と `voice_id`）。既にあれば上書きしないので、同じ声の版が変わっても、
+//!   並行するジョブや複数のワーカーが互いの参照音声を置き換えない
 //! - 絵文字は口調・効果音の指定になるのでそのまま渡す
 
 use super::{error_body, SynthesisRequest, TtsEngine};
@@ -15,7 +15,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use reqwest::{multipart, RequestBuilder, StatusCode};
 use serde_json::{json, Map, Value};
-use std::{collections::HashMap, sync::Mutex, time::Duration};
+use std::{collections::HashSet, sync::Mutex, time::Duration};
 use tracing::instrument;
 
 /// `params.extra` で上書きさせない本文のキー
@@ -24,13 +24,26 @@ const RESERVED_KEYS: [&str; 4] = ["model", "input", "voice", "response_format"];
 /// `TTS_ENGINE_<NAME>_MODEL` が無いときの model
 pub const DEFAULT_MODEL: &str = "irodori-tts";
 
+/// サーバー側の声の ID に入れる参照音声のハッシュの長さ
+const VOICE_HASH_LEN: usize = 12;
+
+/// 参照音声の版ごとのサーバー側の声の ID（`{voice_id}-{ハッシュの先頭 12 文字}`）。
+pub fn server_voice_id(voice_id: &str, hash: &str) -> String {
+    let hash: String = hash
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .take(VOICE_HASH_LEN)
+        .collect();
+    format!("{voice_id}-{hash}")
+}
+
 pub struct OpenAiEngine {
     endpoint: String,
     token: Option<Secret>,
     model: String,
     client: reqwest::Client,
-    /// voice_id → このプロセスで同期した参照音声のハッシュ
-    synced_voices: Mutex<HashMap<String, String>>,
+    /// このプロセスでサーバーにあることを確かめた声の ID（[`server_voice_id`]）
+    synced_voices: Mutex<HashSet<String>>,
 }
 
 impl std::fmt::Debug for OpenAiEngine {
@@ -74,7 +87,7 @@ impl OpenAiEngine {
             token,
             model: model.unwrap_or_else(|| DEFAULT_MODEL.to_string()),
             client: reqwest::Client::builder().timeout(timeout).build()?,
-            synced_voices: Mutex::new(HashMap::new()),
+            synced_voices: Mutex::new(HashSet::new()),
         })
     }
 
@@ -82,6 +95,14 @@ impl OpenAiEngine {
         match &self.token {
             Some(token) => req.bearer_auth(token.expose()),
             None => req,
+        }
+    }
+
+    /// 合成に使うサーバー側の声の ID（参照音声があれば版ごとの ID）
+    fn speech_voice(req: SynthesisRequest<'_>) -> String {
+        match &req.voice.ref_audio {
+            Some(ref_audio) => server_voice_id(&req.voice.voice_id, &ref_audio.hash),
+            None => req.voice.voice_id.clone(),
         }
     }
 
@@ -106,7 +127,7 @@ impl OpenAiEngine {
         let mut body = Map::new();
         body.insert("model".to_string(), json!(self.model));
         body.insert("input".to_string(), json!(req.text));
-        body.insert("voice".to_string(), json!(voice.voice_id));
+        body.insert("voice".to_string(), json!(Self::speech_voice(req)));
         body.insert("response_format".to_string(), json!("wav"));
         if let Some(speed) = params.speed {
             body.insert("speed".to_string(), json!(speed));
@@ -155,38 +176,23 @@ impl OpenAiEngine {
             .mime_str("application/octet-stream")?)
     }
 
-    async fn upload_voice(
-        &self,
-        voice_id: &str,
-        bytes: &[u8],
-        replace: bool,
-    ) -> Result<StatusCode> {
-        let (method, url, form) = if replace {
-            let url = format!(
-                "{}/audio/voices/{}",
-                self.endpoint,
-                urlencoding::encode(voice_id)
-            );
-            let form = multipart::Form::new().part("file", Self::voice_file(voice_id, bytes)?);
-            (reqwest::Method::PUT, url, form)
-        } else {
-            let url = format!("{}/audio/voices", self.endpoint);
-            let form = multipart::Form::new()
-                .part("file", Self::voice_file(voice_id, bytes)?)
-                .text("voice_id", voice_id.to_string());
-            (reqwest::Method::POST, url, form)
-        };
+    /// 参照音声を POST する。他のジョブが先に同じ版を上げていた（409）ときもそのまま使う。
+    async fn upload_voice(&self, voice_id: &str, bytes: &[u8]) -> Result<()> {
+        let url = format!("{}/audio/voices", self.endpoint);
+        let form = multipart::Form::new()
+            .part("file", Self::voice_file(voice_id, bytes)?)
+            .text("voice_id", voice_id.to_string());
         let res = self
-            .auth(self.client.request(method.clone(), &url))
+            .auth(self.client.post(&url))
             .multipart(form)
             .send()
             .await
-            .with_context(|| format!("{method} {url}"))?;
+            .with_context(|| format!("POST {url}"))?;
         let status = res.status();
         if !status.is_success() && status != StatusCode::CONFLICT {
-            bail!("{method} {url}: {status} {}", error_body(res).await);
+            bail!("POST {url}: {status} {}", error_body(res).await);
         }
-        Ok(status)
+        Ok(())
     }
 }
 
@@ -202,14 +208,11 @@ impl TtsEngine for OpenAiEngine {
             .await
             .with_context(|| format!("POST {url}"))?;
         if !res.status().is_success() {
-            // サーバーの再起動などで参照音声が消えたかもしれないので、次は同期し直す
-            self.synced_voices
-                .lock()
-                .unwrap()
-                .remove(&req.voice.voice_id);
+            // サーバーの再起動などで参照音声が消えたかもしれないので、次はあるかを確かめ直す
+            let voice = Self::speech_voice(req);
+            self.synced_voices.lock().unwrap().remove(&voice);
             bail!(
-                "POST {url}: voice={}, text={}, {} {}",
-                req.voice.voice_id,
+                "POST {url}: voice={voice}, text={}, {} {}",
                 req.text,
                 res.status(),
                 error_body(res).await
@@ -220,25 +223,16 @@ impl TtsEngine for OpenAiEngine {
 
     #[instrument(skip(self, bytes))]
     async fn ensure_voice(&self, voice_id: &str, hash: &str, bytes: &[u8]) -> Result<()> {
-        let synced = self.synced_voices.lock().unwrap().get(voice_id).cloned();
-        if synced.as_deref() == Some(hash) {
+        let server_id = server_voice_id(voice_id, hash);
+        if self.synced_voices.lock().unwrap().contains(&server_id) {
             return Ok(());
         }
-        let exists = self.has_voice(voice_id).await?;
-        let replace = if exists {
-            true
-        } else {
-            // 他のジョブが先にアップロードしていたら置き換える
-            self.upload_voice(voice_id, bytes, false).await? == StatusCode::CONFLICT
-        };
-        if replace {
-            self.upload_voice(voice_id, bytes, true).await?;
+        // 版ごとに ID が違うので、既にあれば同じ参照音声。上書きしない
+        if !self.has_voice(&server_id).await? {
+            self.upload_voice(&server_id, bytes).await?;
+            tracing::info!("uploaded reference audio of voice {voice_id} as {server_id}");
         }
-        tracing::info!("synced reference audio of voice {voice_id} ({hash})");
-        self.synced_voices
-            .lock()
-            .unwrap()
-            .insert(voice_id.to_string(), hash.to_string());
+        self.synced_voices.lock().unwrap().insert(server_id);
         Ok(())
     }
 
@@ -255,7 +249,7 @@ impl TtsEngine for OpenAiEngine {
         Ok(())
     }
 
-    fn cache_salt(&self) -> String {
+    async fn version(&self) -> String {
         self.model.clone()
     }
 }
@@ -271,5 +265,14 @@ mod tests {
         assert_eq!(audio_extension(b"ID3....."), "mp3");
         assert_eq!(audio_extension(b"OggS...."), "ogg");
         assert_eq!(audio_extension(b"????"), "wav");
+    }
+
+    #[test]
+    fn server_voice_id_has_hash_prefix() {
+        assert_eq!(
+            server_voice_id("alice", "0123456789abcdef0123"),
+            "alice-0123456789ab"
+        );
+        assert_eq!(server_voice_id("alice", "abc"), "alice-abc");
     }
 }

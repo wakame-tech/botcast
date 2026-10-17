@@ -5,16 +5,72 @@ const DELIMITERS: [char; 2] = ['\n', '。'];
 /// 1 回の合成に渡す文の最大の文字数。
 pub const MAX_SENTENCE_CHARS: usize = 100;
 
-/// 本文を `。` と改行で区切り、`max_chars` 文字（バイト数ではない）を超えない範囲で文をまとめる。
+/// 文中の `http://` / `https://` で始まる URL を取り除く（URL は ASCII の空白以外の文字が続くところまで）。
+pub fn strip_urls(text: &str) -> String {
+    let mut res = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = ["http://", "https://"]
+        .iter()
+        .filter_map(|scheme| rest.find(scheme))
+        .min()
+    {
+        res.push_str(&rest[..start]);
+        let url_len = rest[start..]
+            .find(|c: char| !c.is_ascii_graphic())
+            .unwrap_or(rest.len() - start);
+        rest = &rest[start + url_len..];
+    }
+    res.push_str(rest);
+    res
+}
+
+/// `max_chars` を超える 1 文を、読点（`、`）があればそこで、無ければ文字の境界で分ける。
+fn split_long_sentence(sentence: &str, max_chars: usize) -> Vec<String> {
+    let max_chars = max_chars.max(1);
+    let mut res = vec![];
+    let mut buf = String::new();
+    let mut buf_chars = 0;
+    for piece in sentence.split_inclusive('、') {
+        let chars: Vec<char> = piece.chars().collect();
+        if !buf.is_empty() && buf_chars + chars.len() > max_chars {
+            res.push(std::mem::take(&mut buf));
+            buf_chars = 0;
+        }
+        // 読点の間だけで上限を超えるときは文字の境界で切る
+        for chunk in chars.chunks(max_chars) {
+            if buf_chars + chunk.len() > max_chars {
+                res.push(std::mem::take(&mut buf));
+                buf_chars = 0;
+            }
+            buf.extend(chunk);
+            buf_chars += chunk.len();
+        }
+    }
+    if !buf.is_empty() {
+        res.push(buf);
+    }
+    res
+}
+
+/// 本文から URL を取り除き、`。` と改行で区切り、`max_chars` 文字（バイト数ではない）を超えない範囲で文をまとめる。
 ///
-/// 1 文だけで `max_chars` を超えるときはそのまま 1 つにする。`http` で始まる文（URL）は読まない。
+/// 1 文だけで `max_chars` を超えるときは、読点か文字の境界で分ける。
 pub fn split_text(text: &str, max_chars: usize) -> Vec<String> {
+    let text = strip_urls(text);
     let mut buf = String::new();
     let mut buf_chars = 0;
     let mut res = vec![];
-    for sentence in text.split_inclusive(DELIMITERS) {
+    let sentences = text.split_inclusive(DELIMITERS).flat_map(|sentence| {
         let sentence = sentence.trim();
-        if sentence.is_empty() || sentence.starts_with("http") {
+        if sentence.chars().count() > max_chars {
+            split_long_sentence(sentence, max_chars)
+        } else {
+            vec![sentence.to_string()]
+        }
+    });
+    for sentence in sentences {
+        // URL を取り除いて区切りだけ残った文も読まない
+        if sentence.trim_matches(DELIMITERS).trim().is_empty() {
             continue;
         }
         let chars = sentence.chars().count();
@@ -22,7 +78,7 @@ pub fn split_text(text: &str, max_chars: usize) -> Vec<String> {
             res.push(std::mem::take(&mut buf));
             buf_chars = 0;
         }
-        buf.push_str(sentence);
+        buf.push_str(&sentence);
         buf_chars += chars;
     }
     if !buf.is_empty() {
@@ -69,20 +125,60 @@ mod tests {
     }
 
     #[test]
-    fn split_by_delimiters_and_skip_urls() {
+    fn split_by_delimiters_and_strip_urls() {
         let text = "こんにちは。\nhttps://example.com\n今日は晴れ。\n\n";
         assert_eq!(split_text(text, 6), vec!["こんにちは。", "今日は晴れ。"]);
+        // 文中の URL は URL の部分だけを取り除く
+        let text = "詳しくは https://example.com/a?b=1 を見て。http://x.jp。";
+        assert_eq!(
+            split_text(text, MAX_SENTENCE_CHARS),
+            vec!["詳しくは  を見て。"]
+        );
+        // http で始まるだけの語は URL ではない
+        assert_eq!(
+            split_text("httpとは何か。", MAX_SENTENCE_CHARS),
+            vec!["httpとは何か。"]
+        );
     }
 
     #[test]
-    fn long_sentence_is_kept_without_empty_chunk() {
-        let long = "あ".repeat(120);
-        assert_eq!(split_text(&long, MAX_SENTENCE_CHARS), vec![long.clone()]);
-        let text = format!("{long}。短い。");
+    fn strip_urls_stops_at_non_ascii() {
+        assert_eq!(strip_urls("見て→https://example.com。"), "見て→。");
+        assert_eq!(strip_urls("a http://x b https://y"), "a  b ");
+        assert_eq!(strip_urls("URL なし"), "URL なし");
+    }
+
+    #[test]
+    fn long_sentence_is_split_at_commas() {
+        // 読点で分けられるときは読点で分ける
+        let part = format!("{}、", "あ".repeat(59));
+        let text = format!("{part}{part}{}。", "い".repeat(9));
+        let res = split_text(&text, MAX_SENTENCE_CHARS);
         assert_eq!(
-            split_text(&text, MAX_SENTENCE_CHARS),
-            vec![format!("{long}。"), "短い。".to_string()]
+            res,
+            vec![part.clone(), format!("{part}{}。", "い".repeat(9))]
         );
+        assert!(res.iter().all(|s| s.chars().count() <= MAX_SENTENCE_CHARS));
+        assert_eq!(res.concat(), text);
+    }
+
+    #[test]
+    fn long_sentence_without_commas_is_split_by_chars() {
+        let long = "あ".repeat(250);
+        let res = split_text(&long, MAX_SENTENCE_CHARS);
+        assert_eq!(
+            res.iter().map(|s| s.chars().count()).collect::<Vec<_>>(),
+            vec![100, 100, 50]
+        );
+        assert_eq!(res.concat(), long);
+
+        // 長い文の後ろの短い文は、余りとまとめる
+        let text = format!("{long}。短い。");
+        let res = split_text(&text, MAX_SENTENCE_CHARS);
+        assert_eq!(res.concat(), text);
+        assert!(res
+            .iter()
+            .all(|s| !s.is_empty() && s.chars().count() <= MAX_SENTENCE_CHARS));
     }
 
     #[test]
