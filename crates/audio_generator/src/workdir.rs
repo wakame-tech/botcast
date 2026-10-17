@@ -27,7 +27,6 @@ impl WorkDir {
         fs::OpenOptions::new()
             .append(true)
             .create(true)
-            
             .open(dir.join(format!("{}.log", task_id)))?;
 
         Ok(Self {
@@ -42,7 +41,6 @@ impl WorkDir {
         fs::OpenOptions::new()
             .append(true)
             .create(true)
-            
             .open(log_path)
             .map_err(Into::into)
     }

@@ -192,11 +192,7 @@ impl TaskService {
 MCPツールを使用してエピソードの台本を生成し、CMSに保存してください。\
 台本はsectionsフィールドに格納され、各セクションはSerifSection(speaker, text)またはAudioSection(url, from, to)の形式です。";
 
-        let full_prompt = format!(
-            "エピソードID: {}\n\n{}",
-            episode_id,
-            prompt
-        );
+        let full_prompt = format!("エピソードID: {}\n\n{}", episode_id, prompt);
 
         let result = agent
             .run(system, &full_prompt)
@@ -249,7 +245,9 @@ mod tests {
 
     #[test]
     fn args_generate_audio_serializes_correctly() {
-        let args = Args::GenerateAudio { episode_id: "ep1".to_string() };
+        let args = Args::GenerateAudio {
+            episode_id: "ep1".to_string(),
+        };
         let json = serde_json::to_value(&args).unwrap();
         assert_eq!(json["type"], "generateAudio");
         assert!(json["episodeId"].is_string());
@@ -269,7 +267,9 @@ mod tests {
 
     #[test]
     fn args_generate_episode_serializes_correctly() {
-        let args = Args::GenerateEpisode { podcast_id: "p1".to_string() };
+        let args = Args::GenerateEpisode {
+            podcast_id: "p1".to_string(),
+        };
         let json = serde_json::to_value(&args).unwrap();
         assert_eq!(json["type"], "generateEpisode");
         assert_eq!(json["podcastId"], "p1");

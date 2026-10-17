@@ -83,7 +83,10 @@ mod tests {
 
     #[test]
     fn bearer_token_extracts_token() {
-        assert_eq!(bearer_token(&headers("Bearer abc.def.ghi")), Some("abc.def.ghi"));
+        assert_eq!(
+            bearer_token(&headers("Bearer abc.def.ghi")),
+            Some("abc.def.ghi")
+        );
     }
 
     #[test]

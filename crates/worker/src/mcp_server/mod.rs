@@ -1,9 +1,8 @@
 use crate::usecase::provider::Provider;
 use rmcp::{
-    ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{Implementation, ServerInfo},
-    tool, tool_handler, tool_router,
+    tool, tool_handler, tool_router, ServerHandler,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -42,10 +41,8 @@ pub struct BotcastMcpServer {
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for BotcastMcpServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo::default().with_server_info(Implementation::new(
-            "botcast",
-            env!("CARGO_PKG_VERSION"),
-        ))
+        ServerInfo::default()
+            .with_server_info(Implementation::new("botcast", env!("CARGO_PKG_VERSION")))
     }
 }
 
@@ -89,7 +86,9 @@ impl BotcastMcpServer {
         }
     }
 
-    #[tool(description = "番組のスクリプトで前回エピソード宛てのお便りを読む新しいエピソードを作り、音声まで生成するジョブをエンキューします")]
+    #[tool(
+        description = "番組のスクリプトで前回エピソード宛てのお便りを読む新しいエピソードを作り、音声まで生成するジョブをエンキューします"
+    )]
     pub async fn generate_episode(&self, params: Parameters<GenerateEpisodeParams>) -> String {
         match self
             .provider

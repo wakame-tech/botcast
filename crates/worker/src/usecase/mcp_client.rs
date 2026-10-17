@@ -1,9 +1,9 @@
 use anyhow::Context;
 use rmcp::{
-    ServiceExt,
     model::{CallToolRequestParams, Tool},
     service::RunningService,
     transport::{ConfigureCommandExt, TokioChildProcess},
+    ServiceExt,
 };
 use serde_json::Value;
 use tokio::process::Command;
@@ -36,7 +36,10 @@ impl McpClient {
         .context("Failed to spawn MCP server process")?;
 
         let service = ().serve(transport).await.context("Failed to connect to MCP server")?;
-        let tools = service.list_all_tools().await.context("Failed to list MCP tools")?;
+        let tools = service
+            .list_all_tools()
+            .await
+            .context("Failed to list MCP tools")?;
         let tenant = std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string());
         let tools = tools.into_iter().map(strip_tenant_param).collect();
 
@@ -56,10 +59,7 @@ impl McpClient {
         name: impl Into<std::borrow::Cow<'static, str>>,
         arguments: Value,
     ) -> anyhow::Result<String> {
-        let mut arguments = arguments
-            .as_object()
-            .cloned()
-            .unwrap_or_default();
+        let mut arguments = arguments.as_object().cloned().unwrap_or_default();
 
         // テナントは worker が決める。LLM の出力で上書きさせない
         // (他テナントを指定されるとデータが越境する)
@@ -88,7 +88,10 @@ impl McpClient {
     }
 
     pub async fn close(self) -> anyhow::Result<()> {
-        self.service.cancel().await.context("Failed to close MCP client")?;
+        self.service
+            .cancel()
+            .await
+            .context("Failed to close MCP client")?;
         Ok(())
     }
 }
@@ -104,7 +107,9 @@ mod tests {
     async fn make_client() -> McpClient {
         let path = mcp_server_path();
         let args: Vec<&str> = path.split_whitespace().collect();
-        McpClient::new("node", &args).await.expect("failed to create client")
+        McpClient::new("node", &args)
+            .await
+            .expect("failed to create client")
     }
 
     async fn resolve_collection_id(client: &McpClient, name: &str) -> String {
@@ -112,7 +117,10 @@ mod tests {
             .call_tool("CollectionApi_list", serde_json::json!({}))
             .await
             .expect("failed to list collections");
-        let start = raw.find('[').or_else(|| raw.find('{')).expect("no JSON in response");
+        let start = raw
+            .find('[')
+            .or_else(|| raw.find('{'))
+            .expect("no JSON in response");
         let json: serde_json::Value = serde_json::from_str(&raw[start..]).expect("invalid JSON");
         json.as_array()
             .unwrap()
@@ -144,12 +152,19 @@ mod tests {
             serde_json::Value::Object(o) => o,
             _ => unreachable!(),
         };
-        let tool = Tool::new("RecordApi_list", "list records", std::sync::Arc::new(schema));
+        let tool = Tool::new(
+            "RecordApi_list",
+            "list records",
+            std::sync::Arc::new(schema),
+        );
 
         let tool = strip_tenant_param(tool);
 
         let props = tool.input_schema["properties"].as_object().unwrap();
-        assert!(!props.contains_key("tenantId"), "tenantId を LLM に見せない");
+        assert!(
+            !props.contains_key("tenantId"),
+            "tenantId を LLM に見せない"
+        );
         assert!(props.contains_key("collectionId"));
         let required: Vec<&str> = tool.input_schema["required"]
             .as_array()
@@ -165,7 +180,9 @@ mod tests {
     async fn mcp_client_lists_tools() {
         let path = mcp_server_path();
         let args: Vec<&str> = path.split_whitespace().collect();
-        let client = McpClient::new("node", &args).await.expect("failed to create client");
+        let client = McpClient::new("node", &args)
+            .await
+            .expect("failed to create client");
         let tools = client.tools();
         assert!(!tools.is_empty(), "expected at least one tool");
         let tool_names: Vec<&str> = tools.iter().map(|t| t.name.as_ref()).collect();
@@ -197,7 +214,6 @@ mod tests {
         client.close().await.unwrap();
     }
 
-
     #[tokio::test]
     #[ignore = "requires botcast-cms MCP server to be built"]
     async fn mcp_client_creates_episode() {
@@ -215,7 +231,11 @@ mod tests {
             )
             .await
             .expect("failed to create podcast");
-        assert!(podcast_result.contains("201"), "podcast creation failed: {}", podcast_result);
+        assert!(
+            podcast_result.contains("201"),
+            "podcast creation failed: {}",
+            podcast_result
+        );
         let podcast_record_id = parse_created_id(&podcast_result);
         eprintln!("created podcast id: {}", podcast_record_id);
 
@@ -246,16 +266,25 @@ mod tests {
     async fn mcp_client_calls_record_list() {
         let path = mcp_server_path();
         let args: Vec<&str> = path.split_whitespace().collect();
-        let client = McpClient::new("node", &args).await.expect("failed to create client");
+        let client = McpClient::new("node", &args)
+            .await
+            .expect("failed to create client");
         let tool_names: Vec<&str> = client.tools().iter().map(|t| t.name.as_ref()).collect();
         eprintln!("available tools: {:?}", tool_names);
         let result = client
-            .call_tool("RecordApi_list", serde_json::json!({ "collectionId": "episodes" }))
+            .call_tool(
+                "RecordApi_list",
+                serde_json::json!({ "collectionId": "episodes" }),
+            )
             .await
             .expect("failed to call tool");
         assert!(!result.is_empty(), "expected non-empty result");
         eprintln!("result: {}", result);
-        assert!(result.contains("Status:"), "expected API response in: {}", result);
+        assert!(
+            result.contains("Status:"),
+            "expected API response in: {}",
+            result
+        );
         client.close().await.unwrap();
     }
 }
