@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 readable_text = { path = "../readable_text" }
+cms-client = { path = "../cms-client" }
 audio_generator = { path = "../audio_generator" }
 anyhow = "1.0.86"
 axum = "0.7.5"

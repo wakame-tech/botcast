@@ -1,5 +1,6 @@
 use anyhow::Context;
 use axum::http::{header::AUTHORIZATION, HeaderMap};
+use cms_client::apis::{collections_api, configuration::Configuration, Error as CmsError};
 use reqwest::StatusCode;
 
 /// `Authorization: Bearer <token>` からトークンを取り出す。
@@ -59,14 +60,26 @@ impl CmsTokenVerifier {
     }
 
     pub(crate) async fn verify(&self, token: &str) -> anyhow::Result<TokenStatus> {
-        let res = self
-            .http
-            .get(format!("{}/t/{}/collections", self.base_url, self.tenant))
-            .bearer_auth(token)
-            .send()
-            .await
-            .context("CMS request failed while verifying token")?;
-        token_status(res.status())
+        let config = Configuration {
+            base_path: self.base_url.clone(),
+            client: self.http.clone(),
+            bearer_access_token: Some(token.to_string()),
+            ..Configuration::new()
+        };
+        let res = collections_api::collection_api_list(
+            &config,
+            collections_api::CollectionApiListParams {
+                tenant_id: self.tenant.clone(),
+                x_on_behalf_of: None,
+            },
+        )
+        .await;
+        match res {
+            Ok(_) => Ok(TokenStatus::Valid),
+            Err(CmsError::ResponseError(e)) => token_status(e.status),
+            Err(e) => Err(anyhow::Error::msg(e.to_string()))
+                .context("CMS request failed while verifying token"),
+        }
     }
 }
 
@@ -83,7 +96,10 @@ mod tests {
 
     #[test]
     fn bearer_token_extracts_token() {
-        assert_eq!(bearer_token(&headers("Bearer abc.def.ghi")), Some("abc.def.ghi"));
+        assert_eq!(
+            bearer_token(&headers("Bearer abc.def.ghi")),
+            Some("abc.def.ghi")
+        );
     }
 
     #[test]
