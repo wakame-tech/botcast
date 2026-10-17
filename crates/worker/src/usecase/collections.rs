@@ -88,7 +88,11 @@ pub(crate) fn episodes_schema(podcasts_id: &str) -> Value {
             },
             "audio_url": { "type": "string" },
             "srt_url": { "type": "string" },
-            "duration_sec": { "type": "integer" }
+            "duration_sec": { "type": "integer" },
+            // CMS がファイルのアップロード (`/images/{audio,srt}`) でここに書き込む
+            // (`pointer` / `content_type` / `size` / `url`)。無いとアップロードが 400 になる
+            "audio": { "type": "object" },
+            "srt": { "type": "object" }
         },
         "required": ["title", "podcast_id"],
         "additionalProperties": false
@@ -173,6 +177,13 @@ mod tests {
         seed(&cms).await.unwrap();
         // 2 回目は差分が無いので更新しない（冪等）
         seed(&cms).await.unwrap();
+    }
+
+    #[test]
+    fn episodes_accept_uploaded_file_fields() {
+        let s = episodes_schema("p1");
+        let file = json!({ "pointer": "images:/c/r/audio", "content_type": "audio/mpeg", "size": 1, "url": "/x" });
+        assert!(valid(&s, json!({ "title": "t", "podcast_id": "p", "audio": file, "srt": file })));
     }
 
     #[test]
