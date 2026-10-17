@@ -9,6 +9,9 @@ pub struct SerifSection {
     pub speaker: String,
     #[serde(rename = "text")]
     pub text: String,
+    /// 口調・感情の指定（自由文）
+    #[serde(rename = "style", default, skip_serializing_if = "Option::is_none")]
+    pub style: Option<String>,
 }
 
 #[derive(
@@ -128,6 +131,7 @@ pub fn resolve_legacy_sections(
                 voice: ResolvedVoice {
                     engine: default_engine.to_string(),
                     voice_id: serif.speaker,
+                    style: serif.style,
                     ..Default::default()
                 },
                 text: serif.text,
@@ -145,6 +149,7 @@ mod tests {
     fn sections_keep_json_shape() {
         let json = serde_json::json!([
             {"type": "Serif", "speaker": "3", "text": "こんにちは。"},
+            {"type": "Serif", "speaker": "host", "text": "やあ。", "style": "元気に"},
             {"type": "Audio", "url": "https://example.com/a.mp3", "from": 1.0, "to": 2.0},
             {"type": "Audio", "url": "https://example.com/b.mp3"}
         ]);
@@ -159,6 +164,7 @@ mod tests {
                 r#type: SerifType::Serif,
                 speaker: "3".to_string(),
                 text: "こんにちは。".to_string(),
+                style: None,
             })),
             Section::AudioSection(Box::new(AudioSection {
                 url: "https://example.com/a.mp3".to_string(),

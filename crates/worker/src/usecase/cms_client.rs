@@ -62,6 +62,11 @@ impl CmsClient {
         }
     }
 
+    /// テナント ID
+    pub(crate) fn tenant(&self) -> &str {
+        &self.tenant
+    }
+
     async fn list_collections(&self) -> anyhow::Result<Vec<models::Collection>> {
         collections_api::collection_api_list(
             &self.config,
@@ -267,6 +272,28 @@ impl CmsClient {
         Ok(())
     }
 
+    /// レコードのフィールドに保存したファイル（`/records/{c}/{r}/images/{field}`）の中身を取得する
+    pub(crate) async fn get_file(
+        &self,
+        collection: &str,
+        record_id: &str,
+        field: &str,
+    ) -> anyhow::Result<Vec<u8>> {
+        let res = record_api::record_api_get_image(
+            &self.config,
+            record_api::RecordApiGetImageParams {
+                tenant_id: self.tenant.clone(),
+                collection_id: self.collection_id(collection).await?,
+                record_id: record_id.to_string(),
+                field_name: field.to_string(),
+                x_on_behalf_of: None,
+            },
+        )
+        .await
+        .map_err(cms_error)?;
+        decode_file(res)
+    }
+
     /// ファイルをレコードのフィールドに保存し、取得用の URL（CMS からの相対パス）を返す
     pub(crate) async fn upload_file(
         &self,
@@ -307,6 +334,15 @@ pub(crate) fn cms_error<T: Debug>(e: CmsError<T>) -> anyhow::Error {
         }
         other => anyhow::Error::msg(other.to_string()).context("CMS request failed"),
     }
+}
+
+/// `GET .../images/{field}` の応答（Base64 の JSON）からファイルの中身を取り出す
+fn decode_file(res: serde_json::Value) -> anyhow::Result<Vec<u8>> {
+    let file: models::GetImageResponse =
+        serde_json::from_value(res).context("unexpected file response from CMS")?;
+    BASE64
+        .decode(file.data)
+        .context("file from CMS is not valid Base64")
 }
 
 fn list_params(
@@ -429,6 +465,14 @@ mod tests {
         assert!(collection_needs_update(&other_schema, &schema, &access));
         let no_access = collection("c", "p", schema.clone());
         assert!(collection_needs_update(&no_access, &schema, &access));
+    }
+
+    #[test]
+    fn decode_file_reads_base64_body() {
+        let res = json!({ "data": BASE64.encode(b"RIFF"), "content_type": "audio/wav", "size": 4 });
+        assert_eq!(decode_file(res).unwrap(), b"RIFF");
+        assert!(decode_file(json!({ "data": "!!", "content_type": "audio/wav", "size": 1 })).is_err());
+        assert!(decode_file(json!({ "url": "/x" })).is_err());
     }
 
     #[test]

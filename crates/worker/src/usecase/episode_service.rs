@@ -1,4 +1,5 @@
 use super::cms_client::CmsClient;
+use super::voices::{podcast_cast, Engines, SpeakerResolver, Voice, VoiceStore};
 use crate::error::Error;
 use anyhow::Context;
 use audio_generator::{
@@ -26,6 +27,10 @@ const EPISODES: &str = "episodes";
 ///   kafru->>worker: execute job (generateAudio)
 ///   worker->>cms: GET /records/{episodes の collection ID}/{id}
 ///   cms-->>worker: sections
+///   worker->>cms: GET /records/{podcasts}/{podcast_id} (配役 cast)
+///   worker->>cms: GET /records/{voices}?filter=slug:eq:... (声。ジョブ内で 1 度だけ)
+///   worker->>cms: GET /records/{voices}/{id}/images/ref_audio (参照音声があれば)
+///   worker->>tts: 参照音声の同期 (OpenAI 互換。ハッシュが違うときだけ)
 ///   worker->>tts: 音声合成 (各文。エンジンごとの同時実行数まで並列)
 ///   tts-->>worker: 音声
 ///   worker->>worker: 正規化 (44.1kHz・s16・2ch) → 結合 → mp3 / SRT 生成
@@ -46,6 +51,23 @@ impl EpisodeService {
         Self { cms, tts, tenant }
     }
 
+    /// エピソードの番組の配役（別名 → 声。声が見つからなければ `None`）
+    pub(crate) async fn cast_of_episode(
+        &self,
+        episode_id: &str,
+    ) -> anyhow::Result<Vec<(String, Option<Voice>)>> {
+        let data = self.cms.get_record_data(EPISODES, episode_id).await?;
+        let podcast_id = data["podcast_id"]
+            .as_str()
+            .context("episode has no podcast_id")?;
+        let cast = podcast_cast(&self.cms.get_record("podcasts", podcast_id).await?)?;
+        let mut voices = Vec::with_capacity(cast.len());
+        for (alias, slug) in cast {
+            voices.push((alias, self.cms.find_voice(&slug).await?));
+        }
+        Ok(voices)
+    }
+
     #[instrument(skip(self, work_dir), ret)]
     pub(crate) async fn generate_audio(
         &self,
@@ -63,10 +85,22 @@ impl EpisodeService {
             .context("Failed to parse sections")
             .map_err(Error::Other)?;
 
-        // 旧形式の speaker（VOICEVOX のスタイル ID）は既定のエンジンの声として扱う
-        let sections = self
-            .tts
-            .resolve_legacy_sections(sections)
+        // speaker を 配役の別名 → voices の slug → 旧形式（既定のエンジンのスタイル ID）の順で解決する
+        let podcast_id = data["podcast_id"]
+            .as_str()
+            .context("episode has no podcast_id")
+            .map_err(Error::Other)?;
+        let podcast = self
+            .cms
+            .get_record("podcasts", podcast_id)
+            .await
+            .context("Failed to fetch podcast")
+            .map_err(Error::Other)?;
+        let cast = podcast_cast(&podcast).map_err(Error::Other)?;
+        let engines = Engines::from_registry(&self.tts);
+        let sections = SpeakerResolver::new(self.cms.as_ref(), &cast, &engines)
+            .resolve_sections(sections)
+            .await
             .map_err(Error::Other)?;
 
         let SynthesisResult {

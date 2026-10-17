@@ -2,6 +2,7 @@ use super::agent_service::AgentService;
 use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
 use super::mcp_client::McpClient;
+use super::voices::Voice;
 use crate::error::Error;
 use crate::worker::use_work_dir;
 use anyhow::Context;
@@ -188,9 +189,13 @@ impl TaskService {
 
         let agent = AgentService::new(api_key, mcp_client);
 
-        let system = "あなたはポッドキャストの台本を生成するアシスタントです。\
-MCPツールを使用してエピソードの台本を生成し、CMSに保存してください。\
-台本はsectionsフィールドに格納され、各セクションはSerifSection(speaker, text)またはAudioSection(url, from, to)の形式です。";
+        let cast = self
+            .episode_service
+            .cast_of_episode(episode_id)
+            .await
+            .context("Failed to fetch podcast cast")
+            .map_err(Error::Other)?;
+        let system = script_system_prompt(&cast);
 
         let full_prompt = format!(
             "エピソードID: {}\n\n{}",
@@ -199,7 +204,7 @@ MCPツールを使用してエピソードの台本を生成し、CMSに保存�
         );
 
         let result = agent
-            .run(system, &full_prompt)
+            .run(&system, &full_prompt)
             .await
             .context("Agent failed")
             .map_err(Error::Other)?;
@@ -208,6 +213,43 @@ MCPツールを使用してエピソードの台本を生成し、CMSに保存�
 
         Ok(result)
     }
+}
+
+/// 台本生成の LLM のシステムプロンプト。番組の配役（別名 → 声）と `style` の使い方を説明する
+pub(crate) fn script_system_prompt(cast: &[(String, Option<Voice>)]) -> String {
+    let mut prompt = String::from(
+        "あなたはポッドキャストの台本を生成するアシスタントです。\
+MCPツールを使用してエピソードの台本を生成し、CMSに保存してください。\
+台本はsectionsフィールドに格納され、各セクションは\
+SerifSection {\"type\": \"Serif\", \"speaker\", \"text\", \"style\"(任意)} または\
+AudioSection {\"type\": \"Audio\", \"url\", \"from\"(任意), \"to\"(任意)} の形式です。\n\
+speaker には番組の配役の別名を書き、TTS エンジン固有の ID（数字など）は書かないでください。\
+style は口調・感情の指定で、自由文で書けます（例: 「楽しそうに」「ささやくように」）。不要なら省略してください。\n",
+    );
+    if cast.is_empty() {
+        prompt.push_str(
+            "この番組には配役がありません。speaker にはエピソードの既存のセクションと同じ値を使ってください。",
+        );
+        return prompt;
+    }
+    prompt.push_str("この番組の配役（speaker に書く別名）:\n");
+    for (alias, voice) in cast {
+        match voice {
+            Some(voice) if voice.styles.is_empty() => {
+                prompt.push_str(&format!("- {alias}: {}\n", voice.name));
+            }
+            Some(voice) => {
+                let styles: Vec<&str> = voice.styles.keys().map(String::as_str).collect();
+                prompt.push_str(&format!(
+                    "- {alias}: {}（style の候補: {}）\n",
+                    voice.name,
+                    styles.join("、")
+                ));
+            }
+            None => prompt.push_str(&format!("- {alias}\n")),
+        }
+    }
+    prompt
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -235,6 +277,39 @@ impl TryFrom<QueueData> for JobInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn voice(data: serde_json::Value) -> Voice {
+        Voice::from_record(&serde_json::json!({ "id": "v", "data": data })).unwrap()
+    }
+
+    #[test]
+    fn script_system_prompt_lists_cast_and_styles() {
+        let cast = vec![
+            (
+                "ホスト".to_string(),
+                Some(voice(serde_json::json!({
+                    "slug": "zundamon", "name": "ずんだもん", "engine": "voicevox", "voice_id": "3",
+                    "styles": { "ささやき": "22", "あまあま": "1" }
+                }))),
+            ),
+            (
+                "ゲスト".to_string(),
+                Some(voice(serde_json::json!({ "slug": "g", "name": "語り", "engine": "irodori" }))),
+            ),
+            ("代役".to_string(), None),
+        ];
+        let prompt = script_system_prompt(&cast);
+        assert!(prompt.contains("- ホスト: ずんだもん（style の候補: あまあま、ささやき）"), "{prompt}");
+        assert!(prompt.contains("- ゲスト: 語り\n"), "{prompt}");
+        assert!(prompt.contains("- 代役\n"), "{prompt}");
+    }
+
+    #[test]
+    fn script_system_prompt_without_cast() {
+        let prompt = script_system_prompt(&[]);
+        assert!(prompt.contains("配役がありません"), "{prompt}");
+        assert!(prompt.contains("SerifSection"), "{prompt}");
+    }
 
     #[test]
     fn job_info_try_from_missing_id_returns_error() {
