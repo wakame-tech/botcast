@@ -1,6 +1,6 @@
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::mcp_client::McpClient;
 
@@ -31,14 +31,8 @@ struct AnthropicResponse {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ContentBlock {
-    Text {
-        text: String,
-    },
-    ToolUse {
-        id: String,
-        name: String,
-        input: Value,
-    },
+    Text { text: String },
+    ToolUse { id: String, name: String, input: Value },
 }
 
 pub struct AgentService {
@@ -105,10 +99,8 @@ impl AgentService {
                 anyhow::bail!("Anthropic API error {}: {}", status, body);
             }
 
-            let resp: AnthropicResponse = response
-                .json()
-                .await
-                .context("Failed to parse Anthropic response")?;
+            let resp: AnthropicResponse =
+                response.json().await.context("Failed to parse Anthropic response")?;
 
             let assistant_content: Value = serde_json::to_value(&resp.content)
                 .context("Failed to serialize assistant content")?;

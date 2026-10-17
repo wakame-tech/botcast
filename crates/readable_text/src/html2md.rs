@@ -29,7 +29,7 @@ fn parse_to_md(html: &str) -> String {
     handlers.insert("script".to_string(), Box::new(IgnoreHandlerFactory));
     handlers.insert("style".to_string(), Box::new(IgnoreHandlerFactory));
     handlers.insert("iframe".to_string(), Box::new(IgnoreHandlerFactory));
-
+    
     html2md::parse_html_custom(html, &handlers)
 }
 

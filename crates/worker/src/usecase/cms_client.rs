@@ -117,7 +117,8 @@ impl CmsClient {
         record_id: &str,
     ) -> anyhow::Result<serde_json::Value> {
         let cid = self.collection_id(collection).await?;
-        Self::send(self.request(reqwest::Method::GET, &format!("/records/{cid}/{record_id}"))).await
+        Self::send(self.request(reqwest::Method::GET, &format!("/records/{cid}/{record_id}")))
+            .await
     }
 
     /// レコードの `data` を取得する
@@ -173,12 +174,9 @@ impl CmsClient {
             Some(c) => c,
             None => {
                 tracing::info!("creating collection '{name}'");
-                Self::send(
-                    self.request(reqwest::Method::POST, "/collections")
-                        .json(&body),
-                )
-                .await
-                .with_context(|| format!("Failed to create collection '{name}'"))?
+                Self::send(self.request(reqwest::Method::POST, "/collections").json(&body))
+                    .await
+                    .with_context(|| format!("Failed to create collection '{name}'"))?
             }
         };
         let id = collection_key(&collection).context("id missing in collection response")?;
@@ -218,14 +216,8 @@ impl CmsClient {
         )
         .await?;
         Ok(ScriptOutput {
-            stdout: res["data"]["stdout"]
-                .as_str()
-                .unwrap_or_default()
-                .to_string(),
-            error: res["data"]["error"]
-                .as_str()
-                .unwrap_or_default()
-                .to_string(),
+            stdout: res["data"]["stdout"].as_str().unwrap_or_default().to_string(),
+            error: res["data"]["error"].as_str().unwrap_or_default().to_string(),
         })
     }
 
@@ -313,10 +305,7 @@ mod tests {
     #[test]
     fn url_for_trims_trailing_slash_of_base_url() {
         let cms = CmsClient::new("http://cms:3002/".to_string(), "socia".to_string(), None);
-        assert_eq!(
-            cms.url_for("/collections"),
-            "http://cms:3002/t/socia/collections"
-        );
+        assert_eq!(cms.url_for("/collections"), "http://cms:3002/t/socia/collections");
     }
 
     #[test]

@@ -110,9 +110,7 @@ pub(crate) fn mails_schema(episodes_id: &str) -> Value {
 
 /// 参照先から順に作成・更新し、得た ID を参照元の `x-ref` に埋め込む
 pub(crate) async fn seed(cms: &CmsClient) -> anyhow::Result<()> {
-    let scripts = cms
-        .ensure_collection("scripts", scripts_schema(), access())
-        .await?;
+    let scripts = cms.ensure_collection("scripts", scripts_schema(), access()).await?;
     let podcasts = cms
         .ensure_collection("podcasts", podcasts_schema(&scripts), access())
         .await?;
@@ -141,54 +139,30 @@ mod tests {
     fn episodes_reference_podcasts_and_type_sections() {
         let s = episodes_schema("pc1");
         assert_eq!(s["properties"]["podcast_id"]["x-ref"], "pc1");
-        assert!(valid(
-            &s,
-            json!({ "title": "t", "podcast_id": "p", "sections": [
-                { "type": "Serif", "speaker": "3", "text": "a" },
-                { "type": "Audio", "url": "u", "from": 1.5 }
-            ]})
-        ));
-        assert!(!valid(
-            &s,
-            json!({ "title": "t", "podcast_id": "p", "sections": [{ "type": "Serif" }] })
-        ));
-        assert!(!valid(
-            &s,
-            json!({ "title": "t", "podcast_id": "p", "user_id": "u" })
-        ));
+        assert!(valid(&s, json!({ "title": "t", "podcast_id": "p", "sections": [
+            { "type": "Serif", "speaker": "3", "text": "a" },
+            { "type": "Audio", "url": "u", "from": 1.5 }
+        ]})));
+        assert!(!valid(&s, json!({ "title": "t", "podcast_id": "p", "sections": [{ "type": "Serif" }] })));
+        assert!(!valid(&s, json!({ "title": "t", "podcast_id": "p", "user_id": "u" })));
     }
 
     #[test]
     fn podcasts_reference_scripts_in_schedule() {
         let s = podcasts_schema("sc1");
-        assert_eq!(
-            s["properties"]["schedule"]["properties"]["script_id"]["x-ref"],
-            "sc1"
-        );
-        assert!(valid(
-            &s,
-            json!({ "title": "t", "icon": "🎙️", "schedule": {
-                "cron": "0 0 0 * * ? *", "script_id": "s", "enabled": true, "arguments": { "n": 1 }
-            }})
-        ));
-        assert!(!valid(
-            &s,
-            json!({ "title": "t", "icon": "🎙️", "user_id": "u" })
-        ));
+        assert_eq!(s["properties"]["schedule"]["properties"]["script_id"]["x-ref"], "sc1");
+        assert!(valid(&s, json!({ "title": "t", "icon": "🎙️", "schedule": {
+            "cron": "0 0 0 * * ? *", "script_id": "s", "enabled": true, "arguments": { "n": 1 }
+        }})));
+        assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "user_id": "u" })));
     }
 
     #[test]
     fn mails_reference_episodes_without_podcast_id() {
         let s = mails_schema("ep1");
         assert_eq!(s["properties"]["episode_id"]["x-ref"], "ep1");
-        assert!(valid(
-            &s,
-            json!({ "episode_id": "e", "radio_name": "r", "body": "b" })
-        ));
-        assert!(!valid(
-            &s,
-            json!({ "episode_id": "e", "radio_name": "r", "body": "b", "podcast_id": "p" })
-        ));
+        assert!(valid(&s, json!({ "episode_id": "e", "radio_name": "r", "body": "b" })));
+        assert!(!valid(&s, json!({ "episode_id": "e", "radio_name": "r", "body": "b", "podcast_id": "p" })));
     }
 
     /// `CMS_URL` / `CMS_TENANT` / `API_KEY` の CMS に seed する（既存コレクションの更新も確かめる）
@@ -204,13 +178,7 @@ mod tests {
     #[test]
     fn scripts_reject_user_id() {
         let s = scripts_schema();
-        assert!(valid(
-            &s,
-            json!({ "title": "t", "template": "x", "arguments": {} })
-        ));
-        assert!(!valid(
-            &s,
-            json!({ "title": "t", "template": "x", "user_id": "u" })
-        ));
+        assert!(valid(&s, json!({ "title": "t", "template": "x", "arguments": {} })));
+        assert!(!valid(&s, json!({ "title": "t", "template": "x", "user_id": "u" })));
     }
 }

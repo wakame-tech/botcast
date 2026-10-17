@@ -58,13 +58,8 @@ pub(crate) struct CurrentSchedule {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ScheduleChange {
     Create(DesiredSchedule),
-    Recreate {
-        id: String,
-        desired: DesiredSchedule,
-    },
-    Remove {
-        id: String,
-    },
+    Recreate { id: String, desired: DesiredSchedule },
+    Remove { id: String },
 }
 
 /// `schedule.enabled` が true で `cron`・`script_id` が正しい番組のスケジュールを返す
@@ -74,9 +69,7 @@ pub(crate) fn desired_schedules(podcasts: &[Value]) -> Vec<DesiredSchedule> {
         .filter_map(|p| {
             let id = p["id"].as_str()?;
             let schedule = &p["data"]["schedule"];
-            if schedule["enabled"].as_bool() != Some(true)
-                || schedule["script_id"].as_str().is_none()
-            {
+            if schedule["enabled"].as_bool() != Some(true) || schedule["script_id"].as_str().is_none() {
                 return None;
             }
             let cron = schedule["cron"].as_str()?;
@@ -245,18 +238,9 @@ mod tests {
     #[test]
     fn desired_schedules_picks_enabled_valid_ones() {
         let podcasts = vec![
-            podcast(
-                "a",
-                json!({ "cron": "0 0 12 * * Fri *", "script_id": "s", "enabled": true }),
-            ),
-            podcast(
-                "b",
-                json!({ "cron": "0 0 12 * * Fri *", "script_id": "s", "enabled": false }),
-            ),
-            podcast(
-                "c",
-                json!({ "cron": "bad", "script_id": "s", "enabled": true }),
-            ),
+            podcast("a", json!({ "cron": "0 0 12 * * Fri *", "script_id": "s", "enabled": true })),
+            podcast("b", json!({ "cron": "0 0 12 * * Fri *", "script_id": "s", "enabled": false })),
+            podcast("c", json!({ "cron": "bad", "script_id": "s", "enabled": true })),
             podcast("d", json!({ "cron": "0 0 12 * * Fri *", "enabled": true })),
             json!({ "id": "e", "data": { "title": "t" } }),
         ];
@@ -308,9 +292,7 @@ mod tests {
                     id: "kafru_schedules:changed".to_string(),
                     desired: desired("changed", "0 0 13 * * Fri *"),
                 },
-                ScheduleChange::Remove {
-                    id: "kafru_schedules:gone".to_string()
-                },
+                ScheduleChange::Remove { id: "kafru_schedules:gone".to_string() },
             ]
         );
     }

@@ -179,10 +179,7 @@ mod tests {
 
     #[test]
     fn episode_owner_is_podcast_owner_unless_service() {
-        assert_eq!(
-            episode_owner(&json!({ "owner_id": "user:a" })),
-            Some("user:a")
-        );
+        assert_eq!(episode_owner(&json!({ "owner_id": "user:a" })), Some("user:a"));
         assert_eq!(episode_owner(&json!({ "owner_id": "service" })), None);
         assert_eq!(episode_owner(&json!({ "owner_id": null })), None);
     }
@@ -210,10 +207,7 @@ mod tests {
     #[test]
     fn parse_script_output_uses_default_title() {
         let stdout = r#"{"sections":[{"type":"Serif","speaker":"3","text":"a"}]}"#;
-        assert_eq!(
-            parse_script_output(stdout, "", "第2回").unwrap().title,
-            "第2回"
-        );
+        assert_eq!(parse_script_output(stdout, "", "第2回").unwrap().title, "第2回");
     }
 
     #[test]
