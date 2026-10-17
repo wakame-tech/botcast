@@ -129,6 +129,7 @@ async fn voicevox_request_shape() {
         .synthesize(SynthesisRequest {
             text: "こんにちは。",
             voice: &voice,
+            namespace: "botcast",
         })
         .await
         .unwrap();
@@ -176,6 +177,7 @@ async fn voicevox_unknown_style_uses_default_and_strips_emoji() {
         .synthesize(SynthesisRequest {
             text: "やった",
             voice: &voice,
+            namespace: "botcast",
         })
         .await
         .unwrap();
@@ -253,6 +255,7 @@ async fn openai_request_shape_with_token() {
         .synthesize(SynthesisRequest {
             text: "やった🎉",
             voice: &voice,
+            namespace: "botcast",
         })
         .await
         .unwrap();
@@ -299,6 +302,7 @@ async fn openai_without_token_and_options() {
         .synthesize(SynthesisRequest {
             text: "こんにちは",
             voice: &voice,
+            namespace: "botcast",
         })
         .await
         .unwrap();
@@ -377,7 +381,7 @@ async fn openai_ensure_voice_uploads_only_when_needed() {
 
     // サーバーに無い → POST（multipart の file と、ハッシュの先頭 12 文字を付けた voice_id）
     engine
-        .ensure_voice("alice", hash_1, b"RIFF-alice")
+        .ensure_voice("t1", "alice", hash_1, b"RIFF-alice")
         .await
         .unwrap();
     let requests = take();
@@ -391,48 +395,57 @@ async fn openai_ensure_voice_uploads_only_when_needed() {
         .starts_with("multipart/form-data"));
     let body = String::from_utf8_lossy(&upload.body);
     assert!(
-        body.contains("name=\"file\"; filename=\"alice-0123456789ab.wav\""),
+        body.contains("name=\"file\"; filename=\"t1-alice-0123456789ab.wav\""),
         "{body}"
     );
     assert!(body.contains("RIFF-alice"));
     assert!(
-        body.contains("name=\"voice_id\"\r\n\r\nalice-0123456789ab\r\n"),
+        body.contains("name=\"voice_id\"\r\n\r\nt1-alice-0123456789ab\r\n"),
         "{body}"
     );
 
     // 同じハッシュ → 何もしない
     engine
-        .ensure_voice("alice", hash_1, b"RIFF-alice")
+        .ensure_voice("t1", "alice", hash_1, b"RIFF-alice")
         .await
         .unwrap();
     assert!(take().is_empty());
 
     // ハッシュが違う → 別の ID で POST する（前の版は上書きしない）
     engine
-        .ensure_voice("alice", hash_2, b"RIFF-alice-2")
+        .ensure_voice("t1", "alice", hash_2, b"RIFF-alice-2")
         .await
         .unwrap();
     let requests = take();
     assert_eq!(methods(&requests), list_and_post);
-    assert!(String::from_utf8_lossy(&requests[1].body).contains("alice-fedcba987654"));
+    assert!(String::from_utf8_lossy(&requests[1].body).contains("t1-alice-fedcba987654"));
     assert_eq!(
         *voices.lock().unwrap(),
         HashSet::from([
-            "alice-0123456789ab".to_string(),
-            "alice-fedcba987654".to_string()
+            "t1-alice-0123456789ab".to_string(),
+            "t1-alice-fedcba987654".to_string()
         ])
     );
 
     // 別のプロセス（エンジン）からは、サーバーにあれば上書きしない（一覧を見るだけ）
     let other = OpenAiEngine::new(format!("{url}/v1"), None, None, TIMEOUT).unwrap();
     other
-        .ensure_voice("alice", hash_1, b"RIFF-alice-other")
+        .ensure_voice("t1", "alice", hash_1, b"RIFF-alice-other")
         .await
         .unwrap();
     assert_eq!(
         methods(&take()),
         vec![(Method::GET, "/v1/audio/voices".to_string())]
     );
+
+    // 別の名前空間（テナント）の同じ slug は別の ID でアップロードする
+    other
+        .ensure_voice("t2", "alice", hash_1, b"RIFF-alice-t2")
+        .await
+        .unwrap();
+    let requests = take();
+    assert_eq!(methods(&requests), list_and_post);
+    assert!(String::from_utf8_lossy(&requests[1].body).contains("t2-alice-0123456789ab"));
 }
 
 #[tokio::test]
@@ -452,12 +465,13 @@ async fn openai_synthesize_uses_versioned_voice_id() {
         .synthesize(SynthesisRequest {
             text: "こんにちは",
             voice: &voice,
+            namespace: "botcast",
         })
         .await
         .unwrap();
     assert_eq!(
         captured.lock().unwrap()[0].json()["voice"],
-        "alice-0123456789ab"
+        "botcast-alice-0123456789ab"
     );
 }
 
@@ -482,7 +496,10 @@ fn endpoint_with_credentials_is_rejected() {
 async fn voicevox_ensure_voice_is_noop() {
     let (url, captured) = spawn_server(voicevox_responder).await;
     let engine = VoicevoxEngine::new(&url, TIMEOUT).unwrap();
-    engine.ensure_voice("3", "hash", b"RIFF").await.unwrap();
+    engine
+        .ensure_voice("t1", "3", "hash", b"RIFF")
+        .await
+        .unwrap();
     assert!(captured.lock().unwrap().is_empty());
 }
 

@@ -136,7 +136,14 @@ impl TtsEngine for FakeEngine {
         self.version.lock().unwrap().clone()
     }
 
-    async fn ensure_voice(&self, voice_id: &str, hash: &str, bytes: &[u8]) -> Result<()> {
+    async fn ensure_voice(
+        &self,
+        namespace: &str,
+        voice_id: &str,
+        hash: &str,
+        bytes: &[u8],
+    ) -> Result<()> {
+        assert_eq!(namespace, NS);
         self.ensured
             .lock()
             .unwrap()

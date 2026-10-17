@@ -27,14 +27,34 @@ pub const DEFAULT_MODEL: &str = "irodori-tts";
 /// サーバー側の声の ID に入れる参照音声のハッシュの長さ
 const VOICE_HASH_LEN: usize = 12;
 
-/// 参照音声の版ごとのサーバー側の声の ID（`{voice_id}-{ハッシュの先頭 12 文字}`）。
-pub fn server_voice_id(voice_id: &str, hash: &str) -> String {
+/// サーバー側の声の ID に使える文字（ASCII の英数字・`-`・`_`）だけにする。それ以外は `_` に置き換える
+fn sanitize_id_part(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+/// 参照音声の版ごとのサーバー側の声の ID（`{namespace}-{voice_id}-{ハッシュの先頭 12 文字}`）。
+/// 名前空間（テナント）ごとに分け、同じ slug の声が衝突しないようにする。
+/// 各部分は [`sanitize_id_part`] で正規化する。区切りの `-` が部分の中にあって ID が重なっても、
+/// 参照音声のハッシュが同じ（= 同じ音声）ときだけなので害は無い。
+pub fn server_voice_id(namespace: &str, voice_id: &str, hash: &str) -> String {
     let hash: String = hash
         .chars()
         .filter(char::is_ascii_alphanumeric)
         .take(VOICE_HASH_LEN)
         .collect();
-    format!("{voice_id}-{hash}")
+    format!(
+        "{}-{}-{hash}",
+        sanitize_id_part(namespace),
+        sanitize_id_part(voice_id)
+    )
 }
 
 pub struct OpenAiEngine {
@@ -101,7 +121,7 @@ impl OpenAiEngine {
     /// 合成に使うサーバー側の声の ID（参照音声があれば版ごとの ID）
     fn speech_voice(req: SynthesisRequest<'_>) -> String {
         match &req.voice.ref_audio {
-            Some(ref_audio) => server_voice_id(&req.voice.voice_id, &ref_audio.hash),
+            Some(ref_audio) => server_voice_id(req.namespace, &req.voice.voice_id, &ref_audio.hash),
             None => req.voice.voice_id.clone(),
         }
     }
@@ -222,8 +242,14 @@ impl TtsEngine for OpenAiEngine {
     }
 
     #[instrument(skip(self, bytes))]
-    async fn ensure_voice(&self, voice_id: &str, hash: &str, bytes: &[u8]) -> Result<()> {
-        let server_id = server_voice_id(voice_id, hash);
+    async fn ensure_voice(
+        &self,
+        namespace: &str,
+        voice_id: &str,
+        hash: &str,
+        bytes: &[u8],
+    ) -> Result<()> {
+        let server_id = server_voice_id(namespace, voice_id, hash);
         if self.synced_voices.lock().unwrap().contains(&server_id) {
             return Ok(());
         }
@@ -268,11 +294,24 @@ mod tests {
     }
 
     #[test]
-    fn server_voice_id_has_hash_prefix() {
+    fn server_voice_id_has_namespace_and_hash_prefix() {
         assert_eq!(
-            server_voice_id("alice", "0123456789abcdef0123"),
-            "alice-0123456789ab"
+            server_voice_id("botcast", "alice", "0123456789abcdef0123"),
+            "botcast-alice-0123456789ab"
         );
-        assert_eq!(server_voice_id("alice", "abc"), "alice-abc");
+        assert_eq!(
+            server_voice_id("botcast", "alice", "abc"),
+            "botcast-alice-abc"
+        );
+        // テナントが違えば同じ slug でも別の ID
+        assert_ne!(
+            server_voice_id("t1", "alice", "abc"),
+            server_voice_id("t2", "alice", "abc")
+        );
+        // サーバーが受け付ける文字にそろえる
+        assert_eq!(
+            server_voice_id("my-tenant", "narrator-1 声/x", "ab-cd"),
+            "my-tenant-narrator-1___x-abcd"
+        );
     }
 }
