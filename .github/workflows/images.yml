@@ -10,6 +10,9 @@ on:
   pull_request:
     paths:
       - deploy/selfhost/**
+      # 設定の例はイメージに入らないので、変えてもビルドしない
+      - "!deploy/selfhost/**/*.example"
+      - "!deploy/selfhost/**/.env.example"
       - .github/workflows/images.yml
   workflow_dispatch:
 
