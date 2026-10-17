@@ -702,7 +702,7 @@ pub async fn record_api_list(configuration: &configuration::Configuration, param
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
 
     if let Some(ref param_value) = params.filter {
-        req_builder = match "csv" {
+        req_builder = match "multi" {
             "multi" => req_builder.query(&param_value.into_iter().map(|p| ("filter".to_owned(), p.to_string())).collect::<Vec<(std::string::String, std::string::String)>>()),
             _ => req_builder.query(&[("filter", &param_value.into_iter().map(|p| p.to_string()).collect::<Vec<String>>().join(",").to_string())]),
         };
