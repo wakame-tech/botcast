@@ -2,8 +2,11 @@ import { z } from "zod";
 
 export type SerifSection = {
 	type: "Serif";
+	/** 番組の配役の別名・声 (voices) の slug・旧形式の VOICEVOX のスタイル ID */
 	speaker: string;
 	text: string;
+	/** 口調・感情の指定 (自由文) */
+	style?: string;
 };
 
 export type AudioSection = {

@@ -16,6 +16,8 @@ const sampleContext = (args: Record<string, unknown>) => ({
 		title: "サンプル番組",
 		icon: "",
 		description: "試し実行用の番組",
+		// 配役: 台本の speaker に書く別名 → 声の slug
+		cast: { ホスト: "zundamon" },
 	},
 	previous_episode: {
 		id: "sample-episode",

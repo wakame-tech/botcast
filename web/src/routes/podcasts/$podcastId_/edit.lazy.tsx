@@ -1,3 +1,4 @@
+import { CastForm } from "@/components/podcast/CastForm";
 import { PodcastForm } from "@/components/podcast/PodcastForm";
 import { ScheduleForm } from "@/components/podcast/ScheduleForm";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import type { PodcastInput } from "@/lib/api_client";
 import {
 	$cms,
 	CMS_TENANT,
+	type Cast,
 	type PodcastSchedule,
 	recordToPodcast,
 	toRecordData,
@@ -69,6 +71,11 @@ export default function EditPodcast() {
 		navigate({ to: "/podcasts/$podcastId", params: { podcastId } });
 	};
 
+	const handleCastSubmit = async (cast: Cast) => {
+		await saveData({ cast });
+		navigate({ to: "/podcasts/$podcastId", params: { podcastId } });
+	};
+
 	const handleDelete = async () => {
 		await deletePodcast.mutateAsync({
 			params: {
@@ -98,6 +105,8 @@ export default function EditPodcast() {
 					description: podcast.description,
 				}}
 			/>
+
+			<CastForm value={podcast.cast} onSubmit={handleCastSubmit} />
 
 			<ScheduleForm value={podcast.schedule} onSubmit={handleScheduleSubmit} />
 
