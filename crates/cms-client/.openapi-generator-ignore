@@ -1,0 +1,7 @@
+# 依存の TLS を選べるよう Cargo.toml は手で管理する (生成器は reqwest の TLS を有効にしない)
+Cargo.toml
+# 使わない付属物
+.travis.yml
+git_push.sh
+.gitignore
+docs/**

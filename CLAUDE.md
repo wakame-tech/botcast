@@ -46,11 +46,17 @@ cd web && npm run check
 - VITE_WORKER_URL: worker URL（web。未設定時 `http://localhost:9001`。セルフホストでは nginx が中継する `/api`）。web は `POST /jobs` に botcast-cms のトークンを `Authorization: Bearer` で付け、worker が CMS の `GET /t/{tenantId}/collections` で検証する
 - CMS_URL: botcast-cms URL（worker）
 - CMS_TENANT: botcast-cms のテナント ID（worker。既定 `botcast`）
-- API_KEY: botcast-cms の `API_KEY_<TENANT>` と同じ値（キーはテナントごとに発行される）。worker → CMS の `X-Api-Key` 認証に使い、MCP サーバーの子プロセスにもそのまま渡る
+- API_KEY: botcast-cms でテナント `botcast` の役割 `service` の機械用のユーザーに発行したキー（`api api-key issue --tenant botcast --name worker --user botcast-worker --roles service`）。worker → CMS の `X-Api-Key` 認証に使い、MCP サーバーの子プロセスにもそのまま渡る
 - MCP_SERVER_ARGS: botcast-cms MCP サーバーの起動引数（例: `../botcast-cms/mcp/build/index.js`）
 - KAFRU_DB_HOST / KAFRU_DB_PORT / KAFRU_DB_USERNAME / KAFRU_DB_PASSWORD / KAFRU_DB_NAMESPACE / KAFRU_DB_NAME: ジョブキュー (kafru) の SurrealDB。ローカルは `just up` で 4030 番に起動
 - VOICEVOX_ENDPOINT: VoiceVox エンジン URL（音声生成に必要。例: `docker run -p 50021:50021 voicevox/voicevox_engine:cpu-latest`）
 - OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector
+
+## CMS のクライアント
+
+- worker は botcast-cms の spec から生成した `crates/cms-client` で CMS を呼ぶ（`usecase/cms_client.rs` の `CmsClient` と `api/auth.rs` の `CmsTokenVerifier` が包む）。手で HTTP を組み立てない
+- `crates/cms-client` は生成物なので編集しない。CMS の API が変わったら `just sync-cms-client`（`../botcast-cms` の `cms/crates/client` をコピーし、取り込んだ commit を `SOURCE_REV` に書く）
+- 実物の CMS への結合テスト: `CMS_URL=... CMS_TENANT=botcast API_KEY=... cargo test -p worker -- --ignored against_cms`（`CMS_TEST_OWNER=user:xxxx` で `X-On-Behalf-Of` も確かめる）
 
 ## CMS のコレクション
 

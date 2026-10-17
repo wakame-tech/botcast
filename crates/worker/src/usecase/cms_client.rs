@@ -1,6 +1,11 @@
-use anyhow::{bail, Context};
+use anyhow::Context;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use cms_client::apis::{
+    collections_api, configuration::Configuration, record_api, script_api, Error as CmsError,
+};
+use cms_client::models;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use tokio::sync::Mutex;
 
 /// `GET /records/{collection}` のクエリ
@@ -13,25 +18,6 @@ pub(crate) struct ListQuery {
     pub limit: Option<u32>,
 }
 
-impl ListQuery {
-    fn to_params(&self) -> Vec<(&'static str, String)> {
-        let mut params = vec![];
-        if let Some(f) = &self.filter {
-            params.push(("filter", f.clone()));
-        }
-        if let Some(s) = &self.sort {
-            params.push(("sort", s.clone()));
-        }
-        if self.order_desc {
-            params.push(("order", "desc".to_string()));
-        }
-        if let Some(l) = self.limit {
-            params.push(("limit", l.to_string()));
-        }
-        params
-    }
-}
-
 /// `POST /scripts` の結果
 #[derive(Debug, Clone)]
 pub(crate) struct ScriptOutput {
@@ -41,17 +27,15 @@ pub(crate) struct ScriptOutput {
 
 /// botcast-cms の REST API クライアント。
 ///
-/// - 認証は `X-Api-Key`（環境変数 `API_KEY` = botcast-cms の `API_KEY_<TENANT>` と同じ値）によるサービス間認証
+/// - 通信は botcast-cms の spec から生成した `cms-client`（`crates/cms-client`。`just sync-cms-client` で取り込み直す）
+/// - 認証は `X-Api-Key`（環境変数 `API_KEY` = CMS でテナント `botcast` の役割 `service` の機械用のユーザーに発行したキー）
 /// - CMS はマルチテナントで、全エンドポイントが `/t/{tenantId}/...` 配下にある。
-///   テナント (`CMS_TENANT`、既定 `botcast`) はクライアントが保持し、`request` が URL に付ける。
-///   そのため各メソッドは `/records/...` のようなテナントを含まないパスを書く。
+///   テナント (`CMS_TENANT`、既定 `botcast`) はクライアントが保持して毎回渡す
 /// - collection ID は自動採番のため、名前から ID を `/collections` で解決してキャッシュする
 /// - 音声・字幕ファイルは `/records/{c}/{r}/images/{field}` に Base64 で保存する
 pub(crate) struct CmsClient {
-    http: reqwest::Client,
-    base_url: String,
+    config: Configuration,
     tenant: String,
-    api_key: Option<String>,
     collection_ids: Mutex<HashMap<String, String>>,
 }
 
@@ -65,36 +49,29 @@ impl CmsClient {
     }
 
     pub(crate) fn new(base_url: String, tenant: String, api_key: Option<String>) -> Self {
+        let config = Configuration {
+            base_path: base_url.trim_end_matches('/').to_string(),
+            api_key: api_key
+                .map(|key| cms_client::apis::configuration::ApiKey { prefix: None, key }),
+            ..Configuration::new()
+        };
         Self {
-            http: reqwest::Client::new(),
-            base_url: base_url.trim_end_matches('/').to_string(),
+            config,
             tenant,
-            api_key,
             collection_ids: Mutex::new(HashMap::new()),
         }
     }
 
-    /// テナントを含む最終的なリクエスト URL
-    pub(crate) fn url_for(&self, path: &str) -> String {
-        format!("{}/t/{}{}", self.base_url, self.tenant, path)
-    }
-
-    fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
-        let req = self.http.request(method, self.url_for(path));
-        match &self.api_key {
-            Some(key) => req.header("X-Api-Key", key),
-            None => req,
-        }
-    }
-
-    async fn send(req: reqwest::RequestBuilder) -> anyhow::Result<serde_json::Value> {
-        let res = req.send().await.context("CMS request failed")?;
-        let status = res.status();
-        if !status.is_success() {
-            let body = res.text().await.unwrap_or_default();
-            bail!("CMS returned {status}: {body}");
-        }
-        res.json().await.context("Failed to parse CMS response")
+    async fn list_collections(&self) -> anyhow::Result<Vec<models::Collection>> {
+        collections_api::collection_api_list(
+            &self.config,
+            collections_api::CollectionApiListParams {
+                tenant_id: self.tenant.clone(),
+                x_on_behalf_of: None,
+            },
+        )
+        .await
+        .map_err(cms_error)
     }
 
     /// collection 名を ID（`collection:` 接頭辞なし）に解決する
@@ -103,8 +80,7 @@ impl CmsClient {
         if let Some(id) = ids.get(name) {
             return Ok(id.clone());
         }
-        let collections = Self::send(self.request(reqwest::Method::GET, "/collections")).await?;
-        *ids = parse_collection_ids(&collections);
+        *ids = parse_collection_ids(&self.list_collections().await?);
         ids.get(name)
             .cloned()
             .with_context(|| format!("CMS collection '{name}' not found"))
@@ -116,9 +92,21 @@ impl CmsClient {
         collection: &str,
         record_id: &str,
     ) -> anyhow::Result<serde_json::Value> {
-        let cid = self.collection_id(collection).await?;
-        Self::send(self.request(reqwest::Method::GET, &format!("/records/{cid}/{record_id}")))
-            .await
+        let record = record_api::record_api_read(
+            &self.config,
+            record_api::RecordApiReadParams {
+                tenant_id: self.tenant.clone(),
+                collection_id: self.collection_id(collection).await?,
+                record_id: record_id.to_string(),
+                x_on_behalf_of: None,
+                eval: None,
+                input: None,
+                vars: None,
+            },
+        )
+        .await
+        .map_err(cms_error)?;
+        Ok(serde_json::to_value(record)?)
     }
 
     /// レコードの `data` を取得する
@@ -136,13 +124,20 @@ impl CmsClient {
         collection: &str,
         query: &ListQuery,
     ) -> anyhow::Result<Vec<serde_json::Value>> {
-        let cid = self.collection_id(collection).await?;
-        let res = Self::send(
-            self.request(reqwest::Method::GET, &format!("/records/{cid}"))
-                .query(&query.to_params()),
+        let records = record_api::record_api_list(
+            &self.config,
+            list_params(
+                self.tenant.clone(),
+                self.collection_id(collection).await?,
+                query,
+            ),
         )
-        .await?;
-        Ok(res.as_array().cloned().unwrap_or_default())
+        .await
+        .map_err(cms_error)?;
+        records
+            .into_iter()
+            .map(|r| Ok(serde_json::to_value(r)?))
+            .collect()
     }
 
     /// コレクションを作成し、既にあればスキーマ・access を合わせる。ID を返す
@@ -152,34 +147,54 @@ impl CmsClient {
         schema: serde_json::Value,
         access: serde_json::Value,
     ) -> anyhow::Result<String> {
-        let collections = Self::send(self.request(reqwest::Method::GET, "/collections")).await?;
-        let existing = collections
-            .as_array()
+        let existing = self
+            .list_collections()
+            .await?
             .into_iter()
-            .flatten()
-            .find(|c| c["name"] == name)
-            .cloned();
-        let body = serde_json::json!({ "name": name, "schema": schema, "access": access });
+            .find(|c| c.name == name);
+        let typed_access: models::CollectionAccess =
+            serde_json::from_value(access.clone()).context("invalid collection access")?;
         let collection = match existing {
             Some(c) if collection_needs_update(&c, &schema, &access) => {
-                let id = collection_key(&c).context("id missing in collection")?;
                 tracing::info!("updating collection '{name}'");
-                Self::send(
-                    self.request(reqwest::Method::PUT, &format!("/collections/{id}"))
-                        .json(&body),
+                collections_api::collection_api_update(
+                    &self.config,
+                    collections_api::CollectionApiUpdateParams {
+                        tenant_id: self.tenant.clone(),
+                        collection_id: collection_key(&c.id),
+                        update_collection: models::UpdateCollection {
+                            name: name.to_string(),
+                            schema: Some(schema),
+                            access: Some(typed_access),
+                        },
+                        x_on_behalf_of: None,
+                    },
                 )
                 .await
+                .map_err(cms_error)
                 .with_context(|| format!("Failed to update collection '{name}'"))?
             }
             Some(c) => c,
             None => {
                 tracing::info!("creating collection '{name}'");
-                Self::send(self.request(reqwest::Method::POST, "/collections").json(&body))
-                    .await
-                    .with_context(|| format!("Failed to create collection '{name}'"))?
+                collections_api::collection_api_create(
+                    &self.config,
+                    collections_api::CollectionApiCreateParams {
+                        tenant_id: self.tenant.clone(),
+                        create_or_update_collection: models::CreateOrUpdateCollection {
+                            name: name.to_string(),
+                            schema,
+                            access: Some(typed_access),
+                        },
+                        x_on_behalf_of: None,
+                    },
+                )
+                .await
+                .map_err(cms_error)
+                .with_context(|| format!("Failed to create collection '{name}'"))?
             }
         };
-        let id = collection_key(&collection).context("id missing in collection response")?;
+        let id = collection_key(&collection.id);
         self.collection_ids
             .lock()
             .await
@@ -194,30 +209,38 @@ impl CmsClient {
         data: serde_json::Value,
         owner: Option<&str>,
     ) -> anyhow::Result<String> {
-        let cid = self.collection_id(collection).await?;
-        let mut req = self
-            .request(reqwest::Method::POST, &format!("/records/{cid}"))
-            .json(&serde_json::json!({ "data": data }));
-        if let Some(owner) = owner {
-            req = req.header("X-On-Behalf-Of", owner);
-        }
-        let res = Self::send(req).await?;
-        res["id"]
-            .as_str()
-            .map(str::to_string)
-            .context("id missing in create response")
+        let record = record_api::record_api_create(
+            &self.config,
+            record_api::RecordApiCreateParams {
+                tenant_id: self.tenant.clone(),
+                collection_id: self.collection_id(collection).await?,
+                create_or_update_record: models::CreateOrUpdateRecord::new(data),
+                x_on_behalf_of: owner.map(str::to_string),
+            },
+        )
+        .await
+        .map_err(cms_error)?;
+        Ok(record.id)
     }
 
     /// Node.js のコードを CMS (Dify Sandbox) で実行する
     pub(crate) async fn execute_script(&self, code: &str) -> anyhow::Result<ScriptOutput> {
-        let res = Self::send(
-            self.request(reqwest::Method::POST, "/scripts")
-                .json(&serde_json::json!({ "language": "nodejs", "code": code })),
+        let res = script_api::script_api_execute(
+            &self.config,
+            script_api::ScriptApiExecuteParams {
+                tenant_id: self.tenant.clone(),
+                execute_script_request: models::ExecuteScriptRequest::new(
+                    models::execute_script_request::Language::Nodejs,
+                    code.to_string(),
+                ),
+                x_on_behalf_of: None,
+            },
         )
-        .await?;
+        .await
+        .map_err(cms_error)?;
         Ok(ScriptOutput {
-            stdout: res["data"]["stdout"].as_str().unwrap_or_default().to_string(),
-            error: res["data"]["error"].as_str().unwrap_or_default().to_string(),
+            stdout: res.data.stdout,
+            error: res.data.error,
         })
     }
 
@@ -228,12 +251,19 @@ impl CmsClient {
         record_id: &str,
         data: serde_json::Value,
     ) -> anyhow::Result<()> {
-        let cid = self.collection_id(collection).await?;
-        Self::send(
-            self.request(reqwest::Method::PUT, &format!("/records/{cid}/{record_id}"))
-                .json(&serde_json::json!({ "data": data })),
+        record_api::record_api_update(
+            &self.config,
+            record_api::RecordApiUpdateParams {
+                tenant_id: self.tenant.clone(),
+                collection_id: self.collection_id(collection).await?,
+                record_id: record_id.to_string(),
+                create_or_update_record: models::CreateOrUpdateRecord::new(data),
+                x_on_behalf_of: None,
+                if_match: None,
+            },
         )
-        .await?;
+        .await
+        .map_err(cms_error)?;
         Ok(())
     }
 
@@ -246,66 +276,111 @@ impl CmsClient {
         data: &[u8],
         content_type: &str,
     ) -> anyhow::Result<String> {
-        let cid = self.collection_id(collection).await?;
-        let res = Self::send(
-            self.request(
-                reqwest::Method::POST,
-                &format!("/records/{cid}/{record_id}/images/{field}"),
-            )
-            .json(&serde_json::json!({
-                "data": BASE64.encode(data),
-                "content_type": content_type,
-            })),
+        let content_type = serde_json::from_value(serde_json::json!(content_type))
+            .with_context(|| format!("CMS does not accept content type '{content_type}'"))?;
+        let res = record_api::record_api_upload_image(
+            &self.config,
+            record_api::RecordApiUploadImageParams {
+                tenant_id: self.tenant.clone(),
+                collection_id: self.collection_id(collection).await?,
+                record_id: record_id.to_string(),
+                field_name: field.to_string(),
+                upload_image_request: models::UploadImageRequest {
+                    data: BASE64.encode(data),
+                    content_type,
+                    filename: None,
+                },
+                x_on_behalf_of: None,
+            },
         )
-        .await?;
-        res["url"]
-            .as_str()
-            .map(str::to_string)
-            .context("url missing in upload response")
+        .await
+        .map_err(cms_error)?;
+        Ok(res.url)
+    }
+}
+
+/// 生成クライアントのエラーを、CMS の状態コードと本文が分かる anyhow のエラーにする
+pub(crate) fn cms_error<T: Debug>(e: CmsError<T>) -> anyhow::Error {
+    match e {
+        CmsError::ResponseError(res) => {
+            anyhow::anyhow!("CMS returned {}: {}", res.status, res.content)
+        }
+        other => anyhow::Error::msg(other.to_string()).context("CMS request failed"),
+    }
+}
+
+fn list_params(
+    tenant_id: String,
+    collection_id: String,
+    query: &ListQuery,
+) -> record_api::RecordApiListParams {
+    record_api::RecordApiListParams {
+        tenant_id,
+        collection_id,
+        x_on_behalf_of: None,
+        filter: query.filter.clone().map(|f| vec![f]),
+        sort: query.sort.clone(),
+        order: query.order_desc.then(|| "desc".to_string()),
+        limit: query.limit.map(|l| l as i32),
+        offset: None,
+        eval: None,
+        input: None,
+        vars: None,
     }
 }
 
 /// コレクションの ID（`collection:` 接頭辞なし）
-fn collection_key(collection: &serde_json::Value) -> Option<String> {
-    let id = collection["id"].as_str()?;
-    Some(id.strip_prefix("collection:").unwrap_or(id).to_string())
+fn collection_key(id: &str) -> String {
+    id.strip_prefix("collection:").unwrap_or(id).to_string()
 }
 
 /// 既存コレクションのスキーマ・access が望む値と違うか
 fn collection_needs_update(
-    current: &serde_json::Value,
+    current: &models::Collection,
     schema: &serde_json::Value,
     access: &serde_json::Value,
 ) -> bool {
-    &current["schema"] != schema || &current["access"] != access
+    let current_access = current
+        .access
+        .as_ref()
+        .and_then(|a| serde_json::to_value(a).ok())
+        .unwrap_or(serde_json::Value::Null);
+    &current.schema != schema || &current_access != access
 }
 
-fn parse_collection_ids(collections: &serde_json::Value) -> HashMap<String, String> {
+fn parse_collection_ids(collections: &[models::Collection]) -> HashMap<String, String> {
     collections
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|c| Some((c["name"].as_str()?.to_string(), collection_key(c)?)))
+        .iter()
+        .map(|c| (c.name.clone(), collection_key(&c.id)))
         .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
-    #[test]
-    fn url_for_inserts_tenant_prefix() {
-        let cms = CmsClient::new("http://cms:3002".to_string(), "botcast".to_string(), None);
-        assert_eq!(
-            cms.url_for("/records/episodes"),
-            "http://cms:3002/t/botcast/records/episodes"
-        );
+    fn collection(id: &str, name: &str, schema: serde_json::Value) -> models::Collection {
+        models::Collection::new(id.to_string(), name.to_string(), schema, String::new())
     }
 
     #[test]
-    fn url_for_trims_trailing_slash_of_base_url() {
+    fn new_trims_trailing_slash_of_base_url() {
+        // 生成クライアントは `{base_path}/t/{tenantId}/...` を組み立てる
         let cms = CmsClient::new("http://cms:3002/".to_string(), "socia".to_string(), None);
-        assert_eq!(cms.url_for("/collections"), "http://cms:3002/t/socia/collections");
+        assert_eq!(cms.config.base_path, "http://cms:3002");
+        assert_eq!(cms.tenant, "socia");
+    }
+
+    #[test]
+    fn new_sends_api_key_as_is() {
+        let cms = CmsClient::new(
+            "http://cms".to_string(),
+            "botcast".to_string(),
+            Some("bck_x".to_string()),
+        );
+        let key = cms.config.api_key.unwrap();
+        assert_eq!((key.prefix, key.key.as_str()), (None, "bck_x"));
     }
 
     #[test]
@@ -316,41 +391,100 @@ mod tests {
             order_desc: true,
             limit: Some(1),
         };
-        assert_eq!(
-            q.to_params(),
-            vec![
-                ("filter", "podcast_id:eq:p1".to_string()),
-                ("sort", "created_at".to_string()),
-                ("order", "desc".to_string()),
-                ("limit", "1".to_string()),
-            ]
+        let p = list_params("botcast".to_string(), "c1".to_string(), &q);
+        assert_eq!(p.filter, Some(vec!["podcast_id:eq:p1".to_string()]));
+        assert_eq!(p.sort.as_deref(), Some("created_at"));
+        assert_eq!(p.order.as_deref(), Some("desc"));
+        assert_eq!(p.limit, Some(1));
+        let empty = list_params(
+            "botcast".to_string(),
+            "c1".to_string(),
+            &ListQuery::default(),
         );
-        assert!(ListQuery::default().to_params().is_empty());
+        assert_eq!(
+            (empty.filter, empty.sort, empty.order, empty.limit),
+            (None, None, None, None)
+        );
     }
 
     #[test]
     fn parse_collection_ids_strips_prefix() {
-        let json = serde_json::json!([
-            { "id": "collection:abc", "name": "episodes" },
-            { "id": "def", "name": "podcasts" },
-            { "name": "broken" }
+        let ids = parse_collection_ids(&[
+            collection("collection:abc", "episodes", json!({})),
+            collection("def", "podcasts", json!({})),
         ]);
-        let ids = parse_collection_ids(&json);
         assert_eq!(ids.get("episodes").map(String::as_str), Some("abc"));
         assert_eq!(ids.get("podcasts").map(String::as_str), Some("def"));
-        assert!(!ids.contains_key("broken"));
     }
 
     #[test]
     fn collection_needs_update_when_schema_or_access_differs() {
-        let schema = serde_json::json!({ "type": "object" });
-        let access = serde_json::json!({ "read": "public", "write": "owner" });
-        let same = serde_json::json!({ "name": "p", "schema": schema, "access": access });
+        let schema = json!({ "type": "object" });
+        let access = json!({ "read": "public", "write": "owner" });
+        let mut same = collection("c", "p", schema.clone());
+        same.access = Some(serde_json::from_value(access.clone()).unwrap());
         assert!(!collection_needs_update(&same, &schema, &access));
-        let other_schema =
-            serde_json::json!({ "name": "p", "schema": { "type": "string" }, "access": access });
+        let mut other_schema = collection("c", "p", json!({ "type": "string" }));
+        other_schema.access = same.access.clone();
         assert!(collection_needs_update(&other_schema, &schema, &access));
-        let no_access = serde_json::json!({ "name": "p", "schema": schema });
+        let no_access = collection("c", "p", schema.clone());
         assert!(collection_needs_update(&no_access, &schema, &access));
+    }
+
+    #[test]
+    fn upload_content_types_used_by_the_worker_are_accepted() {
+        for ct in ["audio/mpeg", "text/plain"] {
+            serde_json::from_value::<models::upload_image_request::ContentType>(json!(ct)).unwrap();
+        }
+    }
+
+    /// `CMS_URL` / `CMS_TENANT` / `API_KEY` の CMS に、worker が使う操作を一通り送る。
+    /// `CMS_TEST_OWNER` (テナントの人間のユーザー `user:xxxx`) があれば `X-On-Behalf-Of` も確かめる
+    #[tokio::test]
+    #[ignore = "requires a running botcast-cms"]
+    async fn operations_against_cms() {
+        let cms = CmsClient::from_env();
+        crate::usecase::collections::seed(&cms).await.unwrap();
+
+        let owner = std::env::var("CMS_TEST_OWNER").ok();
+        let title = format!("t-{}", uuid::Uuid::new_v4());
+        let podcast = cms
+            .create_record_as("podcasts", json!({ "title": title, "icon": "i" }), owner.as_deref())
+            .await
+            .unwrap();
+        if let Some(owner) = &owner {
+            assert_eq!(cms.get_record("podcasts", &podcast).await.unwrap()["owner_id"], *owner);
+        }
+        let episode = cms
+            .create_record_as("episodes", json!({ "title": "e", "podcast_id": podcast }), None)
+            .await
+            .unwrap();
+
+        let found = cms
+            .list_records(
+                "episodes",
+                &ListQuery {
+                    filter: Some(format!("podcast_id:eq:{podcast}")),
+                    sort: Some("created_at".to_string()),
+                    order_desc: true,
+                    limit: Some(1),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0]["id"], episode);
+
+        let url = cms
+            .upload_file("episodes", &episode, "srt", b"1\n", "text/plain")
+            .await
+            .unwrap();
+        let mut data = cms.get_record_data("episodes", &episode).await.unwrap();
+        data["srt_url"] = json!(url);
+        cms.update_record_data("episodes", &episode, data).await.unwrap();
+        assert_eq!(cms.get_record_data("episodes", &episode).await.unwrap()["srt_url"], url);
+
+        let err = cms.get_record("episodes", "missing").await.unwrap_err();
+        assert!(err.to_string().contains("404"), "{err}");
     }
 }

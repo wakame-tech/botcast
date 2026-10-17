@@ -24,6 +24,12 @@ check-worker:
 
 # --- botcast-cms ---
 
+# botcast-cms の spec から生成したクライアント (cms/crates/client) を crates/cms-client に取り込み直す。
+# botcast-cms は private なので git 依存にせず、生成物をコピーして持つ。取り込んだ commit は SOURCE_REV に残す
+sync-cms-client cms="../botcast-cms":
+    rsync -a --delete {{cms}}/cms/crates/client/ crates/cms-client/
+    git -C {{cms}} rev-parse HEAD > crates/cms-client/SOURCE_REV
+
 
 # Test botcast-cms (Rust)
 test-cms:
