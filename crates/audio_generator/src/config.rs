@@ -146,10 +146,11 @@ impl TtsConfig {
             } else {
                 var("ENDPOINT")
             };
+            // 値に認証情報が入っていることがあるので、エラーに値は出さない
             let url = reqwest::Url::parse(&endpoint)
-                .with_context(|| format!("invalid {endpoint_var}: {endpoint:?}"))?;
+                .with_context(|| format!("invalid {endpoint_var} (not a URL)"))?;
             if !matches!(url.scheme(), "http" | "https") {
-                bail!("invalid {endpoint_var}: {endpoint:?} (http or https only)");
+                bail!("invalid {endpoint_var} (http or https only)");
             }
 
             let max_concurrency = match get(&var("MAX_CONCURRENCY")) {

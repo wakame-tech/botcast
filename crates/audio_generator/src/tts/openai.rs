@@ -18,6 +18,9 @@ use serde_json::{json, Map, Value};
 use std::{collections::HashMap, sync::Mutex, time::Duration};
 use tracing::instrument;
 
+/// `params.extra` で上書きさせない本文のキー
+const RESERVED_KEYS: [&str; 4] = ["model", "input", "voice", "response_format"];
+
 /// `TTS_ENGINE_<NAME>_MODEL` が無いときの model
 pub const DEFAULT_MODEL: &str = "irodori-tts";
 
@@ -119,6 +122,11 @@ impl OpenAiEngine {
             body.insert("irodori".to_string(), Value::Object(irodori));
         }
         for (key, value) in &params.extra {
+            // 本文・声・model・形式はキャッシュのキーと合わなくなるので上書きさせない
+            if RESERVED_KEYS.contains(&key.as_str()) {
+                tracing::warn!("params.extra.{key} is ignored (voice {})", voice.voice_id);
+                continue;
+            }
             body.insert(key.clone(), value.clone());
         }
         Value::Object(body)
@@ -194,6 +202,11 @@ impl TtsEngine for OpenAiEngine {
             .await
             .with_context(|| format!("POST {url}"))?;
         if !res.status().is_success() {
+            // サーバーの再起動などで参照音声が消えたかもしれないので、次は同期し直す
+            self.synced_voices
+                .lock()
+                .unwrap()
+                .remove(&req.voice.voice_id);
             bail!(
                 "POST {url}: voice={}, text={}, {} {}",
                 req.voice.voice_id,

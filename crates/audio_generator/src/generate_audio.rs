@@ -102,6 +102,17 @@ impl Item {
     }
 }
 
+/// 途中のファイルを消す（失敗したときも残さない）
+async fn remove_if_exists(paths: &[&Path]) {
+    for path in paths {
+        if let Err(e) = tokio::fs::remove_file(path).await {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                tracing::warn!("failed to remove {}: {e}", path.display());
+            }
+        }
+    }
+}
+
 struct Renderer<'a> {
     dir: &'a Path,
     cache_dir: PathBuf,
@@ -135,15 +146,19 @@ impl Renderer<'_> {
                         })?
                 };
                 let raw = self.dir.join(format!("raw_{i}.bin"));
-                tokio::fs::write(&raw, &bytes).await?;
                 // 書きかけのファイルをキャッシュとして読まないよう、別名で作ってから置く
                 let tmp = self
                     .cache_dir
                     .join(format!("{}.tmp", uuid::Uuid::new_v4().simple()));
-                normalize(&raw, &tmp).await?;
-                tokio::fs::rename(&tmp, path).await?;
-                tokio::fs::remove_file(&raw).await?;
-                Ok(())
+                let res = async {
+                    tokio::fs::write(&raw, &bytes).await?;
+                    normalize(&raw, &tmp).await?;
+                    tokio::fs::rename(&tmp, path).await?;
+                    anyhow::Ok(())
+                }
+                .await;
+                remove_if_exists(&[&raw, &tmp]).await;
+                res
             }
             Item::Audio { section, path } => {
                 let bin = {
@@ -158,10 +173,13 @@ impl Renderer<'_> {
                     res.bytes().await?
                 };
                 let download = self.dir.join(format!("download_{i}"));
-                tokio::fs::write(&download, &bin).await?;
-                slice_and_normalize(&download, path, section.from, section.to).await?;
-                tokio::fs::remove_file(&download).await?;
-                Ok(())
+                let res = async {
+                    tokio::fs::write(&download, &bin).await?;
+                    slice_and_normalize(&download, path, section.from, section.to).await
+                }
+                .await;
+                remove_if_exists(&[&download]).await;
+                res
             }
         }
     }
@@ -176,7 +194,8 @@ pub async fn generate_audio(
     generate_audio_in_dir(work_dir.dir(), registry, sections).await
 }
 
-/// [`generate_audio`] の本体。`dir` に途中のファイルと `episode.mp3` を置く。
+/// [`generate_audio`] の本体。`dir` の下に実行ごとのディレクトリを作って途中のファイルと `episode.mp3` を置き、
+/// キャッシュは既定で `dir/tts_cache` に置く。
 #[instrument(skip(registry, sections))]
 pub async fn generate_audio_in_dir(
     dir: &Path,
@@ -190,6 +209,12 @@ pub async fn generate_audio_in_dir(
     tokio::fs::create_dir_all(&cache_dir)
         .await
         .with_context(|| format!("failed to create {}", cache_dir.display()))?;
+    // 途中のファイルと結果は実行ごとのディレクトリに置く（KEEP_WORKDIR で dir を共有しても衝突しない）
+    let run_dir = dir.join(format!("run_{}", uuid::Uuid::new_v4().simple()));
+    tokio::fs::create_dir_all(&run_dir)
+        .await
+        .with_context(|| format!("failed to create {}", run_dir.display()))?;
+    let dir = run_dir.as_path();
 
     // 文に分け、各文のキャッシュの置き場を決める
     let mut items = vec![];

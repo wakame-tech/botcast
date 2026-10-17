@@ -206,7 +206,7 @@ async fn normalized_duration_and_srt() {
         assert_normalized(path);
     }
     // 一時ファイルは残さない
-    let leftovers: Vec<_> = std::fs::read_dir(dir.path())
+    let leftovers: Vec<_> = std::fs::read_dir(result.out_path.parent().unwrap())
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
         .filter(|n| n.starts_with("raw_") || n.ends_with(".tmp"))
@@ -391,7 +391,7 @@ async fn audio_section_is_sliced_and_normalized() {
     .await
     .unwrap();
 
-    let sliced = dir.path().join("audio_0.wav");
+    let sliced = result.out_path.parent().unwrap().join("audio_0.wav");
     assert_normalized(&sliced);
     let sliced_secs = wav_duration(&sliced).unwrap().as_secs_f64();
     assert!((sliced_secs - 0.5).abs() < 0.01, "{sliced_secs}");

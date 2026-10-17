@@ -9,6 +9,19 @@ use anyhow::{anyhow, Context, Result};
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 use tokio::sync::Semaphore;
 
+/// ログに出す URL（userinfo と query を落とす）
+fn redact_url(url: &str) -> String {
+    match reqwest::Url::parse(url) {
+        Ok(mut url) => {
+            let _ = url.set_username("");
+            let _ = url.set_password(None);
+            url.set_query(None);
+            url.to_string()
+        }
+        Err(_) => "(invalid url)".to_string(),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct EngineEntry {
     pub(crate) engine: Arc<dyn TtsEngine>,
@@ -51,7 +64,7 @@ impl TtsRegistry {
                 "TTS engine {}: {:?} {} (max_concurrency={})",
                 engine.name,
                 engine.kind,
-                engine.endpoint,
+                redact_url(&engine.endpoint),
                 engine.max_concurrency
             );
             registry = registry.with_engine(&engine.name, tts, engine.max_concurrency);
@@ -135,5 +148,18 @@ impl TtsRegistry {
                 .with_context(|| format!("TTS engine {name:?} is unreachable"))?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn redact_url_drops_credentials() {
+        assert_eq!(
+            redact_url("https://user:pass@gpu:8088/v1?api_key=x"),
+            "https://gpu:8088/v1"
+        );
     }
 }

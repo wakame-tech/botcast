@@ -212,6 +212,9 @@ async fn openai_request_shape_with_token() {
 
     let mut extra = serde_json::Map::new();
     extra.insert("stream_format".to_string(), json!("audio"));
+    // 本文・声などは上書きさせない
+    extra.insert("voice".to_string(), json!("mallory"));
+    extra.insert("input".to_string(), json!("別の本文"));
     let voice = ResolvedVoice {
         engine: "irodori".to_string(),
         voice_id: "alice".to_string(),
