@@ -141,6 +141,8 @@ fn validate_cache_namespace(namespace: &str) -> Result<()> {
 
 struct Renderer<'a> {
     dir: &'a Path,
+    /// 名前空間（参照音声のサーバー側の声の ID に使う）
+    namespace: &'a str,
     cache_dir: PathBuf,
     client: reqwest::Client,
     downloads: Semaphore,
@@ -166,7 +168,11 @@ impl Renderer<'_> {
                     tracing::info!("[{i}] {}: {text}", voice.engine);
                     entry
                         .engine
-                        .synthesize(SynthesisRequest { text, voice })
+                        .synthesize(SynthesisRequest {
+                            text,
+                            voice,
+                            namespace: self.namespace,
+                        })
                         .await
                         .with_context(|| {
                             format!("TTS engine {:?} failed to synthesize", voice.engine)
@@ -302,7 +308,7 @@ pub async fn generate_audio_in_dir(
         if synced.insert((&voice.engine, &voice.voice_id, &ref_audio.hash)) {
             entry
                 .engine
-                .ensure_voice(&voice.voice_id, &ref_audio.hash, &ref_audio.bytes)
+                .ensure_voice(cache_namespace, &voice.voice_id, ref_audio)
                 .await
                 .with_context(|| {
                     format!(
@@ -314,6 +320,7 @@ pub async fn generate_audio_in_dir(
     }
 
     let renderer = Renderer {
+        namespace: cache_namespace,
         dir,
         cache_dir,
         client: reqwest::Client::builder()
@@ -424,6 +431,7 @@ mod tests {
                     ref_audio: Some(crate::models::RefAudio {
                         hash: "abc".to_string(),
                         bytes: Arc::from(vec![1u8]),
+                        content_type: "audio/wav".to_string(),
                     }),
                     ..voice.clone()
                 },

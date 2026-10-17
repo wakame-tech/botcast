@@ -15,6 +15,9 @@ export interface PodcastSchedule {
 	arguments?: Record<string, unknown>;
 }
 
+/** 配役: 台本の `speaker` に書く別名 → 声 (voices) の slug */
+export type Cast = Record<string, string>;
+
 export interface Podcast {
 	id: string;
 	title: string;
@@ -23,6 +26,43 @@ export interface Podcast {
 	/** 所有者 (JWT の sub)。CMS のレコードの owner_id */
 	owner_id: string | null;
 	schedule?: PodcastSchedule;
+	cast: Cast;
+}
+
+/** CMS に保存したファイルのフィールド (`/images/{field}` のアップロードで CMS が書き込む) */
+export interface CmsFile {
+	pointer: string;
+	content_type: string;
+	size: number;
+	url: string;
+}
+
+export interface VoiceParams {
+	speed?: number;
+	pitch?: number;
+	intonation?: number;
+	volume?: number;
+	/** エンジンごとの素通しの値 */
+	extra?: Record<string, unknown>;
+}
+
+/** 声 (話者) のマスタ。worker の TTS エンジンの設定名 `engine` と、エンジンの声 `voice_id` を持つ */
+export interface Voice {
+	id: string;
+	slug: string;
+	name: string;
+	engine: string;
+	/** VOICEVOX 互換はスタイル ID、OpenAI 互換は voice 名。参照音声を使う場合は省略できる */
+	voice_id?: string;
+	/** VOICEVOX 互換で使う、style の名前 → スタイル ID */
+	styles?: Record<string, string>;
+	ref_audio?: CmsFile;
+	params?: VoiceParams;
+	seed?: number;
+	caption?: string;
+	/** 試聴用の音声 */
+	sample?: CmsFile;
+	owner_id: string | null;
 }
 
 export interface Episode {
@@ -74,6 +114,25 @@ export function recordToPodcast(record: CmsRecord): Podcast {
 		description: (d.description as string) ?? "",
 		owner_id: record.owner_id,
 		schedule: d.schedule as PodcastSchedule | undefined,
+		cast: (d.cast as Cast | undefined) ?? {},
+	};
+}
+
+export function recordToVoice(record: CmsRecord): Voice {
+	const d = record.data as Record<string, unknown>;
+	return {
+		id: record.id,
+		slug: d.slug as string,
+		name: d.name as string,
+		engine: d.engine as string,
+		voice_id: d.voice_id as string | undefined,
+		styles: d.styles as Record<string, string> | undefined,
+		ref_audio: d.ref_audio as CmsFile | undefined,
+		params: d.params as VoiceParams | undefined,
+		seed: d.seed as number | undefined,
+		caption: d.caption as string | undefined,
+		sample: d.sample as CmsFile | undefined,
+		owner_id: record.owner_id,
 	};
 }
 
@@ -205,6 +264,30 @@ fetchClient.use(authMiddleware);
 fetchClient.use(collectionNameMiddleware);
 
 export const $cms = createClient(fetchClient);
+
+/** CMS が受け付ける音声の MIME type (`audio/x-wav` などのブラウザの表記をそろえる) */
+export const audioContentType = (
+	file: File,
+): "audio/wav" | "audio/mpeg" | null => {
+	const type = file.type.toLowerCase();
+	const name = file.name.toLowerCase();
+	if (/wav/.test(type) || name.endsWith(".wav")) return "audio/wav";
+	if (/mpeg|mp3/.test(type) || name.endsWith(".mp3")) return "audio/mpeg";
+	return null;
+};
+
+/** アップロードするファイルの大きさの上限 (worker の `MAX_FILE_SIZE` と同じ値) */
+export const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
+/** ファイルを Base64 にする (CMS のアップロードの形式) */
+export const fileToBase64 = async (file: Blob): Promise<string> => {
+	const bytes = new Uint8Array(await file.arrayBuffer());
+	let binary = "";
+	for (let i = 0; i < bytes.length; i += 0x8000) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+	}
+	return btoa(binary);
+};
 
 /** CMS に保存されたファイル (`/records/{c}/{r}/images/{field}`) を取得する */
 export const fetchCmsFile = async (path: string): Promise<Blob> => {

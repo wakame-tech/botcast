@@ -78,5 +78,16 @@ C4Component
 - TTS エンジンは「プロトコル」で 2 種類の窓口にまとめる: VOICEVOX 互換（`/audio_query` → `/synthesis`。VOICEVOX・AivisSpeech など）と OpenAI 互換（`POST /audio/speech`。Irodori-TTS-Server・OpenAI など）。エンジンは環境変数（`TTS_ENGINES` / `TTS_ENGINE_<NAME>_*`）で設定し、worker の起動時に検証してレジストリを作る
 - エンジンは「文 1 つ → 音声のバイト列」だけを受け持つ。文の分割（100 文字まで）・各文の出力の正規化（ffmpeg で 44.1kHz・s16・2ch の wav）・長さと SRT・結合・キャッシュ・エンジンごとの同時実行数は共通の層で行う
 - 合成結果のキャッシュは `TTS_CACHE_DIR/<テナント ID>/` に置き、キーには処理の版・エンジンの版（VOICEVOX は `GET /version`、OpenAI 互換は model）・声・本文を含める
-- OpenAI 互換の参照音声は、サーバー側の声の ID を `{voice_id}-{ハッシュの先頭 12 文字}` にして版ごとに分ける（既にあれば上書きしない）
-- 入力は声が解決済みのセクション（`ResolvedVoice { engine, voice_id, params, style, seed, ref_audio }`）。今の台本の `speaker`（VOICEVOX のスタイル ID）は既定のエンジン（`TTS_DEFAULT_ENGINE`）の声として扱う。`audio_generator` は CMS を知らない
+- OpenAI 互換の参照音声は、サーバー側の声の ID を `{テナント ID}-{voice_id}-{ハッシュの先頭 12 文字}` にして版ごとに分ける（既にあれば上書きしない）
+- 入力は声が解決済みのセクション（`ResolvedVoice { engine, voice_id, params, style, seed, ref_audio }`）。台本の `speaker` は worker が解決する（下の「声と配役」）。`audio_generator` は CMS を知らない
+
+## 声と配役
+
+- 声は CMS の `voices`（`slug` / `name` / `engine` / `voice_id` / `styles` / `ref_audio` / `params` / `seed` / `caption` / `sample`）、番組の配役は `podcasts.cast`（別名 → 声の slug）
+- worker（`usecase/voices.rs` の `SpeakerResolver`）が音声生成の前に、台本の `speaker` を 配役の別名 → `voices` の slug → 数字だけなら旧形式（`TTS_DEFAULT_ENGINE` の VOICEVOX のスタイル ID）の順で `ResolvedVoice` にする。解決できなければ、どのセクションのどの speaker かを書いたエラーでジョブを失敗させる
+- 使える声は番組の持ち主（podcast の `owner_id`）の声だけ（配役経由・slug 直接の両方）。他人の声・同じ slug が複数ある声・slug の形でない配役の値は、その speaker のエラーにする。`voices` は `read: owner`（参照音声は人の声のサンプルなので本人とサービス以外は読めない）
+- 配役の別名に数字だけの文字列は使えない（旧形式の speaker と区別するため。スキーマと web の両方で弾く）
+- 参照音声（`voices.ref_audio`）は、声のエンジンが OpenAI 互換のときだけ CMS から取得してハッシュを付け、audio_generator がエンジンに同期する。音声（`audio/*`）で 20MB 以下に限る。声のレコードの `version` と大きさが同じなら、プロセス内のキャッシュ（上限 16 件）でジョブをまたいで使い回す
+- 台本生成（LLM）には配役を、改行を除き 40 字までにした名前・style の名前の JSON としてユーザーメッセージで渡す（システムプロンプトに埋め込まない）
+- Serif の `style`（口調・感情の自由文）は、VOICEVOX 互換では声の `styles` で引き、OpenAI 互換では caption に渡す。OpenAI 互換で style が無いセリフは声の `caption` を使う
+- 番組が見つからないエピソードは配役なしで解決する（旧形式の speaker はそのまま作れる。持ち主が分からないので声は使えない）

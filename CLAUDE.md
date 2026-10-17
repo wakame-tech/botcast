@@ -51,7 +51,7 @@ cd web && npm run check
 - KAFRU_DB_HOST / KAFRU_DB_PORT / KAFRU_DB_USERNAME / KAFRU_DB_PASSWORD / KAFRU_DB_NAMESPACE / KAFRU_DB_NAME: ジョブキュー (kafru) の SurrealDB。ローカルは `just up` で 4030 番に起動
 - VOICEVOX_ENDPOINT: VoiceVox エンジン URL（互換。`TTS_ENGINES` が無いときに `voicevox` だけのエンジンとして扱う。例: `docker run -p 50021:50021 voicevox/voicevox_engine:cpu-latest`）
 - TTS_ENGINES: 使う TTS エンジンの名前（カンマ区切り。例: `voicevox,irodori`）。無ければ `VOICEVOX_ENDPOINT` を読む。どちらも無ければ音声生成のジョブが失敗する
-- TTS_DEFAULT_ENGINE: 台本の `speaker`（VOICEVOX のスタイル ID）に使うエンジン（既定: `TTS_ENGINES` の先頭）
+- TTS_DEFAULT_ENGINE: 旧形式の台本の `speaker`（数字だけ = VOICEVOX のスタイル ID）に使うエンジン（既定: `TTS_ENGINES` の先頭）
 - TTS_ENGINE_<NAME>_KIND / _ENDPOINT: エンジンの種類（`voicevox` | `openai`）と URL（必須。`<NAME>` はエンジン名を大文字にし `-` を `_` にしたもの。OpenAI 互換は `/v1` まで含める。URL に認証情報 `user:pass@` は書けない。トークンは `_TOKEN` に書く）
 - TTS_ENGINE_<NAME>_TOKEN / _MODEL: OpenAI 互換の bearer トークンと `model`（任意。model の既定は `irodori-tts`）。トークンはログに出さない
 - TTS_ENGINE_<NAME>_MAX_CONCURRENCY / _TIMEOUT_SEC: 同時に投げる数（既定 1）とタイムアウト（既定 120 秒）
@@ -66,9 +66,16 @@ cd web && npm run check
 
 ## CMS のコレクション
 
-- podcasts / episodes / scripts / mails のスキーマは `crates/worker/src/usecase/collections.rs` が唯一の情報源。worker の起動時に CMS へ反映する（無ければ作成、差分があれば `PUT /collections` で更新。既存レコードが新スキーマを満たさなければ起動に失敗する）
+- voices / podcasts / episodes / scripts / mails のスキーマは `crates/worker/src/usecase/collections.rs` が唯一の情報源。worker の起動時に CMS へ反映する（無ければ作成、差分があれば `PUT /collections` で更新。既存レコードが新スキーマを満たさなければ起動に失敗する）
 - 参照は素のレコード ID で持ち、スキーマの `x-ref`（参照先コレクションの ID）で宣言する（`episodes.podcast_id` / `mails.episode_id` / `podcasts.schedule.script_id`）。コレクション ID は環境ごとに違うので、seed が参照先から順に作って埋め込む
 - データ移行は `deploy/selfhost/migrations/` の SurrealQL を CMS の SurrealDB（namespace = テナント ID）に流す
+
+## 声と配役
+
+- 声は CMS の `voices`（`slug`（x-unique。英小文字で始める）・`name`・`engine`（`TTS_ENGINES` の名前）・`voice_id`・`styles`・`ref_audio`・`params`・`seed`・`caption`・`sample`）。web の「声」画面で作成し、参照音声・試聴用の音声をアップロードする
+- 番組の配役は `podcasts.cast = { "<別名>": "<voices の slug>" }`。web の番組の編集画面で編集する。台本（スクリプト・LLM）は `speaker` に別名を書き、任意の `style`（口調・感情の自由文）を付けられる
+- worker は音声生成の前に `speaker` を 配役の別名 → `voices` の slug → 数字だけなら旧形式（既定のエンジンのスタイル ID）の順で解決する（`usecase/voices.rs`）。`cast` も `voices` も無い番組は今までどおり動く
+- 使える声は番組の持ち主（podcast の `owner_id`）の声だけ。`voices` は `read: owner`。配役の別名に数字だけは使えない。参照音声は `audio/*` で 20MB（`MAX_FILE_SIZE`）まで
 
 ## 音声ファイル
 

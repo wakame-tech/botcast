@@ -36,6 +36,11 @@ export function Header({
 								<span className="text-lg font-bold">スクリプト</span>
 							</Link>
 						</div>
+						<div className="pl-2">
+							<Link to="/voices" className="no-underline">
+								<span className="text-lg font-bold">声</span>
+							</Link>
+						</div>
 					</>
 				)}
 

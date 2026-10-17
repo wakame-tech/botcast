@@ -2,7 +2,8 @@ use super::cms_client::CmsClient;
 use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
 use super::task_service::TaskService;
-use audio_generator::registry::TtsRegistry;
+use super::voices::Engines;
+use audio_generator::{config::TtsConfig, registry::TtsRegistry};
 use kafru::queue::Queue;
 use std::sync::Arc;
 
@@ -24,6 +25,7 @@ pub struct Provider {
     pub(crate) cms: Arc<CmsClient>,
     pub(crate) kafru_queue: Arc<Queue<'static>>,
     pub(crate) tts: Arc<TtsRegistry>,
+    pub(crate) engines: Arc<Engines>,
     /// CMS のテナント ID（TTS のキャッシュをテナントごとに分ける）
     pub(crate) tenant: String,
 }
@@ -35,13 +37,17 @@ impl std::fmt::Debug for Provider {
 }
 
 impl Provider {
-    pub fn new(kafru_queue: Arc<Queue<'static>>, tts: Arc<TtsRegistry>) -> Self {
-        Self {
-            cms: Arc::new(CmsClient::from_env()),
+    /// TTS エンジンの設定からレジストリを作る（設定はここで検証する）
+    pub fn new(kafru_queue: Arc<Queue<'static>>, tts_config: &TtsConfig) -> anyhow::Result<Self> {
+        let cms = Arc::new(CmsClient::from_env());
+        let tenant = cms.tenant().to_string();
+        Ok(Self {
+            cms,
             kafru_queue,
-            tts,
-            tenant: std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string()),
-        }
+            tts: Arc::new(TtsRegistry::from_config(tts_config)?),
+            engines: Arc::new(Engines::from_config(tts_config)),
+            tenant,
+        })
     }
 
     pub(crate) fn task_service(&self) -> TaskService {
@@ -57,6 +63,11 @@ impl Provider {
     }
 
     pub(crate) fn episode_service(&self) -> EpisodeService {
-        EpisodeService::new(self.cms.clone(), self.tts.clone(), self.tenant.clone())
+        EpisodeService::new(
+            self.cms.clone(),
+            self.tts.clone(),
+            self.engines.clone(),
+            self.tenant.clone(),
+        )
     }
 }

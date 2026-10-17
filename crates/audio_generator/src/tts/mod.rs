@@ -6,7 +6,7 @@
 pub mod openai;
 pub mod voicevox;
 
-use crate::models::ResolvedVoice;
+use crate::models::{RefAudio, ResolvedVoice};
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -15,6 +15,8 @@ use async_trait::async_trait;
 pub struct SynthesisRequest<'a> {
     pub text: &'a str,
     pub voice: &'a ResolvedVoice,
+    /// 名前空間（worker はテナント ID）。参照音声のサーバー側の声の ID を分けるのに使う
+    pub namespace: &'a str,
 }
 
 #[async_trait]
@@ -23,9 +25,14 @@ pub trait TtsEngine: Send + Sync + std::fmt::Debug {
     /// 共通の層が ffmpeg でそろえる。
     async fn synthesize(&self, req: SynthesisRequest<'_>) -> Result<Vec<u8>>;
 
-    /// 参照音声 `bytes`（内容のハッシュ `hash`）を `voice_id` としてエンジンに同期する。
+    /// 参照音声を名前空間 `namespace` の `voice_id` としてエンジンに同期する。
     /// 参照音声を持たないエンジンでは何もしない。
-    async fn ensure_voice(&self, _voice_id: &str, _hash: &str, _bytes: &[u8]) -> Result<()> {
+    async fn ensure_voice(
+        &self,
+        _namespace: &str,
+        _voice_id: &str,
+        _ref_audio: &RefAudio,
+    ) -> Result<()> {
         Ok(())
     }
 

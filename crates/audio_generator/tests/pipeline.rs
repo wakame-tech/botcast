@@ -136,11 +136,18 @@ impl TtsEngine for FakeEngine {
         self.version.lock().unwrap().clone()
     }
 
-    async fn ensure_voice(&self, voice_id: &str, hash: &str, bytes: &[u8]) -> Result<()> {
-        self.ensured
-            .lock()
-            .unwrap()
-            .push((voice_id.to_string(), hash.to_string(), bytes.len()));
+    async fn ensure_voice(
+        &self,
+        namespace: &str,
+        voice_id: &str,
+        ref_audio: &RefAudio,
+    ) -> Result<()> {
+        assert_eq!(namespace, NS);
+        self.ensured.lock().unwrap().push((
+            voice_id.to_string(),
+            ref_audio.hash.clone(),
+            ref_audio.bytes.len(),
+        ));
         Ok(())
     }
 
@@ -401,6 +408,7 @@ async fn ensure_voice_once_per_reference_audio() {
         ref_audio: Some(RefAudio {
             hash: "hash-1".to_string(),
             bytes: Arc::from(b"RIFF-ref".to_vec()),
+            content_type: "audio/wav".to_string(),
         }),
         ..Default::default()
     };

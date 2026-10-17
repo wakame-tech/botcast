@@ -1,6 +1,7 @@
 import Episode from "@/components/episode/EpisodeList.tsx";
 import { JobButton } from "@/components/job/JobButton";
 import { JobList } from "@/components/job/JobList";
+import { CastList } from "@/components/podcast/CastForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSession } from "@/hooks/useSession";
 import {
@@ -80,6 +81,9 @@ export function Podcast() {
 				<CardContent>
 					<h2>概要</h2>
 					{podcast.description}
+
+					<h2>配役</h2>
+					<CastList cast={podcast.cast} />
 
 					<h2>エピソード ({episodes.length})</h2>
 					<Episode.List podcastId={podcast.id} episodes={episodes} />

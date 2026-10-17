@@ -57,8 +57,9 @@ async fn main() -> anyhow::Result<()> {
     worker::usecase::collections::seed_from_env().await?;
 
     // TTS エンジンの設定は起動時に検証する
-    let tts = Arc::new(audio_generator::registry::TtsRegistry::from_env()?);
-    let provider = Arc::new(Provider::new(kafru_queue, tts));
+    let tts_config = audio_generator::config::TtsConfig::from_env()
+        .map_err(|e| e.context("invalid TTS engine config"))?;
+    let provider = Arc::new(Provider::new(kafru_queue, &tts_config)?);
     start_worker(provider.clone(), kafru_db.clone());
     start_schedule_sync(provider.clone(), kafru_db);
     start_api(provider).await

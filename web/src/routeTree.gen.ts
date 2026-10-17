@@ -19,7 +19,10 @@ import { Route as ScriptsIndexImport } from './routes/scripts/index'
 
 const SigninLazyImport = createFileRoute('/signin')()
 const IndexLazyImport = createFileRoute('/')()
+const VoicesIndexLazyImport = createFileRoute('/voices/')()
 const PodcastsIndexLazyImport = createFileRoute('/podcasts/')()
+const VoicesNewLazyImport = createFileRoute('/voices/new')()
+const VoicesVoiceIdLazyImport = createFileRoute('/voices/$voiceId')()
 const UsersUserIdLazyImport = createFileRoute('/users/$userId')()
 const ScriptsNewLazyImport = createFileRoute('/scripts/new')()
 const ScriptsScriptIdLazyImport = createFileRoute('/scripts/$scriptId')()
@@ -47,6 +50,11 @@ const IndexLazyRoute = IndexLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
 
+const VoicesIndexLazyRoute = VoicesIndexLazyImport.update({
+  path: '/voices/',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/voices/index.lazy').then((d) => d.Route))
+
 const PodcastsIndexLazyRoute = PodcastsIndexLazyImport.update({
   path: '/podcasts/',
   getParentRoute: () => rootRoute,
@@ -58,6 +66,18 @@ const ScriptsIndexRoute = ScriptsIndexImport.update({
   path: '/scripts/',
   getParentRoute: () => rootRoute,
 } as any)
+
+const VoicesNewLazyRoute = VoicesNewLazyImport.update({
+  path: '/voices/new',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/voices/new.lazy').then((d) => d.Route))
+
+const VoicesVoiceIdLazyRoute = VoicesVoiceIdLazyImport.update({
+  path: '/voices/$voiceId',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/voices/$voiceId.lazy').then((d) => d.Route),
+)
 
 const UsersUserIdLazyRoute = UsersUserIdLazyImport.update({
   path: '/users/$userId',
@@ -165,6 +185,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersUserIdLazyImport
       parentRoute: typeof rootRoute
     }
+    '/voices/$voiceId': {
+      id: '/voices/$voiceId'
+      path: '/voices/$voiceId'
+      fullPath: '/voices/$voiceId'
+      preLoaderRoute: typeof VoicesVoiceIdLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/voices/new': {
+      id: '/voices/new'
+      path: '/voices/new'
+      fullPath: '/voices/new'
+      preLoaderRoute: typeof VoicesNewLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/scripts/': {
       id: '/scripts/'
       path: '/scripts'
@@ -177,6 +211,13 @@ declare module '@tanstack/react-router' {
       path: '/podcasts'
       fullPath: '/podcasts'
       preLoaderRoute: typeof PodcastsIndexLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/voices/': {
+      id: '/voices/'
+      path: '/voices'
+      fullPath: '/voices'
+      preLoaderRoute: typeof VoicesIndexLazyImport
       parentRoute: typeof rootRoute
     }
     '/podcasts/$podcastId/edit': {
@@ -213,8 +254,11 @@ export const routeTree = rootRoute.addChildren({
   ScriptsScriptIdLazyRoute,
   ScriptsNewLazyRoute,
   UsersUserIdLazyRoute,
+  VoicesVoiceIdLazyRoute,
+  VoicesNewLazyRoute,
   ScriptsIndexRoute,
   PodcastsIndexLazyRoute,
+  VoicesIndexLazyRoute,
   PodcastsPodcastIdEditLazyRoute,
   ScriptsScriptIdEditLazyRoute,
   PodcastsPodcastIdEpisodesEpisodeIdLazyRoute,
@@ -235,8 +279,11 @@ export const routeTree = rootRoute.addChildren({
         "/scripts/$scriptId",
         "/scripts/new",
         "/users/$userId",
+        "/voices/$voiceId",
+        "/voices/new",
         "/scripts/",
         "/podcasts/",
+        "/voices/",
         "/podcasts/$podcastId/edit",
         "/scripts/$scriptId/edit",
         "/podcasts/$podcastId/episodes/$episodeId"
@@ -263,11 +310,20 @@ export const routeTree = rootRoute.addChildren({
     "/users/$userId": {
       "filePath": "users/$userId.lazy.tsx"
     },
+    "/voices/$voiceId": {
+      "filePath": "voices/$voiceId.lazy.tsx"
+    },
+    "/voices/new": {
+      "filePath": "voices/new.lazy.tsx"
+    },
     "/scripts/": {
       "filePath": "scripts/index.tsx"
     },
     "/podcasts/": {
       "filePath": "podcasts/index.lazy.tsx"
+    },
+    "/voices/": {
+      "filePath": "voices/index.lazy.tsx"
     },
     "/podcasts/$podcastId/edit": {
       "filePath": "podcasts/$podcastId_/edit.lazy.tsx"
