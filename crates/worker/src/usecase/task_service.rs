@@ -26,6 +26,9 @@ pub(crate) enum Args {
     GenerateScript {
         episode_id: String,
         prompt: String,
+        /// 台本を生成したあと、同じジョブで続けて音声も生成する
+        #[serde(default)]
+        generate_audio: bool,
     },
     /// 番組のスクリプトで新しいエピソードを作り、音声まで生成する
     GenerateEpisode {
@@ -161,9 +164,21 @@ impl TaskService {
                     .generate_audio(&work_dir, &episode_id)
                     .await
             }
-            Args::GenerateScript { episode_id, prompt } => {
+            Args::GenerateScript {
+                episode_id,
+                prompt,
+                generate_audio,
+            } => {
                 self.run_generate_script(&episode_id, &prompt).await?;
-                Ok(())
+                if !generate_audio {
+                    return Ok(());
+                }
+                let work_dir = use_work_dir(&Uuid::new_v4())
+                    .context("Failed to create work dir")
+                    .map_err(Error::Other)?;
+                self.episode_service
+                    .generate_audio(&work_dir, &episode_id)
+                    .await
             }
         }
     }
@@ -401,11 +416,13 @@ mod tests {
         let args = Args::GenerateScript {
             episode_id: "ep1".to_string(),
             prompt: "テスト台本を生成してください".to_string(),
+            generate_audio: true,
         };
         let json = serde_json::to_value(&args).unwrap();
         assert_eq!(json["type"], "generateScript");
         assert_eq!(json["prompt"], "テスト台本を生成してください");
         assert!(json["episodeId"].is_string());
+        assert_eq!(json["generateAudio"], true);
     }
 
     #[test]
@@ -424,6 +441,13 @@ mod tests {
             "prompt": "プロンプト"
         });
         let args: Args = serde_json::from_value(json).unwrap();
-        assert!(matches!(args, Args::GenerateScript { .. }));
+        // generateAudio を省いたら台本だけ生成する（既存の呼び出しとの互換）
+        assert!(matches!(
+            args,
+            Args::GenerateScript {
+                generate_audio: false,
+                ..
+            }
+        ));
     }
 }

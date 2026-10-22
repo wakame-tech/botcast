@@ -81,6 +81,7 @@ impl BotcastMcpServer {
             .create_task(crate::usecase::task_service::Args::GenerateScript {
                 episode_id: params.0.episode_id,
                 prompt: params.0.prompt.clone(),
+                generate_audio: false,
             })
             .await
         {
