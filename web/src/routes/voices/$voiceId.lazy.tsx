@@ -6,6 +6,7 @@ import {
 	type VoiceInput,
 	voiceInputToData,
 } from "@/components/voice/VoiceForm";
+import { VoiceIconField } from "@/components/voice/VoiceIcon";
 import { useSession } from "@/hooks/useSession";
 import {
 	$cms,
@@ -60,7 +61,7 @@ export function VoiceDetail() {
 		.filter((p) => Object.values(p.cast).includes(voice.slug));
 
 	const handleSubmit = async (input: VoiceInput) => {
-		// data は丸ごと置き換わるため、ファイルのフィールド (ref_audio / sample) を保って入れ直す
+		// data は丸ごと置き換わるため、ファイルのフィールド (ref_audio / sample / icon) を保って入れ直す
 		const current = { ...((record.data ?? {}) as Record<string, unknown>) };
 		for (const key of VOICE_INPUT_KEYS) {
 			delete current[key];
@@ -85,6 +86,7 @@ export function VoiceDetail() {
 				{voice.voice_id && ` ・ voice_id: ${voice.voice_id}`}
 			</p>
 
+			<VoiceIconField voiceId={voiceId} file={voice.icon} editable={editable} />
 			<VoiceAudioField
 				voiceId={voiceId}
 				field="sample"

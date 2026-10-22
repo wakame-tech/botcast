@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CmsAudio } from "@/components/voice/VoiceAudio";
+import { VoiceIcon } from "@/components/voice/VoiceIcon";
 import { $cms, CMS_TENANT, recordToVoice } from "@/lib/cms_client";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 
@@ -32,7 +33,8 @@ export default function Voices() {
 				<div key={voice.id} className="p-2">
 					<Card>
 						<CardHeader>
-							<CardTitle>
+							<CardTitle className="flex items-center gap-2">
+								<VoiceIcon file={voice.icon} className="w-10 h-10" />
 								<Link
 									to="/voices/$voiceId"
 									params={{ voiceId: voice.id }}
@@ -40,7 +42,7 @@ export default function Voices() {
 								>
 									<span className="text-xl font-bold">{voice.name}</span>
 								</Link>
-								<span className="pl-2 text-sm text-gray-500">
+								<span className="text-sm text-gray-500">
 									{voice.slug} ・ {voice.engine}
 								</span>
 							</CardTitle>

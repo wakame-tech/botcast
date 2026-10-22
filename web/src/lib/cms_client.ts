@@ -62,6 +62,8 @@ export interface Voice {
 	caption?: string;
 	/** 試聴用の音声 */
 	sample?: CmsFile;
+	/** アイコン画像 */
+	icon?: CmsFile;
 	owner_id: string | null;
 }
 
@@ -132,6 +134,7 @@ export function recordToVoice(record: CmsRecord): Voice {
 		seed: d.seed as number | undefined,
 		caption: d.caption as string | undefined,
 		sample: d.sample as CmsFile | undefined,
+		icon: d.icon as CmsFile | undefined,
 		owner_id: record.owner_id,
 	};
 }
@@ -273,6 +276,19 @@ export const audioContentType = (
 	const name = file.name.toLowerCase();
 	if (/wav/.test(type) || name.endsWith(".wav")) return "audio/wav";
 	if (/mpeg|mp3/.test(type) || name.endsWith(".mp3")) return "audio/mpeg";
+	return null;
+};
+
+/** アップロードする画像の Content-Type (対応していない形式なら null) */
+export const imageContentType = (
+	file: File,
+): "image/png" | "image/jpeg" | "image/webp" | "image/gif" | null => {
+	const type = file.type.toLowerCase();
+	const name = file.name.toLowerCase();
+	if (type === "image/png" || name.endsWith(".png")) return "image/png";
+	if (type === "image/jpeg" || /\.jpe?g$/.test(name)) return "image/jpeg";
+	if (type === "image/webp" || name.endsWith(".webp")) return "image/webp";
+	if (type === "image/gif" || name.endsWith(".gif")) return "image/gif";
 	return null;
 };
 

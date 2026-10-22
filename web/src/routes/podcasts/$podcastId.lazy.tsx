@@ -83,7 +83,7 @@ export function Podcast() {
 					{podcast.description}
 
 					<h2>配役</h2>
-					<CastList cast={podcast.cast} />
+					<CastList cast={podcast.cast} canReadVoices={editable} />
 
 					<h2>エピソード ({episodes.length})</h2>
 					<Episode.List podcastId={podcast.id} episodes={episodes} />
