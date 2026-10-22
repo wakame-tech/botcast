@@ -7,7 +7,13 @@ export const WORKER_URL =
 /** worker の `POST /jobs` の body（worker の `Args` と同じ形式） */
 export type JobArgs =
 	| { type: "generateAudio"; episodeId: string }
-	| { type: "generateScript"; episodeId: string; prompt: string }
+	| {
+			type: "generateScript";
+			episodeId: string;
+			prompt: string;
+			/** 台本の生成に続けて同じジョブで音声も生成する */
+			generateAudio?: boolean;
+	  }
 	| { type: "generateEpisode"; podcastId: string };
 
 export interface JobInfo {
