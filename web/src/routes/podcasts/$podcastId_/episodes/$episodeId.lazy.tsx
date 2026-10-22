@@ -1,4 +1,4 @@
-import { SectionsComponent } from "@/components/episode/Sections";
+import { Transcript } from "@/components/episode/Transcript";
 import { GenerateScriptForm } from "@/components/job/GenerateScriptForm";
 import { JobButton } from "@/components/job/JobButton";
 import { EpisodeMails } from "@/components/mail/EpisodeMails";
@@ -66,7 +66,7 @@ function Episode() {
 		"/t/{tenantId}/records/{collectionId}/{recordId}",
 	);
 
-	const { state, setEpisode, playOrPause, seekTo } = usePlayer();
+	const { state, setEpisode, playOrPause, playFrom } = usePlayer();
 
 	if (!episode) {
 		return <div>error</div>;
@@ -74,6 +74,7 @@ function Episode() {
 
 	const isPlayingEpisode = state.isPlaying && episode.id === state.episode?.id;
 	const editable = isOwner(episode, userId);
+	const generated = !!episode.audio_url && !!episode.srt_url;
 
 	const handleDelete = async () => {
 		await deleteEpisode.mutateAsync({
@@ -126,27 +127,43 @@ function Episode() {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					{editable && (
-						<div className="py-2 flex flex-col gap-2">
-							<JobButton
-								label="音声を生成"
-								args={{ type: "generateAudio", episodeId }}
+					{generated ? (
+						<>
+							<Transcript
+								lines={lines}
+								sections={episode.sections}
+								isCurrentEpisode={episode.id === state.episode?.id}
+								seconds={state.seconds}
+								onClickLine={(seconds) => playFrom(episode, seconds)}
 							/>
-							<GenerateScriptForm episodeId={episodeId} />
-						</div>
+							{editable && (
+								<details className="pt-4 text-sm">
+									<summary className="cursor-pointer text-gray-500">
+										作り直す
+									</summary>
+									<GenerateForms episodeId={episodeId} />
+								</details>
+							)}
+						</>
+					) : (
+						editable && <GenerateForms episodeId={episodeId} />
 					)}
-					<div className="py-2">
-						<SectionsComponent
-							isPlayingEpisode={isPlayingEpisode}
-							seconds={state.seconds}
-							lines={lines}
-							sections={episode.sections}
-							onClickLine={seekTo}
-						/>
-					</div>
 				</CardContent>
 			</Card>
 			<EpisodeMails episodeId={episodeId} />
 		</>
+	);
+}
+
+/** 音声の生成と台本の生成 */
+function GenerateForms({ episodeId }: { episodeId: string }) {
+	return (
+		<div className="py-2 flex flex-col gap-2">
+			<JobButton
+				label="音声を生成"
+				args={{ type: "generateAudio", episodeId }}
+			/>
+			<GenerateScriptForm episodeId={episodeId} />
+		</div>
 	);
 }
