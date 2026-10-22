@@ -289,10 +289,13 @@ export const fileToBase64 = async (file: Blob): Promise<string> => {
 	return btoa(binary);
 };
 
-/** CMS に保存されたファイル (`/records/{c}/{r}/images/{field}`) を取得する */
+/**
+ * CMS に保存されたファイル (`/records/{c}/{r}/images/{field}`) を取得する。
+ * ファイルの `url` はテナントの prefix を含まないので `/t/{tenant}` を付ける
+ */
 export const fetchCmsFile = async (path: string): Promise<Blob> => {
 	const token = getToken();
-	const res = await fetch(`${CMS_URL}${path}`, {
+	const res = await fetch(`${CMS_URL}/t/${CMS_TENANT}${path}`, {
 		headers: token ? { Authorization: `Bearer ${token}` } : {},
 	});
 	if (!res.ok) {
