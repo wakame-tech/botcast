@@ -81,7 +81,9 @@ pub(crate) fn voices_schema() -> Value {
             // 声の説明（OpenAI 互換では台本に style が無いセリフの caption に使う）
             "caption": { "type": "string" },
             // 試聴用の音声（CMS が `/images/sample` のアップロードで書き込む）
-            "sample": file_schema()
+            "sample": file_schema(),
+            // アイコン画像（CMS が `/images/icon` のアップロードで書き込む）
+            "icon": file_schema()
         },
         "required": ["slug", "name", "engine"],
         "additionalProperties": false,
@@ -275,10 +277,22 @@ mod tests {
         assert!(!valid(&s, json!({ "slug": "a", "name": "n", "engine": "e", "params": { "rate": 1 } })));
         assert!(!valid(&s, json!({ "slug": "a", "name": "n", "engine": "e", "user_id": "u" })));
         // ファイルのフィールドは CMS のファイルの形だけ
-        for field in ["ref_audio", "sample"] {
+        for field in ["ref_audio", "sample", "icon"] {
             assert!(!valid(&s, json!({ "slug": "a", "name": "n", "engine": "e", field: {} })));
             assert!(!valid(&s, json!({ "slug": "a", "name": "n", "engine": "e", field: { "url": "/x" } })));
         }
+    }
+
+    #[test]
+    fn voices_accept_icon_and_keep_existing_records() {
+        let s = voices_schema();
+        let audio = json!({ "pointer": "images:/c/r/sample", "content_type": "audio/wav", "size": 1, "url": "/x" });
+        // icon を足す前のレコードはそのまま通る
+        let existing = json!({ "slug": "narrator", "name": "語り", "engine": "irodori", "sample": audio });
+        assert!(valid(&s, existing.clone()));
+        let mut with_icon = existing;
+        with_icon["icon"] = json!({ "pointer": "images:/c/r/icon", "content_type": "image/png", "size": 1, "url": "/y" });
+        assert!(valid(&s, with_icon));
     }
 
     #[test]

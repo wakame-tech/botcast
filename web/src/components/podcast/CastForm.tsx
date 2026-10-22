@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CmsAudio } from "@/components/voice/VoiceAudio";
+import { CmsAudio, CmsPlayButton } from "@/components/voice/VoiceAudio";
+import { VoiceIcon } from "@/components/voice/VoiceIcon";
 import {
 	$cms,
 	CMS_TENANT,
@@ -11,17 +12,24 @@ import {
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-/** 声の一覧 (slug → 声) */
-export const useVoices = () => {
-	const { data: records } = $cms.useQuery(
+/**
+ * 声の一覧 (slug → 声)。voices は所有者しか読めないので、自分の声だけが返る。
+ * `enabled` が false なら取得しない
+ */
+export const useVoices = (enabled = true) => {
+	const { data: records, isPending } = $cms.useQuery(
 		"get",
 		"/t/{tenantId}/records/{collectionId}",
 		{
 			params: { path: { tenantId: CMS_TENANT, collectionId: "voices" } },
 		},
+		{ enabled },
 	);
 	const voices = (records ?? []).map(recordToVoice);
-	return new Map<string, Voice>(voices.map((v) => [v.slug, v]));
+	return {
+		voices: new Map<string, Voice>(voices.map((v) => [v.slug, v])),
+		isPending: enabled && isPending,
+	};
 };
 
 interface Row {
@@ -39,7 +47,7 @@ interface CastFormProps {
 
 /** 番組の配役 (台本の speaker に書く別名 → 声) の編集 */
 export function CastForm({ value, onSubmit }: CastFormProps) {
-	const voices = useVoices();
+	const { voices } = useVoices();
 	const [rows, setRows] = useState<Row[]>(
 		Object.entries(value).map(([alias, slug]) => ({
 			key: nextRowKey++,
@@ -139,28 +147,42 @@ export function CastForm({ value, onSubmit }: CastFormProps) {
 	);
 }
 
-/** 番組の配役の一覧 (試聴付き) */
-export function CastList({ cast }: { cast: Cast }) {
-	const voices = useVoices();
+interface CastListProps {
+	cast: Cast;
+	/**
+	 * 声を読めるか (番組の持ち主か)。voices は所有者しか読めないので、
+	 * 持ち主以外には声を引かず別名と slug だけを出す
+	 */
+	canReadVoices: boolean;
+}
+
+/** 番組の配役の一覧 (アイコン・声の画面へのリンク・試聴付き) */
+export function CastList({ cast, canReadVoices }: CastListProps) {
+	const { voices, isPending } = useVoices(canReadVoices);
 	const entries = Object.entries(cast);
 	if (entries.length === 0) {
 		return <p className="text-sm text-gray-500">配役はありません</p>;
 	}
 	return (
-		<ul>
+		<ul className="flex flex-col gap-2 py-2">
 			{entries.map(([alias, slug]) => {
 				const voice = voices.get(slug);
 				return (
 					<li key={alias} className="flex flex-wrap gap-2 items-center">
+						<VoiceIcon file={voice?.icon} />
 						<span className="font-bold">{alias}</span>
 						{voice ? (
-							<Link to="/voices/$voiceId" params={{ voiceId: voice.id }}>
-								{voice.name}
-							</Link>
-						) : (
+							<>
+								<Link to="/voices/$voiceId" params={{ voiceId: voice.id }}>
+									{voice.name}
+								</Link>
+								<CmsPlayButton file={voice.sample} />
+							</>
+						) : canReadVoices && !isPending ? (
 							<span className="text-red-500">{slug} (見つかりません)</span>
+						) : (
+							<span className="text-sm text-gray-500">{slug}</span>
 						)}
-						<CmsAudio file={voice?.sample} />
 					</li>
 				);
 			})}
