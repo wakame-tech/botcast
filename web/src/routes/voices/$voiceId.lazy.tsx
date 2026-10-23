@@ -85,6 +85,14 @@ export function VoiceDetail() {
 				slug: {voice.slug} ・ エンジン: {voice.engine}
 				{voice.voice_id && ` ・ voice_id: ${voice.voice_id}`}
 			</p>
+			{!voice.voice_id && !voice.ref_audio && (
+				<p className="text-sm text-yellow-700">
+					voice_id
+					も参照音声も無いため、この声では音声を生成できません。参照音声をアップロードするか、voice_id
+					を設定してください (irodori で参照音声を使わないなら <code>none</code>
+					)
+				</p>
+			)}
 
 			<VoiceIconField voiceId={voiceId} file={voice.icon} editable={editable} />
 			<VoiceAudioField
