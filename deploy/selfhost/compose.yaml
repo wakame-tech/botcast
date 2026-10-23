@@ -5,7 +5,7 @@
 # - worker / web は GHCR のイメージ (.github/workflows/images.yml) を使う:
 #     docker compose pull && docker compose up -d --remove-orphans
 #   手元でビルドするときは docker compose up -d --build
-# - watchtower が GHCR の新しいイメージを 5 分ごとに確認し、ラベル付きのコンテナを入れ替える
+# - watchtower が GHCR の新しいイメージを 60 秒ごとに確認し、ラベル付きのコンテナを入れ替える
 #   (botcast-cms の deploy/compose.yaml の api / web も対象)。compose ファイルの変更は手動で反映する
 name: botcast
 
@@ -110,7 +110,7 @@ services:
       - ${DOCKER_CONFIG_FILE:-~/.docker/config.json}:/config.json:ro
     environment:
       - WATCHTOWER_LABEL_ENABLE=true
-      - WATCHTOWER_POLL_INTERVAL=300
+      - WATCHTOWER_POLL_INTERVAL=60
       - WATCHTOWER_CLEANUP=true
       # 任意: 更新時の通知先 (shoutrrr 形式。例: discord://<token>@<webhook id>)。.env に書く
       - WATCHTOWER_NOTIFICATION_URL
