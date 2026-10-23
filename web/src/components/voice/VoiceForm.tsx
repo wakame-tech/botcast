@@ -172,7 +172,8 @@ export function VoiceForm({ value, onSubmit }: VoiceFormProps) {
 			/>
 			<label className="text-sm" htmlFor="voice-voice-id">
 				voice_id (VOICEVOX はスタイル ID、OpenAI 互換は voice
-				名。参照音声を使う場合は空でよい)
+				名。参照音声をアップロードする場合だけ空でよい。参照音声が無いなら必須で、irodori
+				で参照音声を使わないなら <code>none</code>)
 			</label>
 			<Input
 				id="voice-voice-id"

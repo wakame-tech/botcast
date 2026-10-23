@@ -314,7 +314,11 @@ impl<'a> SpeakerResolver<'a> {
         let voice_id = match (&voice.voice_id, &ref_audio) {
             (Some(id), _) => id.clone(),
             (None, Some(_)) => voice.slug.clone(),
-            (None, None) => bail!("voice {:?} has neither voice_id nor ref_audio", voice.slug),
+            (None, None) => bail!(
+                "voice {:?} has neither voice_id nor ref_audio: upload a reference audio or set voice_id \
+                 (for irodori without a reference audio, use \"none\")",
+                voice.slug
+            ),
         };
         self.captions
             .insert(voice.slug.clone(), voice.caption.clone().filter(|_| openai));
@@ -722,6 +726,8 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("neither voice_id nor ref_audio"), "{err}");
+        // どうすれば直るかも書く
+        assert!(err.contains("set voice_id"), "{err}");
     }
 
     #[tokio::test]
