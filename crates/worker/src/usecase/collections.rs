@@ -5,8 +5,13 @@
 //! 追加するフィールドは任意にする（既存のレコードが新しいスキーマをそのまま満たすように）。
 
 use super::cms_client::{CmsClient, ListQuery};
+use super::episode_generation::MAX_SOURCES;
 use super::llm_models::{LLM_MODELS, USER_SETTINGS};
+use super::safe_fetch::FETCH_ALLOWED_HOSTS;
 use serde_json::{json, Value};
+
+/// 定期実行の LLM モードの指示（`schedule.prompt`）の長さの上限
+const SCHEDULE_PROMPT_MAX_LENGTH: u32 = 8000;
 
 /// 全コレクション共通: 認証済みなら誰でも読め、書けるのは所有者（とサービス）
 fn access() -> Value {
@@ -161,6 +166,27 @@ async fn seed_llm_models(cms: &CmsClient) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// worker が取得してよいホストの一覧（`fetch_url` ツール・定期実行の `schedule.sources`）。
+/// ホスト名と完全一致で使う（サブドメインは別に登録する）。IP アドレスは worker が拒否する
+pub(crate) fn fetch_allowed_hosts_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            // 小文字のドメイン名（例: `zenn.dev`）。スキーム・ポート・パスは書かない
+            "host": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+            },
+            // false なら取得しない
+            "enabled": { "type": "boolean" },
+            "description": { "type": "string" }
+        },
+        "required": ["host", "enabled"],
+        "additionalProperties": false,
+        "x-unique": [["host"]]
+    })
+}
+
 pub(crate) fn podcasts_schema(scripts_id: &str) -> Value {
     json!({
         "type": "object",
@@ -172,12 +198,33 @@ pub(crate) fn podcasts_schema(scripts_id: &str) -> Value {
                 "type": "object",
                 "properties": {
                     "cron": { "type": "string" },
+                    // 台本の作り方。無ければ script（既存のレコード）
+                    "generator": { "enum": ["script", "llm"] },
                     "script_id": { "type": "string", "x-ref": scripts_id },
                     "enabled": { "type": "boolean" },
                     // 値はスクリプトの `arguments` (JSON Schema) に従う
-                    "arguments": { "type": "object" }
+                    "arguments": { "type": "object" },
+                    // LLM モードの指示
+                    "prompt": { "type": "string", "maxLength": SCHEDULE_PROMPT_MAX_LENGTH },
+                    // 事前に取得して台本の材料にする URL（worker が `fetch_allowed_hosts` のホストだけ取得する）
+                    "sources": {
+                        "type": "array",
+                        "items": { "type": "string", "pattern": "^https://" },
+                        "maxItems": MAX_SOURCES
+                    }
                 },
-                "required": ["cron", "script_id", "enabled"],
+                "required": ["cron", "enabled"],
+                // script（既定）は script_id、llm は prompt が要る
+                "anyOf": [
+                    {
+                        "properties": { "generator": { "const": "script" } },
+                        "required": ["script_id"]
+                    },
+                    {
+                        "properties": { "generator": { "const": "llm" } },
+                        "required": ["generator", "prompt"]
+                    }
+                ],
                 "additionalProperties": false
             },
             // 配役: 台本の `speaker` に書く別名 → voices の slug。
@@ -278,6 +325,13 @@ pub(crate) async fn seed(cms: &CmsClient) -> anyhow::Result<()> {
         USER_SETTINGS,
         user_settings_schema(&llm_models),
         user_settings_access(),
+    )
+    .await?;
+    // 取得してよいホストは llm_models と同じく、読めるのはログインしたユーザー全員・書けるのは管理者とサービスだけ
+    cms.ensure_collection(
+        FETCH_ALLOWED_HOSTS,
+        fetch_allowed_hosts_schema(),
+        llm_models_access(),
     )
     .await?;
     Ok(())
@@ -425,6 +479,67 @@ mod tests {
             "cron": "0 0 0 * * ? *", "script_id": "s", "enabled": true, "arguments": { "n": 1 }
         }})));
         assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "user_id": "u" })));
+    }
+
+    #[test]
+    fn podcasts_keep_legacy_schedules_valid() {
+        let s = podcasts_schema("sc1");
+        // generator を足す前のレコード（script_id 必須だった形）はそのまま通る
+        for schedule in [
+            json!({ "cron": "0 0 12 * * Fri *", "script_id": "s", "enabled": true }),
+            json!({ "cron": "0 0 12 * * Fri *", "script_id": "s", "enabled": false, "arguments": {} }),
+        ] {
+            assert!(valid(&s, json!({ "title": "t", "icon": "🎙️", "schedule": schedule })), "{schedule}");
+        }
+        // script（既定）は今までどおり script_id が要る
+        assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "schedule": {
+            "cron": "0 0 12 * * Fri *", "enabled": true
+        }})));
+        assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "schedule": {
+            "cron": "0 0 12 * * Fri *", "enabled": true, "generator": "script"
+        }})));
+        // script モードでも事前に取得する資料を渡せる
+        assert!(valid(&s, json!({ "title": "t", "icon": "🎙️", "schedule": {
+            "cron": "0 0 12 * * Fri *", "enabled": true, "script_id": "s",
+            "sources": ["https://zenn.dev/api/articles?order=weekly&count=5"]
+        }})));
+    }
+
+    #[test]
+    fn podcasts_accept_llm_schedules() {
+        let s = podcasts_schema("sc1");
+        let llm = json!({
+            "cron": "0 0 22 * * Sun *", "enabled": true, "generator": "llm",
+            "prompt": "今週の Zenn の人気記事を紹介して",
+            "sources": ["https://zenn.dev/api/articles?order=weekly&count=5"]
+        });
+        assert!(valid(&s, json!({ "title": "t", "icon": "🎙️", "schedule": llm })));
+        // llm は script_id が要らず、prompt が要る
+        let mut no_prompt = llm.clone();
+        no_prompt.as_object_mut().unwrap().remove("prompt");
+        assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "schedule": no_prompt })));
+        for (k, v) in [
+            ("generator", json!("other")),
+            ("sources", json!(["http://zenn.dev/"])),
+            ("sources", json!(vec!["https://zenn.dev/"; MAX_SOURCES + 1])),
+            ("prompt", json!("あ".repeat(SCHEDULE_PROMPT_MAX_LENGTH as usize + 1))),
+            ("model", json!("x")),
+        ] {
+            let mut bad = llm.clone();
+            bad[k] = v;
+            assert!(!valid(&s, json!({ "title": "t", "icon": "🎙️", "schedule": bad })), "{k}");
+        }
+    }
+
+    #[test]
+    fn fetch_allowed_hosts_are_admin_managed_domains() {
+        let s = fetch_allowed_hosts_schema();
+        assert_eq!(s["x-unique"], json!([["host"]]));
+        assert!(valid(&s, json!({ "host": "zenn.dev", "enabled": true, "description": "Zenn" })));
+        for host in ["https://zenn.dev", "zenn.dev/api", "Zenn.dev", "localhost", "zenn.dev:443", ""] {
+            assert!(!valid(&s, json!({ "host": host, "enabled": true })), "{host}");
+        }
+        assert!(!valid(&s, json!({ "host": "zenn.dev" })));
     }
 
     #[test]

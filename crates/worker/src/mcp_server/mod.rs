@@ -124,7 +124,7 @@ impl BotcastMcpServer {
             .await
     }
 
-    #[tool(description = "番組のスクリプトで前回エピソード宛てのお便りを読む新しいエピソードを作り、音声まで生成するジョブをエンキューします")]
+    #[tool(description = "番組の定期実行の設定（スクリプトまたは LLM）で新しいエピソードを作り、音声まで生成するジョブをエンキューします")]
     pub async fn generate_episode(
         &self,
         params: Parameters<GenerateEpisodeParams>,

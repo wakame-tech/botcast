@@ -6,13 +6,48 @@ import type { components, paths } from "./cms_api";
 
 export type CmsRecord = components["schemas"]["Record_"];
 
+/** 定期実行の台本の作り方。無ければ `script` */
+export type ScheduleGenerator = "script" | "llm";
+
 export interface PodcastSchedule {
 	/** Quartz 形式 7 フィールド (秒 分 時 日 月 曜日 年)、UTC */
 	cron: string;
-	script_id: string;
+	/** 台本の作り方 (無ければ `script`) */
+	generator?: ScheduleGenerator;
+	/** `script` のとき必須 */
+	script_id?: string;
 	enabled: boolean;
 	/** スクリプトに渡す引数の値 (スクリプトの `arguments` JSON Schema に従う) */
 	arguments?: Record<string, unknown>;
+	/** `llm` のときの LLM への指示 (必須) */
+	prompt?: string;
+	/** 事前に取得して台本の材料にする URL (worker が `fetch_allowed_hosts` のホストだけ取得する) */
+	sources?: string[];
+}
+
+/** 定期実行で生成できる設定か (worker の `ScheduleConfig::is_runnable` と同じ条件) */
+export function isScheduleRunnable(schedule?: PodcastSchedule): boolean {
+	if (!schedule) return false;
+	if (schedule.generator === "llm") return !!schedule.prompt?.trim();
+	return !!schedule.script_id;
+}
+
+/** worker が取得してよいホスト (CMS の `fetch_allowed_hosts`。管理者が編集する) */
+export interface FetchAllowedHost {
+	id: string;
+	host: string;
+	enabled: boolean;
+	description?: string;
+}
+
+export function recordToFetchAllowedHost(record: CmsRecord): FetchAllowedHost {
+	const d = record.data as Record<string, unknown>;
+	return {
+		id: record.id,
+		host: d.host as string,
+		enabled: (d.enabled as boolean) ?? false,
+		description: d.description as string | undefined,
+	};
 }
 
 /** 配役: 台本の `speaker` に書く別名 → 声 (voices) の slug */

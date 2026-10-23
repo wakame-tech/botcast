@@ -73,7 +73,7 @@ cd web && npm run check
 
 ## CMS のコレクション
 
-- voices / podcasts / episodes / scripts / mails のスキーマは `crates/worker/src/usecase/collections.rs` が唯一の情報源。worker の起動時に CMS へ反映する（無ければ作成、差分があれば `PUT /collections` で更新。既存レコードが新スキーマを満たさなければ起動に失敗する）
+- voices / podcasts / episodes / scripts / mails / llm_models / user_settings / fetch_allowed_hosts のスキーマは `crates/worker/src/usecase/collections.rs` が唯一の情報源。worker の起動時に CMS へ反映する（無ければ作成、差分があれば `PUT /collections` で更新。既存レコードが新スキーマを満たさなければ起動に失敗する）
 - 参照は素のレコード ID で持ち、スキーマの `x-ref`（参照先コレクションの ID）で宣言する（`episodes.podcast_id` / `mails.episode_id` / `podcasts.schedule.script_id`）。コレクション ID は環境ごとに違うので、seed が参照先から順に作って埋め込む
 - データ移行は `deploy/selfhost/migrations/` の SurrealQL を CMS の SurrealDB（namespace = テナント ID）に流す
 
@@ -106,12 +106,28 @@ cd web && npm run check
 - `GenerateScript` は LLM に CMS の MCP ツールのうち読み取りだけ（`agent_service.rs` の `READ_ONLY_CMS_TOOLS`）を渡し、台本を structured outputs（`output_config.format`）で `{ title?, sections }` の JSON として返させる。保存は worker が行い、LLM に保存を頼まない
 - 出力のスキーマは `collections.rs` の episodes の `title` / `sections` から作る（`usecase/script_output.rs`。`oneOf` → `anyOf`、`maxLength` などの制約は外して送り、受け取ったあとに元のスキーマで検証する）。違反・`max_tokens`・`refusal` はジョブ失敗。`generateAudio` は保存できたときだけ音声に進む
 - span `script.save` にはセリフ数・話者の数などの件数だけを入れ、台本の本文は入れない
+- LLM には MCP のツールに加えて worker が実装するツール（client tool）`fetch_url` を渡す（`usecase/fetch_url_tool.rs`。1 ジョブ 20 回まで）。エージェントのループは `agent_service.rs` の `LocalTool` を MCP より先に引く。tool_choice は指定しない（forced は 5.5 系で 400）
 
-## お便りエピソードの定期生成
+## Web の取得（fetch_url・schedule.sources）
+
+- CMS のスクリプトは dify-sandbox（seccomp でネットワーク禁止）で動くので Web を読めない。サンドボックスは開けず（LAN への SSRF になる）、worker が `usecase/safe_fetch.rs` の `SafeFetcher` で取得する
+- 取得してよいホストは CMS の `fetch_allowed_hosts`（`host`（x-unique。小文字のドメイン名）・`enabled`・`description`）。ホスト名と完全一致（サブドメインは別に登録）。読めるのはログインしたユーザー全員、書けるのは役割 `admin` とサービスだけ（`llm_models` と同じ）。初期データは入れない（管理者が CMS で登録する。空なら何も取得できない）。環境変数では設定しない
+- HTTPS（443 番）だけ。URL の認証情報・IP アドレスのホストは不可。DNS の結果を **すべて** 確かめ（ループバック・プライベート・リンクローカル（169.254.169.254 を含む）・ユニークローカル・CGNAT・予約などは拒否）、確かめたアドレスに接続を固定する（reqwest の `resolve`。プロキシの環境変数も使わない）ので DNS rebinding で内部に繋がらない
+- リダイレクトは自動で追わず、1 回ごとに URL・許可リスト・DNS を確かめ直す（3 回まで）。接続 5 秒・全体 20 秒のタイムアウト、本文 2MiB まで（超えたら失敗）
+- JSON はそのまま（ただしキーが `_html` で終わる文字列は本文のテキストにする。Zenn の `body_html` など）、HTML は見出し・段落のテキスト（`readable_text`）にし、20,000 文字で切る
+- span `web.fetch` にはホスト（`server.address`）・状態コード・バイト数・リダイレクト数だけを入れ、URL のパス・本文は入れない
+- 実物の zenn.dev への確認: `cargo test -p worker -- --ignored fetch_against_zenn`
+
+## エピソードの定期生成（スクリプト・LLM）
 
 - お便りは CMS の `mails`（`episode_id` / `radio_name` / `body`。所有者は投稿者）。web のエピソード画面から投稿する
-- 番組の `data.schedule = { cron, script_id, enabled, arguments }`（cron は Quartz 7 フィールド・UTC）を worker の `ScheduleSync` が 60 秒ごとに kafru のスケジュールへ同期する
+- 番組の `data.schedule = { cron, enabled, generator?, script_id?, arguments?, prompt?, sources? }`（cron は Quartz 7 フィールド・UTC）を worker の `ScheduleSync` が 60 秒ごとに kafru のスケジュールへ同期する。`generator` は `script`（既定。無い既存のレコードも script）か `llm`。script は `script_id`、llm は `prompt` が必須（スキーマの `anyOf`。足りない番組は同期しない）
+- `sources` は事前に取得する URL（10 個まで。`fetch_allowed_hosts` のホストだけ）。1 つでも取得に失敗したらジョブを失敗させる
 - スクリプトの `data.arguments` は引数の **JSON Schema**、その **値** は番組の `schedule.arguments`。web の定期実行設定でスキーマから生成したフォームで入力する
-- 発火すると `GenerateEpisode` ジョブが `schedule.arguments`（無ければ `{}`）をスクリプトのスキーマで検証し（違反ならジョブ失敗）、スクリプト（Node.js）を CMS `/scripts` で実行する。スクリプトは `context = { podcast, previous_episode, mails, arguments }` を受け取り、`{ title?, sections }` を JSON で標準出力する
+- 発火すると `GenerateEpisode` ジョブが動く（`usecase/episode_generation.rs` の `EpisodeGenerator`）
+  - script: `schedule.arguments`（無ければ `{}`）をスクリプトのスキーマで検証し（違反ならジョブ失敗）、スクリプト（Node.js）を CMS `/scripts` で実行する。スクリプトは `context = { podcast, previous_episode, mails, arguments, sources }`（`sources` は `[{ url, content_type, truncated, content }]`）を受け取り、`{ title?, sections }` を JSON で標準出力する
+  - llm: 番組の持ち主のモデル・API キー（BYOK）で、`prompt`・取得した `sources`・配役（台本生成と同じプロンプト）を渡し、CMS の読み取りのツールと `fetch_url` を使わせて structured outputs で `{ title?, sections }` を受け取る。episodes のスキーマで検証してから番組の持ち主のエピソードを作る（失敗したらエピソードを作らない）。タイトルは LLM が書かなければ `第N回`。トークン数はジョブの `usage` に残す
+  - どちらもエピソードを作れたら続けて音声を生成する
+- web の番組の編集画面の「定期実行」で作り方・指示・資料の URL を編集し、取得を許可されたホストを表示する
 - web のスクリプト詳細画面で、サンプルの context と入力した引数で試し実行できる
-- 手動実行は worker の MCP ツール `generate_episode(podcast_id)`
+- 手動実行は worker の MCP ツール `generate_episode(podcast_id)`（web の番組画面の「エピソードを生成」）

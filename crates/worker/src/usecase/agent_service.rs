@@ -2,7 +2,7 @@ use crate::trace_context::record_error;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tracing::{Instrument, field::Empty};
 
 use super::llm_api_key::ApiKey;
@@ -25,6 +25,61 @@ pub(crate) const READ_ONLY_CMS_TOOLS: &[&str] = &[
     "RecordApi_read",
     "RecordApi_referencedBy",
 ];
+
+/// worker が実装するツール（client tool。例: [`super::fetch_url_tool::FetchUrlTool`]）。
+/// MCP のツールと一緒に LLM に渡し、呼ばれたら worker の中で実行する
+#[async_trait::async_trait]
+pub(crate) trait LocalTool: Send + Sync {
+    fn name(&self) -> &str;
+    fn description(&self) -> &str;
+    fn input_schema(&self) -> Value;
+    /// 成功なら tool_result の本文、失敗なら `is_error: true` の tool_result の本文
+    async fn call(&self, input: &Value) -> Result<String, String>;
+}
+
+/// worker のツールを Anthropic のツール定義にする
+fn local_tools_for_anthropic(tools: &[Arc<dyn LocalTool>]) -> Vec<AnthropicTool> {
+    tools
+        .iter()
+        .map(|t| AnthropicTool {
+            name: t.name().to_string(),
+            description: t.description().to_string(),
+            input_schema: t.input_schema(),
+        })
+        .collect()
+}
+
+/// worker のツールを呼び、tool_result のブロックにする。span には名前と成否だけを入れる（引数・結果の本文は入れない）
+async fn call_local_tool(tool: &dyn LocalTool, id: &str, input: &Value) -> Value {
+    let name = tool.name().to_string();
+    let span = tracing::info_span!(
+        "execute_tool",
+        otel.name = format!("execute_tool {name}"),
+        gen_ai.operation.name = "execute_tool",
+        gen_ai.tool.name = %name,
+        tool.is_error = Empty,
+        otel.status_code = Empty,
+        otel.status_message = Empty,
+    );
+    let result = tool.call(input).instrument(span.clone()).await;
+    span.record("tool.is_error", result.is_err());
+    match result {
+        Ok(content) => json!({
+            "type": "tool_result",
+            "tool_use_id": id,
+            "content": content,
+        }),
+        Err(message) => {
+            record_error(&span, "tool returned an error");
+            json!({
+                "type": "tool_result",
+                "tool_use_id": id,
+                "content": message,
+                "is_error": true,
+            })
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct AnthropicTool {
@@ -229,6 +284,8 @@ pub struct AgentService {
     mcp_client: McpClient,
     /// LLM に渡す（呼ばせる）ツールの名前
     allowed_tools: &'static [&'static str],
+    /// worker が実装するツール（`fetch_url` など）
+    local_tools: Vec<Arc<dyn LocalTool>>,
     http_client: reqwest::Client,
     /// これまでの LLM の呼び出しのトークン数の合計
     usage: Mutex<Usage>,
@@ -248,9 +305,16 @@ impl AgentService {
             model,
             mcp_client,
             allowed_tools,
+            local_tools: vec![],
             http_client: reqwest::Client::new(),
             usage: Mutex::new(Usage::default()),
         }
+    }
+
+    /// worker が実装するツールを足す（MCP のツールと同じ名前は使わない）
+    pub(crate) fn with_local_tools(mut self, tools: Vec<Arc<dyn LocalTool>>) -> Self {
+        self.local_tools = tools;
+        self
     }
 
     /// これまでの LLM の呼び出しのトークン数の合計（失敗したループの分も含む）
@@ -277,7 +341,8 @@ impl AgentService {
         prompt: &str,
         output_schema: Option<&Value>,
     ) -> anyhow::Result<String> {
-        let tools = tools_for_anthropic(self.mcp_client.tools(), self.allowed_tools);
+        let mut tools = tools_for_anthropic(self.mcp_client.tools(), self.allowed_tools);
+        tools.extend(local_tools_for_anthropic(&self.local_tools));
         let mut messages: Vec<Message> = vec![Message {
             role: "user".to_string(),
             content: json!(prompt),
@@ -363,6 +428,10 @@ impl AgentService {
         let mut tool_results = Vec::new();
         for block in &blocks {
             if let ContentBlock::ToolUse { id, name, input } = block {
+                if let Some(tool) = self.local_tools.iter().find(|t| t.name() == name) {
+                    tool_results.push(call_local_tool(tool.as_ref(), id, input).await);
+                    continue;
+                }
                 // 渡していないツール（書き込み系など）は呼ばない
                 if !self.allowed_tools.contains(&name.as_str()) {
                     tracing::warn!("Agent requested a tool that is not allowed: {name}");
@@ -577,6 +646,45 @@ mod tests {
         assert!(!format!("{value:?}").contains("sk-ant"));
         let err = api_key_header(&ApiKey::new("sk-ant-secret\n".to_string())).unwrap_err();
         assert!(!format!("{err:#}").contains("sk-ant"), "{err:#}");
+    }
+
+    struct EchoTool;
+
+    #[async_trait::async_trait]
+    impl LocalTool for EchoTool {
+        fn name(&self) -> &str {
+            "echo"
+        }
+        fn description(&self) -> &str {
+            "echo desc"
+        }
+        fn input_schema(&self) -> Value {
+            json!({ "type": "object", "properties": { "s": { "type": "string" } } })
+        }
+        async fn call(&self, input: &Value) -> Result<String, String> {
+            input["s"].as_str().map(str::to_string).ok_or_else(|| "no s".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn local_tools_are_offered_and_return_tool_results() {
+        let tools: Vec<Arc<dyn LocalTool>> = vec![Arc::new(EchoTool)];
+        let defs = local_tools_for_anthropic(&tools);
+        assert_eq!(defs[0].name, "echo");
+        assert_eq!(defs[0].input_schema["type"], "object");
+        let messages = vec![Message { role: "user".to_string(), content: json!("p") }];
+        let schema = json!({ "type": "object", "additionalProperties": false });
+        let body = request_body("m", "sys", &defs, &messages, Some(&schema));
+        assert_eq!(body["tools"][0]["name"], "echo");
+        // structured outputs と一緒に使い、forced tool_choice は使わない
+        assert!(body.get("tool_choice").is_none());
+        assert!(body.get("output_config").is_some());
+
+        let ok = call_local_tool(&EchoTool, "toolu_1", &json!({ "s": "hi" })).await;
+        assert_eq!(ok, json!({ "type": "tool_result", "tool_use_id": "toolu_1", "content": "hi" }));
+        let err = call_local_tool(&EchoTool, "toolu_2", &json!({})).await;
+        assert_eq!(err["is_error"], true);
+        assert_eq!(err["content"], "no s");
     }
 
     #[test]

@@ -198,6 +198,20 @@ pub(crate) async fn find_owned_voice(
     Ok(Ok(Some(voice)))
 }
 
+/// 番組の配役（別名 → 声。番組の持ち主の声が見つからない・使えなければ `None`）
+pub(crate) async fn cast_of_podcast(
+    store: &dyn VoiceStore,
+    podcast: &Value,
+) -> anyhow::Result<Vec<(String, Option<Voice>)>> {
+    let owner = podcast["owner_id"].as_str();
+    let mut voices = vec![];
+    for (alias, slug) in podcast_cast(podcast)? {
+        let voice = find_owned_voice(store, &slug, owner).await?;
+        voices.push((alias, voice.ok().flatten()));
+    }
+    Ok(voices)
+}
+
 /// 参照音声のキャッシュのキー: 声のレコード ID・版・参照音声の大きさ
 type RefAudioKey = (String, i64, u64);
 

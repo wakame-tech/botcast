@@ -40,3 +40,4 @@ aquamarine = "0.6"
 jsonschema = { version = "0.26", default-features = false }
 sha2 = "0.10.8"
 hex = "0.4.3"
+url = "2"
