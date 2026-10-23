@@ -395,6 +395,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Get a stored file as JSON `{ data (Base64), content_type, size }`, not as raw bytes. */
         get: operations["RecordApi_getImage"];
         put?: never;
         post: operations["RecordApi_uploadImage"];
@@ -716,12 +717,16 @@ export interface components {
             /** @description Generated `data` following the collection schema. Not validated: the client edits it and saves with `create` */
             data: Record<string, never>;
         };
+        /** @description A stored file returned as JSON (the bytes are Base64 encoded). */
         GetImageResponse: {
-            /** @description Base64 encoded image data */
+            /** @description Base64 encoded file data (image, audio or subtitle text) */
             data: string;
-            /** @description MIME type */
+            /** @description MIME type of the stored file */
             content_type: string;
-            /** @description File size in bytes */
+            /**
+             * Format: int64
+             * @description File size in bytes (before Base64 encoding)
+             */
             size: number;
         };
         ImageField: {
@@ -1947,7 +1952,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": unknown;
+                    "application/json": components["schemas"]["GetImageResponse"];
                 };
             };
         };

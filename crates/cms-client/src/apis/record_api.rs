@@ -648,7 +648,8 @@ pub async fn record_api_generate_data(configuration: &configuration::Configurati
     }
 }
 
-pub async fn record_api_get_image(configuration: &configuration::Configuration, params: RecordApiGetImageParams) -> Result<serde_json::Value, Error<RecordApiGetImageError>> {
+/// Get a stored file as JSON `{ data (Base64), content_type, size }`, not as raw bytes.
+pub async fn record_api_get_image(configuration: &configuration::Configuration, params: RecordApiGetImageParams) -> Result<models::GetImageResponse, Error<RecordApiGetImageError>> {
 
     let uri_str = format!("{}/t/{tenantId}/records/{collectionId}/{recordId}/images/{fieldName}", configuration.base_path, tenantId=crate::apis::urlencode(params.tenant_id), collectionId=crate::apis::urlencode(params.collection_id), recordId=crate::apis::urlencode(params.record_id), fieldName=crate::apis::urlencode(params.field_name));
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -686,8 +687,8 @@ pub async fn record_api_get_image(configuration: &configuration::Configuration, 
         let content = resp.text().await?;
         match content_type {
             ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `serde_json::Value`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `serde_json::Value`")))),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::GetImageResponse`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::GetImageResponse`")))),
         }
     } else {
         let content = resp.text().await?;

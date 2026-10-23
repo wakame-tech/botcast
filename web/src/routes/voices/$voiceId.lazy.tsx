@@ -128,7 +128,13 @@ export function VoiceDetail() {
 
 			{editable && (
 				<>
-					<VoiceForm value={voice} onSubmit={handleSubmit} />
+					{/* フォームは初期値を state に写すので、試聴のテイクで seed が変わったら作り直す
+					    (古い seed のまま保存して、テイクの seed を戻してしまわないように) */}
+					<VoiceForm
+						key={voice.seed ?? "none"}
+						value={voice}
+						onSubmit={handleSubmit}
+					/>
 					{castIn.length > 0 && (
 						<p className="text-sm text-red-500">
 							この声は次の番組の配役に使われています。削除すると、配役を直すまで音声を生成できません:{" "}

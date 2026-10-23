@@ -11,21 +11,23 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
+/// GetImageResponse : A stored file returned as JSON (the bytes are Base64 encoded).
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GetImageResponse {
-    /// Base64 encoded image data
+    /// Base64 encoded file data (image, audio or subtitle text)
     #[serde(rename = "data")]
     pub data: String,
-    /// MIME type
+    /// MIME type of the stored file
     #[serde(rename = "content_type")]
     pub content_type: String,
-    /// File size in bytes
+    /// File size in bytes (before Base64 encoding)
     #[serde(rename = "size")]
-    pub size: i32,
+    pub size: i64,
 }
 
 impl GetImageResponse {
-    pub fn new(data: String, content_type: String, size: i32) -> GetImageResponse {
+    /// A stored file returned as JSON (the bytes are Base64 encoded).
+    pub fn new(data: String, content_type: String, size: i64) -> GetImageResponse {
         GetImageResponse {
             data,
             content_type,
