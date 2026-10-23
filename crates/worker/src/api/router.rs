@@ -1,10 +1,12 @@
 use super::auth::{bearer_token, TokenStatus};
 use super::AppState;
-use crate::{error::Error, mcp_server::BotcastMcpServer, usecase::task_service::Args};
+use crate::{
+    error::Error, mcp_server::BotcastMcpServer, trace_context, usecase::task_service::Args,
+};
 use axum::{
     body::Bytes,
     extract::State,
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, Request, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
     Json, Router,
@@ -15,6 +17,7 @@ use rmcp::transport::{
 };
 use serde_json::json;
 use std::sync::Arc;
+use tower::ServiceBuilder;
 use tracing::instrument;
 
 #[instrument(skip(state))]
@@ -53,6 +56,11 @@ async fn version() -> Result<impl IntoResponse, Error> {
     })))
 }
 
+fn inject_trace_context<B>(mut req: Request<B>) -> Request<B> {
+    trace_context::inject_into_headers(req.headers_mut(), &tracing::Span::current());
+    req
+}
+
 pub(crate) fn routers(provider: Arc<crate::usecase::provider::Provider>) -> Router<Arc<AppState>> {
     let mcp_server = BotcastMcpServer::new(provider);
     let mcp_service = StreamableHttpService::new(
@@ -64,5 +72,12 @@ pub(crate) fn routers(provider: Arc<crate::usecase::provider::Provider>) -> Rout
     Router::new()
         .route("/version", get(version))
         .route("/jobs", get(list_jobs).post(create_job))
-        .nest_service("/mcp", mcp_service)
+        // rmcp はツールのハンドラーを別のタスクで動かし、HTTP の span が引き継がれない。
+        // 今の span（TraceLayer の HTTP の span）の trace context をヘッダーに入れ、ツール側で親にする
+        .nest_service(
+            "/mcp",
+            ServiceBuilder::new()
+                .map_request(inject_trace_context::<axum::body::Body>)
+                .service(mcp_service),
+        )
 }

@@ -69,6 +69,30 @@ pub(crate) fn trace_id_from_params(params: &HashMap<String, Value>) -> Option<St
         .map(str::to_string)
 }
 
+/// HTTP のヘッダーに span の trace context（`traceparent` / `tracestate`）を入れる（既にあれば置き換える）
+pub(crate) fn inject_into_headers(headers: &mut axum::http::HeaderMap, span: &tracing::Span) {
+    for (key, value) in inject(span) {
+        if let (Ok(name), Ok(value)) = (
+            axum::http::HeaderName::try_from(key),
+            axum::http::HeaderValue::try_from(value),
+        ) {
+            headers.insert(name, value);
+        }
+    }
+}
+
+/// HTTP のヘッダーから親の context を取り出す。無い・壊れているなら `None`
+pub(crate) fn extract_from_headers(headers: &axum::http::HeaderMap) -> Option<Context> {
+    let carrier: HashMap<String, String> = ["traceparent", "tracestate"]
+        .into_iter()
+        .filter_map(|key| {
+            let value = headers.get(key)?.to_str().ok()?;
+            Some((key.to_string(), value.to_string()))
+        })
+        .collect();
+    extract(&carrier)
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -134,6 +158,29 @@ pub(crate) mod tests {
             let parent = extract_from_params(&params).unwrap();
             assert_eq!(parent.span().span_context().trace_id().to_string(), id);
         });
+    }
+
+    #[test]
+    fn headers_round_trip_parent_context() {
+        let (subscriber, _exporter, _provider) = test_subscriber();
+        tracing::subscriber::with_default(subscriber, || {
+            let span = tracing::info_span!("request");
+            let mut headers = axum::http::HeaderMap::new();
+            // クライアントが送ってきた traceparent は worker の span で置き換える
+            headers.insert(
+                "traceparent",
+                "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+                    .parse()
+                    .unwrap(),
+            );
+            inject_into_headers(&mut headers, &span);
+            let parent = extract_from_headers(&headers).unwrap();
+            assert_eq!(
+                Some(parent.span().span_context().trace_id().to_string()),
+                trace_id(&span)
+            );
+        });
+        assert!(extract_from_headers(&axum::http::HeaderMap::new()).is_none());
     }
 
     #[test]
