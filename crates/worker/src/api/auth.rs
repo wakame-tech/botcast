@@ -1,3 +1,4 @@
+use crate::usecase::cms_client::traced_cms_call_raw;
 use anyhow::Context;
 use axum::http::{header::AUTHORIZATION, HeaderMap};
 use cms_client::apis::{collections_api, configuration::Configuration, Error as CmsError};
@@ -66,12 +67,16 @@ impl CmsTokenVerifier {
             bearer_access_token: Some(token.to_string()),
             ..Configuration::new()
         };
-        let res = collections_api::collection_api_list(
-            &config,
-            collections_api::CollectionApiListParams {
-                tenant_id: self.tenant.clone(),
-                x_on_behalf_of: None,
-            },
+        let res = traced_cms_call_raw(
+            "GET",
+            "/t/{tenantId}/collections",
+            collections_api::collection_api_list(
+                &config,
+                collections_api::CollectionApiListParams {
+                    tenant_id: self.tenant.clone(),
+                    x_on_behalf_of: None,
+                },
+            ),
         )
         .await;
         match res {

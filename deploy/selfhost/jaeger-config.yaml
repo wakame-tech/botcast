@@ -1,0 +1,41 @@
+# Jaeger v2 の設定。トレースを badger（ローカルのファイル）に保存し、再起動しても消えないようにする
+# 元: https://github.com/jaegertracing/jaeger/blob/v2.21.0/cmd/jaeger/config-badger.yaml
+service:
+  extensions: [jaeger_storage, jaeger_query]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger_storage_exporter]
+
+extensions:
+  jaeger_query:
+    storage:
+      traces: badger_store
+    http:
+      endpoint: 0.0.0.0:16686
+
+  jaeger_storage:
+    backends:
+      badger_store:
+        badger:
+          directories:
+            keys: /badger/key
+            values: /badger/data
+          ephemeral: false
+          ttl:
+            # 保存する期間。古いものから消える
+            spans: 168h # 7 日
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: badger_store

@@ -1,3 +1,4 @@
+use crate::trace_context::record_error;
 use anyhow::Context;
 use rmcp::{
     ServiceExt,
@@ -7,6 +8,7 @@ use rmcp::{
 };
 use serde_json::Value;
 use tokio::process::Command;
+use tracing::{Instrument, field::Empty};
 
 pub struct McpClient {
     service: RunningService<rmcp::RoleClient, ()>,
@@ -51,11 +53,46 @@ impl McpClient {
         &self.tools
     }
 
+    /// ツールを呼び、結果のテキストを返す。
+    /// span にはツール名と成否（`mcp.tool.is_error` = ツールがエラーを返したか）だけを入れ、引数・結果の本文は入れない
     pub async fn call_tool(
         &self,
         name: impl Into<std::borrow::Cow<'static, str>>,
         arguments: Value,
     ) -> anyhow::Result<String> {
+        let name = name.into();
+        let span = tracing::info_span!(
+            "execute_tool",
+            otel.name = format!("execute_tool {name}"),
+            otel.kind = "client",
+            gen_ai.operation.name = "execute_tool",
+            gen_ai.tool.name = %name,
+            mcp.tool.is_error = Empty,
+            otel.status_code = Empty,
+            otel.status_message = Empty,
+        );
+        let result = self
+            .call_tool_inner(name, arguments)
+            .instrument(span.clone())
+            .await;
+        match &result {
+            Ok((_, is_error)) => {
+                span.record("mcp.tool.is_error", is_error);
+                if *is_error {
+                    record_error(&span, "tool returned an error");
+                }
+            }
+            Err(e) => record_error(&span, &format!("{e:#}")),
+        }
+        result.map(|(text, _)| text)
+    }
+
+    /// ツールを呼び、結果のテキストと、ツールがエラーを返したかを返す
+    async fn call_tool_inner(
+        &self,
+        name: std::borrow::Cow<'static, str>,
+        arguments: Value,
+    ) -> anyhow::Result<(String, bool)> {
         let mut arguments = arguments
             .as_object()
             .cloned()
@@ -84,7 +121,7 @@ impl McpClient {
             .collect::<Vec<_>>()
             .join("\n");
 
-        Ok(text)
+        Ok((text, result.is_error.unwrap_or(false)))
     }
 
     pub async fn close(self) -> anyhow::Result<()> {

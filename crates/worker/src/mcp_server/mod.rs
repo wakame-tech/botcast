@@ -1,13 +1,15 @@
 use crate::usecase::provider::Provider;
+use crate::usecase::task_service::Args;
 use rmcp::{
     ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
-    model::{Implementation, ServerInfo},
+    model::{Extensions, Implementation, ServerInfo},
     tool, tool_handler, tool_router,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tracing::Instrument;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct GenerateAudioParams {
@@ -33,6 +35,26 @@ pub struct GetJobStatusParams {
     pub job_id: String,
 }
 
+/// `/mcp` の HTTP リクエストの span。API のルーターがリクエストの extensions に入れる
+#[derive(Clone)]
+pub(crate) struct RequestSpan(pub(crate) tracing::Span);
+
+/// ツールの呼び出しの span。HTTP リクエストの span の子にする
+/// （rmcp はハンドラーを別のタスクで動かすので、HTTP の span がそのままでは引き継がれない）
+fn tool_span(name: &'static str, extensions: &Extensions) -> tracing::Span {
+    let parent = extensions
+        .get::<axum::http::request::Parts>()
+        .and_then(|parts| parts.extensions.get::<RequestSpan>())
+        .map(|span| span.0.clone())
+        .unwrap_or_else(tracing::Span::none);
+    tracing::info_span!(
+        parent: &parent,
+        "mcp.tool_call",
+        otel.name = format!("mcp.tool_call {name}"),
+        mcp.tool.name = name,
+    )
+}
+
 #[derive(Clone)]
 pub struct BotcastMcpServer {
     provider: Arc<Provider>,
@@ -49,6 +71,22 @@ impl ServerHandler for BotcastMcpServer {
     }
 }
 
+impl BotcastMcpServer {
+    /// ジョブを積み、結果をツールの応答（JSON の文字列）にする
+    async fn enqueue(&self, args: Args, span: tracing::Span) -> String {
+        match self
+            .provider
+            .task_service()
+            .create_task(args)
+            .instrument(span)
+            .await
+        {
+            Ok(()) => serde_json::json!({ "status": "enqueued" }).to_string(),
+            Err(e) => serde_json::json!({ "error": e.to_string() }).to_string(),
+        }
+    }
+}
+
 #[tool_router(router = tool_router)]
 impl BotcastMcpServer {
     pub fn new(provider: Arc<Provider>) -> Self {
@@ -59,50 +97,44 @@ impl BotcastMcpServer {
     }
 
     #[tool(description = "エピソードの音声を生成するジョブをエンキューします")]
-    pub async fn generate_audio(&self, params: Parameters<GenerateAudioParams>) -> String {
-        match self
-            .provider
-            .task_service()
-            .create_task(crate::usecase::task_service::Args::GenerateAudio {
-                episode_id: params.0.episode_id,
-            })
+    pub async fn generate_audio(
+        &self,
+        params: Parameters<GenerateAudioParams>,
+        extensions: Extensions,
+    ) -> String {
+        let args = Args::GenerateAudio {
+            episode_id: params.0.episode_id,
+        };
+        self.enqueue(args, tool_span("generate_audio", &extensions))
             .await
-        {
-            Ok(()) => serde_json::json!({ "status": "enqueued" }).to_string(),
-            Err(e) => serde_json::json!({ "error": e.to_string() }).to_string(),
-        }
     }
 
     #[tool(description = "エピソードの台本を生成するジョブをエンキューします")]
-    pub async fn generate_script(&self, params: Parameters<GenerateScriptParams>) -> String {
-        match self
-            .provider
-            .task_service()
-            .create_task(crate::usecase::task_service::Args::GenerateScript {
-                episode_id: params.0.episode_id,
-                prompt: params.0.prompt.clone(),
-                generate_audio: false,
-            })
+    pub async fn generate_script(
+        &self,
+        params: Parameters<GenerateScriptParams>,
+        extensions: Extensions,
+    ) -> String {
+        let args = Args::GenerateScript {
+            episode_id: params.0.episode_id,
+            prompt: params.0.prompt,
+            generate_audio: false,
+        };
+        self.enqueue(args, tool_span("generate_script", &extensions))
             .await
-        {
-            Ok(()) => serde_json::json!({ "status": "enqueued" }).to_string(),
-            Err(e) => serde_json::json!({ "error": e.to_string() }).to_string(),
-        }
     }
 
     #[tool(description = "番組のスクリプトで前回エピソード宛てのお便りを読む新しいエピソードを作り、音声まで生成するジョブをエンキューします")]
-    pub async fn generate_episode(&self, params: Parameters<GenerateEpisodeParams>) -> String {
-        match self
-            .provider
-            .task_service()
-            .create_task(crate::usecase::task_service::Args::GenerateEpisode {
-                podcast_id: params.0.podcast_id,
-            })
+    pub async fn generate_episode(
+        &self,
+        params: Parameters<GenerateEpisodeParams>,
+        extensions: Extensions,
+    ) -> String {
+        let args = Args::GenerateEpisode {
+            podcast_id: params.0.podcast_id,
+        };
+        self.enqueue(args, tool_span("generate_episode", &extensions))
             .await
-        {
-            Ok(()) => serde_json::json!({ "status": "enqueued" }).to_string(),
-            Err(e) => serde_json::json!({ "error": e.to_string() }).to_string(),
-        }
     }
 
     #[tool(description = "ジョブ一覧を取得します")]

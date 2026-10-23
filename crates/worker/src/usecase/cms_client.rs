@@ -7,6 +7,7 @@ use cms_client::models;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use tokio::sync::Mutex;
+use tracing::Instrument;
 
 /// `GET /records/{collection}` のクエリ
 #[derive(Debug, Default, Clone)]
@@ -86,15 +87,18 @@ impl CmsClient {
     }
 
     async fn list_collections(&self) -> anyhow::Result<Vec<models::Collection>> {
-        collections_api::collection_api_list(
-            &self.config,
-            collections_api::CollectionApiListParams {
-                tenant_id: self.tenant.clone(),
-                x_on_behalf_of: None,
-            },
+        traced_cms_call(
+            "GET",
+            "/t/{tenantId}/collections",
+            collections_api::collection_api_list(
+                &self.config,
+                collections_api::CollectionApiListParams {
+                    tenant_id: self.tenant.clone(),
+                    x_on_behalf_of: None,
+                },
+            ),
         )
         .await
-        .map_err(cms_error)
     }
 
     /// collection 名を ID（`collection:` 接頭辞なし）に解決する
@@ -115,20 +119,23 @@ impl CmsClient {
         collection: &str,
         record_id: &str,
     ) -> anyhow::Result<serde_json::Value> {
-        let record = record_api::record_api_read(
-            &self.config,
-            record_api::RecordApiReadParams {
-                tenant_id: self.tenant.clone(),
-                collection_id: self.collection_id(collection).await?,
-                record_id: record_id.to_string(),
-                x_on_behalf_of: None,
-                eval: None,
-                input: None,
-                vars: None,
-            },
+        let record = traced_cms_call(
+            "GET",
+            "/t/{tenantId}/records/{collectionId}/{recordId}",
+            record_api::record_api_read(
+                &self.config,
+                record_api::RecordApiReadParams {
+                    tenant_id: self.tenant.clone(),
+                    collection_id: self.collection_id(collection).await?,
+                    record_id: record_id.to_string(),
+                    x_on_behalf_of: None,
+                    eval: None,
+                    input: None,
+                    vars: None,
+                },
+            ),
         )
-        .await
-        .map_err(cms_error)?;
+        .await?;
         Ok(serde_json::to_value(record)?)
     }
 
@@ -147,16 +154,19 @@ impl CmsClient {
         collection: &str,
         query: &ListQuery,
     ) -> anyhow::Result<Vec<serde_json::Value>> {
-        let records = record_api::record_api_list(
-            &self.config,
-            list_params(
-                self.tenant.clone(),
-                self.collection_id(collection).await?,
-                query,
+        let records = traced_cms_call(
+            "GET",
+            "/t/{tenantId}/records/{collectionId}",
+            record_api::record_api_list(
+                &self.config,
+                list_params(
+                    self.tenant.clone(),
+                    self.collection_id(collection).await?,
+                    query,
+                ),
             ),
         )
-        .await
-        .map_err(cms_error)?;
+        .await?;
         records
             .into_iter()
             .map(|r| Ok(serde_json::to_value(r)?))
@@ -180,40 +190,46 @@ impl CmsClient {
         let collection = match existing {
             Some(c) if collection_needs_update(&c, &schema, &access) => {
                 tracing::info!("updating collection '{name}'");
-                collections_api::collection_api_update(
-                    &self.config,
-                    collections_api::CollectionApiUpdateParams {
-                        tenant_id: self.tenant.clone(),
-                        collection_id: collection_key(&c.id),
-                        update_collection: models::UpdateCollection {
-                            name: name.to_string(),
-                            schema: Some(schema),
-                            access: Some(typed_access),
+                traced_cms_call(
+                    "PUT",
+                    "/t/{tenantId}/collections/{collectionId}",
+                    collections_api::collection_api_update(
+                        &self.config,
+                        collections_api::CollectionApiUpdateParams {
+                            tenant_id: self.tenant.clone(),
+                            collection_id: collection_key(&c.id),
+                            update_collection: models::UpdateCollection {
+                                name: name.to_string(),
+                                schema: Some(schema),
+                                access: Some(typed_access),
+                            },
+                            x_on_behalf_of: None,
                         },
-                        x_on_behalf_of: None,
-                    },
+                    ),
                 )
                 .await
-                .map_err(cms_error)
                 .with_context(|| format!("Failed to update collection '{name}'"))?
             }
             Some(c) => c,
             None => {
                 tracing::info!("creating collection '{name}'");
-                collections_api::collection_api_create(
-                    &self.config,
-                    collections_api::CollectionApiCreateParams {
-                        tenant_id: self.tenant.clone(),
-                        create_or_update_collection: models::CreateOrUpdateCollection {
-                            name: name.to_string(),
-                            schema,
-                            access: Some(typed_access),
+                traced_cms_call(
+                    "POST",
+                    "/t/{tenantId}/collections",
+                    collections_api::collection_api_create(
+                        &self.config,
+                        collections_api::CollectionApiCreateParams {
+                            tenant_id: self.tenant.clone(),
+                            create_or_update_collection: models::CreateOrUpdateCollection {
+                                name: name.to_string(),
+                                schema,
+                                access: Some(typed_access),
+                            },
+                            x_on_behalf_of: None,
                         },
-                        x_on_behalf_of: None,
-                    },
+                    ),
                 )
                 .await
-                .map_err(cms_error)
                 .with_context(|| format!("Failed to create collection '{name}'"))?
             }
         };
@@ -232,35 +248,41 @@ impl CmsClient {
         data: serde_json::Value,
         owner: Option<&str>,
     ) -> anyhow::Result<String> {
-        let record = record_api::record_api_create(
-            &self.config,
-            record_api::RecordApiCreateParams {
-                tenant_id: self.tenant.clone(),
-                collection_id: self.collection_id(collection).await?,
-                create_or_update_record: models::CreateOrUpdateRecord::new(data),
-                x_on_behalf_of: owner.map(str::to_string),
-            },
+        let record = traced_cms_call(
+            "POST",
+            "/t/{tenantId}/records/{collectionId}",
+            record_api::record_api_create(
+                &self.config,
+                record_api::RecordApiCreateParams {
+                    tenant_id: self.tenant.clone(),
+                    collection_id: self.collection_id(collection).await?,
+                    create_or_update_record: models::CreateOrUpdateRecord::new(data),
+                    x_on_behalf_of: owner.map(str::to_string),
+                },
+            ),
         )
-        .await
-        .map_err(cms_error)?;
+        .await?;
         Ok(record.id)
     }
 
     /// Node.js のコードを CMS (Dify Sandbox) で実行する
     pub(crate) async fn execute_script(&self, code: &str) -> anyhow::Result<ScriptOutput> {
-        let res = script_api::script_api_execute(
-            &self.config,
-            script_api::ScriptApiExecuteParams {
-                tenant_id: self.tenant.clone(),
-                execute_script_request: models::ExecuteScriptRequest::new(
-                    models::execute_script_request::Language::Nodejs,
-                    code.to_string(),
-                ),
-                x_on_behalf_of: None,
-            },
+        let res = traced_cms_call(
+            "POST",
+            "/t/{tenantId}/scripts",
+            script_api::script_api_execute(
+                &self.config,
+                script_api::ScriptApiExecuteParams {
+                    tenant_id: self.tenant.clone(),
+                    execute_script_request: models::ExecuteScriptRequest::new(
+                        models::execute_script_request::Language::Nodejs,
+                        code.to_string(),
+                    ),
+                    x_on_behalf_of: None,
+                },
+            ),
         )
-        .await
-        .map_err(cms_error)?;
+        .await?;
         Ok(ScriptOutput {
             stdout: res.data.stdout,
             error: res.data.error,
@@ -274,19 +296,22 @@ impl CmsClient {
         record_id: &str,
         data: serde_json::Value,
     ) -> anyhow::Result<()> {
-        record_api::record_api_update(
-            &self.config,
-            record_api::RecordApiUpdateParams {
-                tenant_id: self.tenant.clone(),
-                collection_id: self.collection_id(collection).await?,
-                record_id: record_id.to_string(),
-                create_or_update_record: models::CreateOrUpdateRecord::new(data),
-                x_on_behalf_of: None,
-                if_match: None,
-            },
+        traced_cms_call(
+            "PUT",
+            "/t/{tenantId}/records/{collectionId}/{recordId}",
+            record_api::record_api_update(
+                &self.config,
+                record_api::RecordApiUpdateParams {
+                    tenant_id: self.tenant.clone(),
+                    collection_id: self.collection_id(collection).await?,
+                    record_id: record_id.to_string(),
+                    create_or_update_record: models::CreateOrUpdateRecord::new(data),
+                    x_on_behalf_of: None,
+                    if_match: None,
+                },
+            ),
         )
-        .await
-        .map_err(cms_error)?;
+        .await?;
         Ok(())
     }
 
@@ -299,18 +324,21 @@ impl CmsClient {
         field: &str,
         max_size: usize,
     ) -> anyhow::Result<FileContent> {
-        let res = record_api::record_api_get_image(
-            &self.config,
-            record_api::RecordApiGetImageParams {
-                tenant_id: self.tenant.clone(),
-                collection_id: self.collection_id(collection).await?,
-                record_id: record_id.to_string(),
-                field_name: field.to_string(),
-                x_on_behalf_of: None,
-            },
+        let res = traced_cms_call(
+            "GET",
+            "/t/{tenantId}/records/{collectionId}/{recordId}/images/{fieldName}",
+            record_api::record_api_get_image(
+                &self.config,
+                record_api::RecordApiGetImageParams {
+                    tenant_id: self.tenant.clone(),
+                    collection_id: self.collection_id(collection).await?,
+                    record_id: record_id.to_string(),
+                    field_name: field.to_string(),
+                    x_on_behalf_of: None,
+                },
+            ),
         )
-        .await
-        .map_err(cms_error)?;
+        .await?;
         decode_file(res, max_size)
     }
 
@@ -325,25 +353,73 @@ impl CmsClient {
     ) -> anyhow::Result<String> {
         let content_type = serde_json::from_value(serde_json::json!(content_type))
             .with_context(|| format!("CMS does not accept content type '{content_type}'"))?;
-        let res = record_api::record_api_upload_image(
-            &self.config,
-            record_api::RecordApiUploadImageParams {
-                tenant_id: self.tenant.clone(),
-                collection_id: self.collection_id(collection).await?,
-                record_id: record_id.to_string(),
-                field_name: field.to_string(),
-                upload_image_request: models::UploadImageRequest {
-                    data: BASE64.encode(data),
-                    content_type,
-                    filename: None,
+        let res = traced_cms_call(
+            "POST",
+            "/t/{tenantId}/records/{collectionId}/{recordId}/images/{fieldName}",
+            record_api::record_api_upload_image(
+                &self.config,
+                record_api::RecordApiUploadImageParams {
+                    tenant_id: self.tenant.clone(),
+                    collection_id: self.collection_id(collection).await?,
+                    record_id: record_id.to_string(),
+                    field_name: field.to_string(),
+                    upload_image_request: models::UploadImageRequest {
+                        data: BASE64.encode(data),
+                        content_type,
+                        filename: None,
+                    },
+                    x_on_behalf_of: None,
                 },
-                x_on_behalf_of: None,
-            },
+            ),
         )
-        .await
-        .map_err(cms_error)?;
+        .await?;
         Ok(res.url)
     }
+}
+
+/// CMS の呼び出し 1 回を span（`cms.request`）で包み、エラーを [`cms_error`] にする
+pub(crate) async fn traced_cms_call<T, E: Debug>(
+    method: &'static str,
+    route: &'static str,
+    call: impl std::future::Future<Output = Result<T, CmsError<E>>>,
+) -> anyhow::Result<T> {
+    traced_cms_call_raw(method, route, call)
+        .await
+        .map_err(cms_error)
+}
+
+/// CMS の呼び出し 1 回を span（`cms.request`）で包む。
+/// span にはメソッド・パスのテンプレート（ID を埋める前の形）・失敗したときの状態コードを入れる。
+/// 生成クライアントは成功時の状態コードを返さないので、成功時は status を OK にするだけ
+pub(crate) async fn traced_cms_call_raw<T, E>(
+    method: &'static str,
+    route: &'static str,
+    call: impl std::future::Future<Output = Result<T, CmsError<E>>>,
+) -> Result<T, CmsError<E>> {
+    let span = tracing::info_span!(
+        "cms.request",
+        otel.name = format!("{method} {route}"),
+        otel.kind = "client",
+        http.request.method = method,
+        url.template = route,
+        http.response.status_code = tracing::field::Empty,
+        otel.status_code = tracing::field::Empty,
+        otel.status_message = tracing::field::Empty,
+    );
+    let result = call.instrument(span.clone()).await;
+    match &result {
+        Ok(_) => {
+            span.record("otel.status_code", "OK");
+        }
+        Err(e) => {
+            if let CmsError::ResponseError(res) = e {
+                span.record("http.response.status_code", res.status.as_u16());
+            }
+            // ResponseError は状態コードだけ（本文は入れない）
+            crate::trace_context::record_error(&span, &e.to_string());
+        }
+    }
+    result
 }
 
 /// 生成クライアントのエラーを、CMS の状態コードと本文が分かる anyhow のエラーにする

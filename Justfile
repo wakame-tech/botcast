@@ -1,6 +1,6 @@
 # botcast monorepo root Justfile
 
-# Start all local services (SurrealDB + Dify sandbox)
+# Start all local services (SurrealDB + Dify sandbox + otel-collector + Jaeger)
 up:
     docker compose -f compose-dev.yaml up -d
 
