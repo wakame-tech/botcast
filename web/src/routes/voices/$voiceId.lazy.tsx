@@ -7,6 +7,7 @@ import {
 	voiceInputToData,
 } from "@/components/voice/VoiceForm";
 import { VoiceIconField } from "@/components/voice/VoiceIcon";
+import { VoicePreview } from "@/components/voice/VoicePreview";
 import { useSession } from "@/hooks/useSession";
 import {
 	$cms,
@@ -73,6 +74,19 @@ export function VoiceDetail() {
 		await refetch();
 	};
 
+	/** 試聴のテイクを参照音声にするとき、声の seed をそのテイクの seed にする (ファイルのフィールドは保つ) */
+	const handleSetSeed = async (seed: number) => {
+		const { data: latest } = await refetch();
+		const current = {
+			...(((latest ?? record).data ?? {}) as Record<string, unknown>),
+		};
+		await updateVoice.mutateAsync({
+			params: { path },
+			body: { data: toRecordData({ ...current, seed }) },
+		});
+		await refetch();
+	};
+
 	const handleDelete = async () => {
 		await deleteVoice.mutateAsync({ params: { path } });
 		navigate({ to: "/voices" });
@@ -105,10 +119,12 @@ export function VoiceDetail() {
 			<VoiceAudioField
 				voiceId={voiceId}
 				field="ref_audio"
-				label="参照音声 (声の複製の元。OpenAI 互換のエンジンに同期する。権利と本人の同意があるものだけ)"
+				label="参照音声 (声の複製の元。OpenAI 互換のエンジンに同期する。あれば voice_id・caption より優先する。20〜30 秒以上のきれいな音声が安定する。権利と本人の同意があるものだけ)"
 				file={voice.ref_audio}
 				editable={editable}
 			/>
+
+			{editable && <VoicePreview voiceId={voiceId} onSetSeed={handleSetSeed} />}
 
 			{editable && (
 				<>

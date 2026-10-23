@@ -51,6 +51,61 @@ export const enqueueJob = async (args: JobArgs): Promise<void> => {
 	}
 };
 
+/** 声の試聴の 1 テイク（worker の `PreviewTake`） */
+export interface VoicePreviewTake {
+	/** このテイクの seed。参照音声にするときに声の seed にする */
+	seed: number;
+	contentType: string;
+	audioBase64: string;
+	elapsedMs: number;
+}
+
+export interface VoicePreviewResponse {
+	voiceId: string;
+	engine: string;
+	text: string;
+	takes: VoicePreviewTake[];
+}
+
+/** 試聴の本文の上限（worker の `MAX_PREVIEW_TEXT_CHARS`） */
+export const MAX_PREVIEW_TEXT_CHARS = 600;
+/** テイク数の上限（worker の `MAX_PREVIEW_TAKES`） */
+export const MAX_PREVIEW_TAKES = 4;
+
+/**
+ * 声の試聴を作る（`POST /voices/{voiceId}/previews`。声の持ち主だけ）。
+ * text を省略すると worker の既定の本文（数文）になる。音声は保存されない
+ */
+export const createVoicePreviews = async (
+	voiceId: string,
+	body: { text?: string; count?: number },
+	signal?: AbortSignal,
+): Promise<VoicePreviewResponse> => {
+	const token = getToken();
+	const res = await fetch(
+		workerUrl(`/voices/${encodeURIComponent(voiceId)}/previews`),
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				...(token ? { Authorization: `Bearer ${token}` } : {}),
+			},
+			body: JSON.stringify(body),
+			signal,
+		},
+	);
+	if (!res.ok) {
+		const detail = await res
+			.json()
+			.then((b: { error?: string }) => b.error)
+			.catch(() => undefined);
+		throw new Error(
+			`試聴の生成に失敗しました (${res.status}${detail ? `: ${detail}` : ""})`,
+		);
+	}
+	return (await res.json()) as VoicePreviewResponse;
+};
+
 export const fetchJobs = async (): Promise<JobInfo[]> => {
 	const res = await fetch(workerUrl("/jobs"));
 	if (!res.ok) {

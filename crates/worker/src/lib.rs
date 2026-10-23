@@ -7,7 +7,7 @@
 //! | コンポーネント | 技術 | 役割 |
 //! |---|---|---|
 //! | web | React / TanStack Router / UnoCSS | UI。botcast-cms に JWT で直接アクセスする |
-//! | worker | Rust / Axum / kafru / rmcp / VoiceVox | ジョブ実行。HTTP で MCP サーバー (`/mcp`) とジョブ一覧 (`/jobs`) を提供する |
+//! | worker | Rust / Axum / kafru / rmcp / VoiceVox | ジョブ実行。HTTP で MCP サーバー (`/mcp`)・ジョブ (`/jobs`)・声の試聴 (`/voices/{id}/previews`) を提供する |
 //! | botcast-cms | Rust / Axum / SurrealDB | 認証 (JWT)・Podcast/Episode/Script データ・音声/字幕ファイル管理 |
 //!
 //! ## 機能

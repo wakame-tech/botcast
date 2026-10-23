@@ -83,6 +83,9 @@ cd web && npm run check
 - 番組の配役は `podcasts.cast = { "<別名>": "<voices の slug>" }`。web の番組の編集画面で編集する。台本（スクリプト・LLM）は `speaker` に別名を書き、任意の `style`（口調・感情の自由文）を付けられる
 - worker は音声生成の前に `speaker` を 配役の別名 → `voices` の slug → 数字だけなら旧形式（既定のエンジンのスタイル ID）の順で解決する（`usecase/voices.rs`）。`cast` も `voices` も無い番組は今までどおり動く
 - 使える声は番組の持ち主（podcast の `owner_id`）の声だけ。`voices` は `read: owner`。配役の別名に数字だけは使えない。参照音声は `audio/*` で 20MB（`MAX_FILE_SIZE`）まで
+- 参照音声が優先: OpenAI 互換のエンジンでは `ref_audio` があれば参照音声で声を複製する（`voice_id` が空でも `none` でもよく、サーバー側の声の名前は `voice_id`（`none` なら slug）。`audio_generator` の `tts/openai.rs`）。参照音声がある声には caption（声の `caption`・セリフの `style`）を送らない（参照音声と食い違うと声が不安定になる。Irodori-TTS v4.1 のモデルカード）。caption と seed は参照音声が無い声（`voice_id: none`）だけで使う
+- caption だけの声は行ごと・絵文字で声色が揺れる。web の声の画面（持ち主だけ）の「試聴を作る」で同じ本文を seed を変えて何テイクか作り、選んだテイクを「この声を参照音声にする」（`ref_audio` にアップロードし、声の `seed` をそのテイクの seed にする）か「試聴用の音声にする」（`sample`）。参照音声にするなら 20〜30 秒以上読める数文がよい
+- 試聴は worker の `POST /voices/{voice_id}/previews`（`{ text?（既定は数文。600 文字まで）, count?（1〜4。既定 3） }` → `{ voiceId, engine, text, takes: [{ seed, contentType: audio/wav, audioBase64, elapsedMs }] }`。`usecase/voice_preview.rs`）。`POST /jobs` と同じ CMS の JWT で、CMS の `GET /users/me` で呼び出し元を調べ、声を `X-On-Behalf-Of` で読んで `owner_id` も確かめる（他人の声は 404 / 403）。テイクは順番に合成し（エンジンの `MAX_CONCURRENCY` はジョブと共有）、保存しない。全体のタイムアウトは 280 秒（nginx の 300 秒より短く）で、web は 1 テイクずつ呼ぶ。エンジンが設定されていなければ 503。span `voice.preview` / `voice.preview.take` には声の ID・エンジン・テイク数・seed・時間・バイト数だけを入れ、音声は入れない
 
 ## 音声ファイル
 

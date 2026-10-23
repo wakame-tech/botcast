@@ -503,3 +503,49 @@ async fn audio_section_is_sliced_and_normalized() {
     );
     assert!(result.srt.contains("♪"));
 }
+
+/// 試聴用の合成: 文に分けず 1 回で合成し、参照音声を同期し、同時実行数を守る（ffmpeg は使わない）
+#[tokio::test]
+async fn synthesize_text_once_with_ref_audio_and_concurrency() {
+    let engine = FakeEngine::new(24000, 0.1);
+    let registry = TtsRegistry::default().with_engine("irodori", engine.clone(), 1);
+    let voice = ResolvedVoice {
+        engine: "irodori".to_string(),
+        voice_id: "alice".to_string(),
+        ref_audio: Some(RefAudio {
+            hash: "h1".to_string(),
+            bytes: Arc::from(vec![1u8, 2, 3]),
+            content_type: "audio/wav".to_string(),
+        }),
+        ..Default::default()
+    };
+    let text = "こんにちは。今日はいい天気ですね🎉";
+    let results =
+        futures::future::join_all((0..3).map(|_| registry.synthesize_text(NS, &voice, text))).await;
+    for bytes in results {
+        assert!(bytes.unwrap().starts_with(b"RIFF"));
+    }
+    // 文に分けず、エンジンの加工（絵文字を除く）だけをして渡す
+    assert_eq!(
+        *engine.texts.lock().unwrap(),
+        vec!["こんにちは。今日はいい天気ですね".to_string(); 3]
+    );
+    // MAX_CONCURRENCY = 1 なので順番に合成する
+    assert_eq!(engine.max_in_flight.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        engine.ensured.lock().unwrap()[0],
+        ("alice".to_string(), "h1".to_string(), 3)
+    );
+
+    // 加工で空になる本文・設定に無いエンジンはエラー
+    assert!(registry.synthesize_text(NS, &voice, "🎉").await.is_err());
+    let unknown = ResolvedVoice {
+        engine: "nope".to_string(),
+        ..voice.clone()
+    };
+    let err = registry
+        .synthesize_text(NS, &unknown, text)
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("not configured"), "{err}");
+}

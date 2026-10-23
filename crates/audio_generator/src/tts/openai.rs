@@ -2,6 +2,8 @@
 //!
 //! - 本文: `model`・`input`・`voice`・`response_format: wav`・`speed`・`irodori: { seed, caption }`
 //!   （caption は声の `style`）。`params.extra` は本文にそのまま足す
+//! - 参照音声が優先: 参照音声がある声は `voice` を参照音声の版ごとの ID（[`server_voice_id`]）にし、
+//!   `voice_id` はその ID の名前に使うだけ。caption は送らない（参照音声と食い違うと声が不安定になる）
 //! - 認証: `TOKEN` があれば `Authorization: Bearer`
 //! - 参照音声の同期（Irodori）: サーバー側の声の ID は `{voice_id}-{ハッシュの先頭 12 文字}`
 //!   （[`server_voice_id`]）。`GET {endpoint}/audio/voices` に無ければ `POST {endpoint}/audio/voices`
@@ -165,8 +167,19 @@ impl OpenAiEngine {
         if let Some(seed) = voice.seed {
             irodori.insert("seed".to_string(), json!(seed));
         }
-        if let Some(style) = &voice.style {
-            irodori.insert("caption".to_string(), json!(style));
+        // 参照音声がある声は参照音声が声を決める。caption（声の caption・セリフの style）を一緒に渡すと、
+        // 参照音声と食い違って声が不安定になる（Irodori-TTS v4.1 のモデルカード）ので送らない
+        match (&voice.style, &voice.ref_audio) {
+            (Some(style), None) => {
+                irodori.insert("caption".to_string(), json!(style));
+            }
+            (Some(_), Some(_)) => {
+                tracing::debug!(
+                    "caption is not sent because voice {} has a reference audio",
+                    voice.voice_id
+                );
+            }
+            (None, _) => {}
         }
         if !irodori.is_empty() {
             body.insert("irodori".to_string(), Value::Object(irodori));

@@ -1,4 +1,4 @@
-use crate::usecase::provider::Provider;
+use crate::usecase::{provider::Provider, voices::RefAudioCache};
 use auth::CmsTokenVerifier;
 use router::routers;
 use std::sync::Arc;
@@ -17,12 +17,15 @@ mod router;
 struct AppState {
     provider: Arc<Provider>,
     verifier: CmsTokenVerifier,
+    /// 試聴で使う参照音声（呼び出しをまたいで使い回す）
+    ref_audios: RefAudioCache,
 }
 
 pub async fn start_api(provider: Arc<Provider>) -> anyhow::Result<()> {
     let state = Arc::new(AppState {
         provider: provider.clone(),
         verifier: CmsTokenVerifier::from_env(),
+        ref_audios: RefAudioCache::default(),
     });
     // 認証は Authorization ヘッダー（Cookie 不使用）なので、任意のオリジンからの呼び出しを許可する
     let router = routers(provider).with_state(state).layer(

@@ -22,6 +22,10 @@ use std::{
 
 pub(crate) const VOICES: &str = "voices";
 
+/// 参照音声を使わない irodori の声の `voice_id`（caption と seed で声を決める）。
+/// 参照音声があれば参照音声が優先し、この値は使わない
+pub(crate) const NO_VOICE_ID: &str = "none";
+
 /// プロセス内に置く参照音声の数の上限
 const REF_AUDIO_CACHE_CAPACITY: usize = 16;
 
@@ -222,6 +226,15 @@ pub(crate) struct RefAudioCache {
     entries: Mutex<VecDeque<(RefAudioKey, RefAudio)>>,
 }
 
+impl std::fmt::Debug for RefAudioCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let len = self.entries.lock().map(|e| e.len()).unwrap_or_default();
+        f.debug_struct("RefAudioCache")
+            .field("entries", &len)
+            .finish()
+    }
+}
+
 impl RefAudioCache {
     fn get(&self, key: &RefAudioKey) -> Option<RefAudio> {
         let entries = self.entries.lock().unwrap();
@@ -324,8 +337,10 @@ impl<'a> SpeakerResolver<'a> {
             },
             _ => None,
         };
-        // 参照音声を使う声は voice_id を省略でき、slug をエンジンの voice 名にする
+        // 参照音声が優先: 参照音声がある声（OpenAI 互換）は voice_id を省略でき、`none`（参照音声を使わない
+        // irodori の印）のままでも参照音声で合成する。どちらも slug をサーバー側の声の名前にする
         let voice_id = match (&voice.voice_id, &ref_audio) {
+            (Some(id), Some(_)) if id == NO_VOICE_ID => voice.slug.clone(),
             (Some(id), _) => id.clone(),
             (None, Some(_)) => voice.slug.clone(),
             (None, None) => bail!(
@@ -334,8 +349,14 @@ impl<'a> SpeakerResolver<'a> {
                 voice.slug
             ),
         };
-        self.captions
-            .insert(voice.slug.clone(), voice.caption.clone().filter(|_| openai));
+        // caption は参照音声が無いときだけ使う（参照音声と食い違うと声が不安定になる）
+        self.captions.insert(
+            voice.slug.clone(),
+            voice
+                .caption
+                .clone()
+                .filter(|_| openai && ref_audio.is_none()),
+        );
         Ok(Ok(ResolvedVoice {
             engine: voice.engine,
             voice_id,
@@ -344,6 +365,28 @@ impl<'a> SpeakerResolver<'a> {
             styles: voice.styles,
             seed: voice.seed,
             ref_audio,
+        }))
+    }
+
+    /// 取得済みの声のレコードを、style の無いセリフと同じ形（caption を style にする）に解決する。
+    /// 声の試聴に使う。所有者の確認は呼び出し側で行う
+    pub(crate) async fn resolve_record(
+        &mut self,
+        voice: Voice,
+    ) -> anyhow::Result<Result<ResolvedVoice, String>> {
+        let slug = voice.slug.clone();
+        if !self.engines.names.contains(&voice.engine) {
+            return Ok(Err(format!(
+                "TTS engine {:?} of voice {slug:?} is not configured (configured: {:?})",
+                voice.engine, self.engines.names
+            )));
+        }
+        Ok(self.resolve_voice(voice).await?.map(|resolved| {
+            let caption = self.captions.get(&slug).cloned().flatten();
+            ResolvedVoice {
+                style: caption,
+                ..resolved
+            }
         }))
     }
 
@@ -669,13 +712,52 @@ mod tests {
         let ref_audio = narrator.ref_audio.as_ref().unwrap();
         assert_eq!(&*ref_audio.bytes, b"wav");
         assert_eq!(ref_audio.hash, hex::encode(Sha256::digest(b"wav")));
-        // style が無いセリフは声の caption、あればセリフの style
-        assert_eq!(narrator.style.as_deref(), Some("落ち着いた声"));
+        // 参照音声がある声は caption を使わない（セリフの style はそのまま。エンジンが送るかを決める）
+        assert_eq!(narrator.style, None);
         assert_eq!(
             voice_of(&resolved[1]).style.as_deref(),
             Some("ささやき声で")
         );
         assert_eq!(*store.fetches.lock().unwrap(), vec!["narrator".to_string()]);
+    }
+
+    /// 参照音声が優先: `voice_id: none`（caption と seed で決める irodori の声）に参照音声を足すと、
+    /// 参照音声で合成し（サーバー側の声の名前は slug）、caption は使わない
+    #[tokio::test]
+    async fn ref_audio_takes_precedence_over_voice_id_none() {
+        let data = |slug: &str| {
+            json!({ "slug": slug, "name": slug, "engine": "irodori", "voice_id": "none",
+                    "caption": "明るい女性の声", "seed": 3 })
+        };
+        let mut cloned = data("cloned");
+        cloned["ref_audio"] = json!({ "content_type": "audio/wav", "size": 4 });
+        let store = FakeStore {
+            voices: vec![voice("v1", cloned), voice("v2", data("designed"))],
+            ref_audio: HashMap::from([("v1".to_string(), b"take".to_vec())]),
+            ..Default::default()
+        };
+        let cast = Cast::new();
+        let engines = engines();
+        let resolved = resolve(
+            &store,
+            &cast,
+            &engines,
+            vec![serif("cloned", None), serif("designed", None)],
+        )
+        .await
+        .unwrap();
+
+        let cloned = voice_of(&resolved[0]);
+        assert_eq!(cloned.voice_id, "cloned");
+        assert_eq!(&*cloned.ref_audio.as_ref().unwrap().bytes, b"take");
+        assert_eq!(cloned.style, None);
+        assert_eq!(cloned.seed, Some(3));
+
+        // 参照音声が無ければ今までどおり voice_id は none、caption を使う
+        let designed = voice_of(&resolved[1]);
+        assert_eq!(designed.voice_id, NO_VOICE_ID);
+        assert!(designed.ref_audio.is_none());
+        assert_eq!(designed.style.as_deref(), Some("明るい女性の声"));
     }
 
     #[tokio::test]
