@@ -513,10 +513,8 @@ pub(crate) fn cms_error<T: Debug>(e: CmsError<T>) -> anyhow::Error {
     }
 }
 
-/// `GET .../images/{field}` の応答（Base64 の JSON）からファイルの中身を取り出す
-fn decode_file(res: serde_json::Value, max_size: usize) -> anyhow::Result<FileContent> {
-    let file: models::GetImageResponse =
-        serde_json::from_value(res).context("unexpected file response from CMS")?;
+/// `GET .../images/{field}` の応答（`GetImageResponse`。Base64 の JSON）からファイルの中身を取り出す
+fn decode_file(file: models::GetImageResponse, max_size: usize) -> anyhow::Result<FileContent> {
     // Base64 は 3 バイトを 4 文字にする
     if usize::try_from(file.size).map_or(true, |size| size > max_size)
         || file.data.len() > max_size.div_ceil(3) * 4
@@ -657,40 +655,51 @@ mod tests {
         assert!(collection_needs_update(&no_access, &schema, &access));
     }
 
+    fn file_response(data: &str, size: i64) -> models::GetImageResponse {
+        models::GetImageResponse::new(data.to_string(), "audio/wav".to_string(), size)
+    }
+
     #[test]
     fn decode_file_reads_base64_body() {
-        let res = json!({ "data": BASE64.encode(b"RIFF"), "content_type": "audio/wav", "size": 4 });
-        let file = decode_file(res, 4).unwrap();
+        let file = decode_file(file_response(&BASE64.encode(b"RIFF"), 4), 4).unwrap();
         assert_eq!(
             (file.bytes.as_slice(), file.content_type.as_str()),
             (&b"RIFF"[..], "audio/wav")
         );
-        assert!(decode_file(
-            json!({ "data": "!!", "content_type": "audio/wav", "size": 1 }),
-            4
-        )
-        .is_err());
-        assert!(decode_file(json!({ "url": "/x" }), 4).is_err());
+        assert!(decode_file(file_response("!!", 1), 4).is_err());
+    }
+
+    #[test]
+    fn get_image_response_parses_the_cms_json_body() {
+        // CMS は `application/json` で `{ data, content_type, size }` を返す（生成クライアントはこれを型に読む）
+        let res: models::GetImageResponse = serde_json::from_value(json!({
+            "data": BASE64.encode(b"RIFF"),
+            "content_type": "audio/wav",
+            "size": 4
+        }))
+        .unwrap();
+        let file = decode_file(res, 4).unwrap();
+        assert_eq!(file.bytes, b"RIFF");
+        assert!(
+            serde_json::from_value::<models::GetImageResponse>(json!({ "url": "/x" })).is_err()
+        );
     }
 
     #[test]
     fn decode_file_rejects_files_over_the_limit_before_decoding() {
         // 申告の size が上限を超える
-        let res = json!({ "data": BASE64.encode(b"RIFF"), "content_type": "audio/wav", "size": 5 });
-        let err = decode_file(res, 4).unwrap_err().to_string();
+        let err = decode_file(file_response(&BASE64.encode(b"RIFF"), 5), 4)
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("too large"), "{err}");
         // size を偽っても Base64 の長さで弾く
-        let res =
-            json!({ "data": BASE64.encode(b"RIFFRIFF"), "content_type": "audio/wav", "size": 1 });
-        assert!(decode_file(res, 4)
-            .unwrap_err()
-            .to_string()
-            .contains("too large"));
-        assert!(decode_file(
-            json!({ "data": "", "content_type": "audio/wav", "size": -1 }),
-            4
-        )
-        .is_err());
+        assert!(
+            decode_file(file_response(&BASE64.encode(b"RIFFRIFF"), 1), 4)
+                .unwrap_err()
+                .to_string()
+                .contains("too large")
+        );
+        assert!(decode_file(file_response("", -1), 4).is_err());
     }
 
     #[test]
@@ -698,6 +707,53 @@ mod tests {
         for ct in ["audio/mpeg", "text/plain"] {
             serde_json::from_value::<models::upload_image_request::ContentType>(json!(ct)).unwrap();
         }
+    }
+
+    /// CMS と同じ形の応答（`application/json` の `{ data, content_type, size }`）を返す HTTP サーバーに、
+    /// 生成クライアントを通して `get_file` を送る（以前の CMS は `*/*` で返し、生成クライアントが読めなかった）
+    #[tokio::test]
+    async fn get_file_reads_the_json_response_through_the_generated_client() {
+        use axum::{extract::Path, routing::get, Json, Router};
+
+        async fn get_image(
+            Path((tenant, collection, record, field)): Path<(String, String, String, String)>,
+        ) -> Json<serde_json::Value> {
+            assert_eq!(
+                [tenant, collection, record, field],
+                ["botcast", "c_voices", "v1", "ref_audio"]
+            );
+            Json(json!({
+                "data": BASE64.encode(b"RIFF"),
+                "content_type": "audio/wav",
+                "size": 4
+            }))
+        }
+        let router = Router::new().route(
+            "/t/:tenant/records/:collection/:record/images/:field",
+            get(get_image),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+
+        let cms = CmsClient::new(format!("http://{addr}"), "botcast".to_string(), None);
+        cms.collection_ids
+            .lock()
+            .await
+            .insert("voices".to_string(), "c_voices".to_string());
+        let file = cms
+            .get_file("voices", "v1", "ref_audio", 1024)
+            .await
+            .unwrap();
+        assert_eq!(
+            (file.bytes.as_slice(), file.content_type.as_str()),
+            (&b"RIFF"[..], "audio/wav")
+        );
+        let err = cms
+            .get_file("voices", "v1", "ref_audio", 3)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("too large"), "{err}");
     }
 
     /// `CMS_URL` / `CMS_TENANT` / `API_KEY` の CMS に、worker が使う操作を一通り送る。
@@ -741,6 +797,14 @@ mod tests {
             .upload_file("episodes", &episode, "srt", b"1\n", "text/plain")
             .await
             .unwrap();
+        let file = cms
+            .get_file("episodes", &episode, "srt", 1024)
+            .await
+            .unwrap();
+        assert_eq!(
+            (file.bytes.as_slice(), file.content_type.as_str()),
+            (&b"1\n"[..], "text/plain")
+        );
         let mut data = cms.get_record_data("episodes", &episode).await.unwrap();
         data["srt_url"] = json!(url);
         cms.update_record_data("episodes", &episode, data).await.unwrap();

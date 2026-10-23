@@ -391,11 +391,9 @@ export const fetchCmsFile = async (path: string): Promise<Blob> => {
 	if (!res.ok) {
 		throw new Error(`Failed to fetch ${path}: ${res.status}`);
 	}
-	// CMS はファイル本体を Base64 の JSON で返す
-	const { data, content_type } = (await res.json()) as {
-		data: string;
-		content_type: string;
-	};
+	// CMS はファイル本体を Base64 の JSON (`GetImageResponse`) で返す
+	const { data, content_type } =
+		(await res.json()) as components["schemas"]["GetImageResponse"];
 	const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
 	return new Blob([bytes], { type: content_type });
 };
