@@ -8,6 +8,7 @@ import {
 	$cms,
 	CMS_TENANT,
 	isOwner,
+	isScheduleRunnable,
 	recordToEpisode,
 	recordToPodcast,
 } from "@/lib/cms_client";
@@ -92,13 +93,14 @@ export function Podcast() {
 						<>
 							<h2>ジョブ</h2>
 							<JobButton
-								label="お便りエピソードを生成"
+								label="エピソードを生成"
 								args={{ type: "generateEpisode", podcastId: podcast.id }}
-								disabled={!podcast.schedule?.script_id}
+								disabled={!isScheduleRunnable(podcast.schedule)}
 							/>
-							{!podcast.schedule?.script_id && (
+							{!isScheduleRunnable(podcast.schedule) && (
 								<p className="text-sm text-gray-500">
-									番組のスケジュールにスクリプトを設定すると生成できます
+									番組の定期実行にスクリプト（LLM
+									なら指示）を設定すると生成できます
 								</p>
 							)}
 							<JobList />
