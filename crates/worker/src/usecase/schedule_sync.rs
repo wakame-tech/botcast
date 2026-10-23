@@ -1,4 +1,5 @@
 use super::cms_client::{CmsClient, ListQuery};
+use super::episode_generation::ScheduleConfig;
 use super::task_service::{Args, QUEUE_NAME};
 use anyhow::bail;
 use chrono::{Duration, Utc};
@@ -62,15 +63,24 @@ pub(crate) enum ScheduleChange {
     Remove { id: String },
 }
 
-/// `schedule.enabled` が true で `cron`・`script_id` が正しい番組のスケジュールを返す
+/// `schedule.enabled` が true で `cron` が正しく、生成に必要な値（script なら `script_id`、
+/// llm なら `prompt`）がある番組のスケジュールを返す
 pub(crate) fn desired_schedules(podcasts: &[Value]) -> Vec<DesiredSchedule> {
     podcasts
         .iter()
         .filter_map(|p| {
             let id = p["id"].as_str()?;
             let schedule = &p["data"]["schedule"];
-            if schedule["enabled"].as_bool() != Some(true) || schedule["script_id"].as_str().is_none() {
+            if schedule["enabled"].as_bool() != Some(true) {
                 return None;
+            }
+            match ScheduleConfig::from_podcast(p) {
+                Ok(config) if config.is_runnable() => {}
+                Ok(_) => return None,
+                Err(e) => {
+                    tracing::warn!("skip schedule of podcast {id}: {e:#}");
+                    return None;
+                }
             }
             let cron = schedule["cron"].as_str()?;
             match parse_cron(cron) {
@@ -252,6 +262,21 @@ mod tests {
                 cron: "0 0 12 * * Fri *".to_string(),
             }]
         );
+    }
+
+    #[test]
+    fn desired_schedules_accepts_llm_mode_without_script() {
+        let podcasts = vec![
+            podcast("llm", json!({ "cron": "0 0 22 * * Sun *", "enabled": true, "generator": "llm", "prompt": "今週の記事を紹介して" })),
+            // llm で prompt が無い・空なら動かせない
+            podcast("noprompt", json!({ "cron": "0 0 22 * * Sun *", "enabled": true, "generator": "llm" })),
+            podcast("blank", json!({ "cron": "0 0 22 * * Sun *", "enabled": true, "generator": "llm", "prompt": "  " })),
+            // 明示した script は今までどおり script_id が要る
+            podcast("script", json!({ "cron": "0 0 22 * * Sun *", "enabled": true, "generator": "script" })),
+            podcast("unknown", json!({ "cron": "0 0 22 * * Sun *", "enabled": true, "generator": "x", "script_id": "s" })),
+        ];
+        let names: Vec<String> = desired_schedules(&podcasts).into_iter().map(|d| d.name).collect();
+        assert_eq!(names, vec!["podcast:llm".to_string()]);
     }
 
     fn desired(id: &str, cron: &str) -> DesiredSchedule {

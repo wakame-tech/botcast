@@ -1,7 +1,5 @@
 use super::cms_client::CmsClient;
-use super::voices::{
-    find_owned_voice, podcast_cast, Engines, RefAudioCache, SpeakerResolver, Voice,
-};
+use super::voices::{podcast_cast, Engines, RefAudioCache, SpeakerResolver};
 use crate::error::Error;
 use anyhow::Context;
 use audio_generator::{
@@ -77,20 +75,6 @@ impl EpisodeService {
             .as_str()
             .context("episode has no podcast_id")?;
         self.cms.get_record("podcasts", podcast_id).await
-    }
-
-    /// 番組の配役（別名 → 声。番組の持ち主の声が見つからなければ `None`）
-    pub(crate) async fn cast_of_podcast(
-        &self,
-        podcast: &serde_json::Value,
-    ) -> anyhow::Result<Vec<(String, Option<Voice>)>> {
-        let owner = podcast["owner_id"].as_str();
-        let mut voices = vec![];
-        for (alias, slug) in podcast_cast(podcast)? {
-            let voice = find_owned_voice(self.cms.as_ref(), &slug, owner).await?;
-            voices.push((alias, voice.ok().flatten()));
-        }
-        Ok(voices)
     }
 
     #[instrument(skip(self, work_dir), ret)]

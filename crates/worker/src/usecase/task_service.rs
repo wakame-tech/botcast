@@ -1,12 +1,12 @@
-use super::agent_service::{AgentService, Usage, READ_ONLY_CMS_TOOLS};
+use super::agent_service::{LocalTool, Usage};
+use super::cms_client::CmsClient;
 use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
-use super::cms_client::CmsClient;
-use super::llm_api_key::resolve_api_key;
-use super::llm_models::resolve_model;
-use super::mcp_client::McpClient;
-use super::script_output::{parse_script_output, save_script, script_output_schema};
-use super::voices::Voice;
+use super::fetch_url_tool::{FetchUrlTool, FETCH_URL_SYSTEM_PROMPT};
+use super::safe_fetch::{SafeFetcher, UrlFetcher};
+use super::script_agent::{LlmScriptAgent, ScriptAgent};
+use super::script_output::{parse_script_output, save_script};
+use super::voices::{cast_of_podcast, Voice};
 use crate::error::Error;
 use crate::trace_context;
 use crate::worker::use_work_dir;
@@ -211,18 +211,22 @@ impl TaskService {
                     .await
             }
             Args::GenerateEpisode { podcast_id } => {
-                let episode_id = self
-                    .episode_generation_service
-                    .generate(&podcast_id)
-                    .await
-                    .context("Failed to generate episode")
-                    .map_err(Error::Other)?;
-                let work_dir = use_work_dir(&Uuid::new_v4())
-                    .context("Failed to create work dir")
-                    .map_err(Error::Other)?;
-                self.episode_service
-                    .generate_audio(&work_dir, &episode_id)
-                    .await
+                let generation = async {
+                    self.episode_generation_service
+                        .generate(&podcast_id, usage)
+                        .await
+                        .context("Failed to generate episode")
+                        .map_err(Error::Other)
+                };
+                episode_then_audio(generation, |episode_id| async move {
+                    let work_dir = use_work_dir(&Uuid::new_v4())
+                        .context("Failed to create work dir")
+                        .map_err(Error::Other)?;
+                    self.episode_service
+                        .generate_audio(&work_dir, &episode_id)
+                        .await
+                })
+                .await
             }
             Args::GenerateScript {
                 episode_id,
@@ -259,35 +263,12 @@ impl TaskService {
             .await
             .context("Failed to fetch podcast")
             .map_err(Error::Other)?;
-        let owner = podcast["owner_id"].as_str();
-        // API キーは番組の持ち主が CMS に保存したもの（BYOK）。このジョブの間だけ持つ
-        let api_key = resolve_api_key(self.cms.as_ref(), owner)
-            .await
-            .map_err(Error::Other)?;
-        // モデルは番組の持ち主の設定 → llm_models の既定の順で決める
-        let model = resolve_model(self.cms.as_ref(), owner)
-            .await
-            .map_err(Error::Other)?;
-        let mcp_cmd = std::env::var("MCP_SERVER_CMD").unwrap_or_else(|_| "node".to_string());
-        let mcp_args_str = std::env::var("MCP_SERVER_ARGS")
-            .context("MCP_SERVER_ARGS is not set")
-            .map_err(Error::Other)?;
-        let mcp_args: Vec<&str> = mcp_args_str.split_whitespace().collect();
-
-        let mcp_client = McpClient::new(&mcp_cmd, &mcp_args)
-            .await
-            .context("Failed to create MCP client")
-            .map_err(Error::Other)?;
-
-        let agent = AgentService::new(api_key, model, mcp_client, READ_ONLY_CMS_TOOLS);
-
-        let cast = self
-            .episode_service
-            .cast_of_podcast(&podcast)
+        let cast = cast_of_podcast(self.cms.as_ref(), &podcast)
             .await
             .context("Failed to fetch podcast cast")
             .map_err(Error::Other)?;
-        let system = script_system_prompt(!cast.is_empty());
+        let mut system = script_system_prompt(!cast.is_empty());
+        system.push_str(FETCH_URL_SYSTEM_PROMPT);
 
         let mut full_prompt = format!(
             "エピソードID: {}\n\n{}",
@@ -299,14 +280,16 @@ impl TaskService {
             full_prompt.push_str(&cast);
         }
 
-        let output_schema = script_output_schema();
-        let result = agent.run(&system, &full_prompt, Some(&output_schema)).await;
-        *usage = Some(agent.usage());
-        // エージェントが失敗しても MCP サーバーの子プロセスは止める
-        if let Err(e) = agent.close().await {
-            tracing::warn!("Failed to close MCP client: {e:#}");
+        // Web は許可したホストだけを worker が取得する（CMS のスクリプトのサンドボックスはネットワークを使えない）
+        let fetcher: Arc<dyn UrlFetcher> = Arc::new(SafeFetcher::new(self.cms.clone()));
+        let tools: Vec<Arc<dyn LocalTool>> = vec![Arc::new(FetchUrlTool::new(fetcher))];
+        let run = LlmScriptAgent::new(self.cms.clone())
+            .generate(podcast["owner_id"].as_str(), &system, &full_prompt, tools)
+            .await;
+        if run.usage.is_some() {
+            *usage = run.usage;
         }
-        let text = result.context("Agent failed").map_err(Error::Other)?;
+        let text = run.result.map_err(Error::Other)?;
 
         let script = parse_script_output(&text).map_err(Error::Other)?;
         save_script(self.cms.as_ref(), episode_id, &script)
@@ -327,6 +310,17 @@ where
         return Ok(());
     }
     audio().await
+}
+
+/// 番組の設定でエピソードを作れた（`generate` が成功した）ときだけ、そのエピソードの音声を生成する（`audio`）
+async fn episode_then_audio<G, A, AF>(generate: G, audio: A) -> Result<(), Error>
+where
+    G: Future<Output = Result<String, Error>>,
+    A: FnOnce(String) -> AF,
+    AF: Future<Output = Result<(), Error>>,
+{
+    let episode_id = generate.await?;
+    audio(episode_id).await
 }
 
 /// 配役の JSON に入れる声の名前・style の名前の長さの上限（文字数）
@@ -543,6 +537,32 @@ mod tests {
         let (result, audio) = run_script_then_audio(Ok(()), false);
         assert!(result.is_ok());
         assert!(!audio);
+    }
+
+    #[test]
+    fn audio_is_generated_for_the_created_episode_only() {
+        let audio_for = std::cell::RefCell::new(None);
+        let result = futures::executor::block_on(episode_then_audio(
+            async { Ok("ep-new".to_string()) },
+            |id| {
+                *audio_for.borrow_mut() = Some(id);
+                async { Ok(()) }
+            },
+        ));
+        assert!(result.is_ok());
+        assert_eq!(audio_for.borrow().as_deref(), Some("ep-new"));
+
+        // エピソードを作れなければ音声に進まない
+        let called = std::cell::Cell::new(false);
+        let result = futures::executor::block_on(episode_then_audio(
+            async { Err(Error::Other(anyhow::anyhow!("LLM output does not match"))) },
+            |_| {
+                called.set(true);
+                async { Ok(()) }
+            },
+        ));
+        assert!(result.is_err());
+        assert!(!called.get());
     }
 
     #[test]
