@@ -1,7 +1,9 @@
 use super::auth::{bearer_token, TokenStatus};
 use super::AppState;
 use crate::{
-    error::Error, mcp_server::BotcastMcpServer, trace_context, usecase::task_service::Args,
+    error::Error,
+    mcp_server::{BotcastMcpServer, RequestSpan},
+    usecase::task_service::Args,
 };
 use axum::{
     body::Bytes,
@@ -56,8 +58,10 @@ async fn version() -> Result<impl IntoResponse, Error> {
     })))
 }
 
-fn inject_trace_context<B>(mut req: Request<B>) -> Request<B> {
-    trace_context::inject_into_headers(req.headers_mut(), &tracing::Span::current());
+/// 今の span（TraceLayer の HTTP の span）をリクエストの extensions に入れる
+fn insert_request_span<B>(mut req: Request<B>) -> Request<B> {
+    req.extensions_mut()
+        .insert(RequestSpan(tracing::Span::current()));
     req
 }
 
@@ -73,11 +77,11 @@ pub(crate) fn routers(provider: Arc<crate::usecase::provider::Provider>) -> Rout
         .route("/version", get(version))
         .route("/jobs", get(list_jobs).post(create_job))
         // rmcp はツールのハンドラーを別のタスクで動かし、HTTP の span が引き継がれない。
-        // 今の span（TraceLayer の HTTP の span）の trace context をヘッダーに入れ、ツール側で親にする
+        // HTTP の span をリクエストに持たせ、ツール側でその子の span を作る
         .nest_service(
             "/mcp",
             ServiceBuilder::new()
-                .map_request(inject_trace_context::<axum::body::Body>)
+                .map_request(insert_request_span::<axum::body::Body>)
                 .service(mcp_service),
         )
 }

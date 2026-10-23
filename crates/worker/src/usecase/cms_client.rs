@@ -415,9 +415,8 @@ pub(crate) async fn traced_cms_call_raw<T, E>(
             if let CmsError::ResponseError(res) = e {
                 span.record("http.response.status_code", res.status.as_u16());
             }
-            span.record("otel.status_code", "ERROR");
             // ResponseError は状態コードだけ（本文は入れない）
-            span.record("otel.status_message", e.to_string());
+            crate::trace_context::record_error(&span, &e.to_string());
         }
     }
     result

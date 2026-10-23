@@ -1,3 +1,4 @@
+use crate::trace_context::record_error;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -87,11 +88,6 @@ fn record_llm_response(span: &tracing::Span, resp: &AnthropicResponse) {
     }
 }
 
-/// span の status を Error にしてメッセージを付ける
-fn record_error(span: &tracing::Span, message: &str) {
-    span.record("otel.status_code", "ERROR");
-    span.record("otel.status_message", message);
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]

@@ -1,4 +1,3 @@
-use crate::trace_context;
 use crate::usecase::provider::Provider;
 use crate::usecase::task_service::Args;
 use rmcp::{
@@ -11,7 +10,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::Instrument;
-use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct GenerateAudioParams {
@@ -37,22 +35,24 @@ pub struct GetJobStatusParams {
     pub job_id: String,
 }
 
-/// ツールの呼び出しの span。`/mcp` の HTTP リクエストのヘッダーに入れた trace context を親にする
+/// `/mcp` の HTTP リクエストの span。API のルーターがリクエストの extensions に入れる
+#[derive(Clone)]
+pub(crate) struct RequestSpan(pub(crate) tracing::Span);
+
+/// ツールの呼び出しの span。HTTP リクエストの span の子にする
 /// （rmcp はハンドラーを別のタスクで動かすので、HTTP の span がそのままでは引き継がれない）
 fn tool_span(name: &'static str, extensions: &Extensions) -> tracing::Span {
-    let span = tracing::info_span!(
+    let parent = extensions
+        .get::<axum::http::request::Parts>()
+        .and_then(|parts| parts.extensions.get::<RequestSpan>())
+        .map(|span| span.0.clone())
+        .unwrap_or_else(tracing::Span::none);
+    tracing::info_span!(
+        parent: &parent,
         "mcp.tool_call",
         otel.name = format!("mcp.tool_call {name}"),
-        otel.kind = "server",
         mcp.tool.name = name,
-    );
-    if let Some(parent) = extensions
-        .get::<axum::http::request::Parts>()
-        .and_then(|parts| trace_context::extract_from_headers(&parts.headers))
-    {
-        span.set_parent(parent);
-    }
-    span
+    )
 }
 
 #[derive(Clone)]

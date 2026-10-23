@@ -1,3 +1,4 @@
+use crate::trace_context::record_error;
 use anyhow::Context;
 use rmcp::{
     ServiceExt,
@@ -78,14 +79,10 @@ impl McpClient {
             Ok((_, is_error)) => {
                 span.record("mcp.tool.is_error", is_error);
                 if *is_error {
-                    span.record("otel.status_code", "ERROR");
-                    span.record("otel.status_message", "tool returned an error");
+                    record_error(&span, "tool returned an error");
                 }
             }
-            Err(e) => {
-                span.record("otel.status_code", "ERROR");
-                span.record("otel.status_message", format!("{e:#}"));
-            }
+            Err(e) => record_error(&span, &format!("{e:#}")),
         }
         result.map(|(text, _)| text)
     }

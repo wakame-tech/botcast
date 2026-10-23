@@ -48,10 +48,7 @@ pub(crate) fn record_result(span: &tracing::Span, result: &Result<(), String>) {
         Ok(()) => {
             span.record("otel.status_code", "OK");
         }
-        Err(e) => {
-            span.record("otel.status_code", "ERROR");
-            span.record("otel.status_message", e.as_str());
-        }
+        Err(e) => trace_context::record_error(span, e),
     }
 }
 
@@ -76,11 +73,12 @@ impl TaskHandler for ExecuteTaskJob {
 async fn run(params: HashMap<String, Value>, queue_id: Option<RecordId>) -> Result<(), String> {
     let provider = PROVIDER.get().ok_or("Provider not initialized")?;
     let task_service = provider.task_service();
-    // trace context を持たずに積まれたジョブ（定期実行・以前のジョブ）は、ここで始めたトレースの ID を書き足す
-    if let (Some(job_id), None) = (queue_id, trace_context::trace_id_from_params(&params)) {
-        if let Some(trace_id) = trace_context::trace_id(&tracing::Span::current()) {
+    // traceparent を持たずに積まれたジョブ（定期実行・以前のジョブ）は、ここで始めたトレースを書き足す
+    // （ジョブ一覧がトレース ID を読むため。親ではなく、このジョブの span の traceparent）
+    if let (Some(job_id), None) = (queue_id, params.get(trace_context::TRACEPARENT_PARAM)) {
+        if let Some(traceparent) = trace_context::traceparent(&tracing::Span::current()) {
             if let Err(e) = task_service
-                .record_trace_id(job_id, params.clone(), trace_id)
+                .record_traceparent(job_id, params.clone(), traceparent)
                 .await
             {
                 tracing::warn!("{e}");
@@ -145,7 +143,7 @@ mod tests {
         let (subscriber, exporter, provider) = test_subscriber();
         tracing::subscriber::with_default(subscriber, || {
             let job = job_span(&HashMap::new(), None);
-            assert!(trace_context::trace_id(&job).is_some());
+            assert!(trace_context::traceparent(&job).is_some());
             record_result(&job, &Ok(()));
         });
         provider.force_flush();

@@ -142,16 +142,16 @@ impl TaskService {
             .collect()
     }
 
-    /// trace context を持たずに積まれた（定期実行・以前の）ジョブに、実行したトレースの ID を書き足す
-    pub(crate) async fn record_trace_id(
+    /// traceparent を持たずに積まれた（定期実行・以前の）ジョブに、実行した span の traceparent を書き足す
+    pub(crate) async fn record_traceparent(
         &self,
         job_id: RecordId,
         mut params: HashMap<String, serde_json::Value>,
-        trace_id: String,
+        traceparent: String,
     ) -> anyhow::Result<(), Error> {
         params.insert(
-            trace_context::TRACE_ID_PARAM.to_string(),
-            serde_json::Value::String(trace_id),
+            trace_context::TRACEPARENT_PARAM.to_string(),
+            serde_json::Value::String(traceparent),
         );
         self.kafru_queue
             .update(
@@ -458,8 +458,8 @@ mod tests {
             id: Some("queue:abc".parse().unwrap()),
             name: Some("execute_task".to_string()),
             parameters: Some(HashMap::from([(
-                trace_context::TRACE_ID_PARAM.to_string(),
-                serde_json::json!("0af7651916cd43dd8448eb211c80319c"),
+                trace_context::TRACEPARENT_PARAM.to_string(),
+                serde_json::json!("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"),
             )])),
             ..Default::default()
         };
@@ -469,7 +469,7 @@ mod tests {
             "0af7651916cd43dd8448eb211c80319c"
         );
 
-        // trace_id を持たない以前のジョブは traceId を出さない
+        // traceparent を持たない以前のジョブは traceId を出さない
         let old = QueueData {
             id: Some("queue:abc".parse().unwrap()),
             parameters: Some(HashMap::new()),
