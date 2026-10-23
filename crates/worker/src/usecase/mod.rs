@@ -13,6 +13,7 @@ pub(crate) mod schedule_sync;
 pub(crate) mod script_agent;
 pub(crate) mod script_output;
 pub(crate) mod task_service;
+pub(crate) mod voice_preview;
 pub(crate) mod voices;
 
 pub use provider::Provider;

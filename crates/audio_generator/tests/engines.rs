@@ -484,6 +484,46 @@ async fn openai_synthesize_uses_versioned_voice_id() {
     );
 }
 
+/// 参照音声がある声は参照音声が優先: voice は参照音声の版の ID、caption は送らず seed だけ送る。
+/// 参照音声が無ければ caption を送る
+#[tokio::test]
+async fn openai_ref_audio_takes_precedence_over_caption() {
+    let (url, captured) = spawn_server(|_| (StatusCode::OK, b"RIFF-fake-wav".to_vec())).await;
+    let engine = OpenAiEngine::new(&url, None, None, TIMEOUT).unwrap();
+    let caption_voice = ResolvedVoice {
+        engine: "irodori".to_string(),
+        voice_id: "none".to_string(),
+        style: Some("落ち着いた女性の声".to_string()),
+        seed: Some(42),
+        ..Default::default()
+    };
+    let cloned_voice = ResolvedVoice {
+        voice_id: "alice".to_string(),
+        ref_audio: Some(ref_audio("0123456789abcdef", b"RIFF")),
+        ..caption_voice.clone()
+    };
+    for voice in [&caption_voice, &cloned_voice] {
+        engine
+            .synthesize(SynthesisRequest {
+                text: "こんにちは😊",
+                voice,
+                namespace: "botcast",
+            })
+            .await
+            .unwrap();
+    }
+    let captured = captured.lock().unwrap().clone();
+    let without_ref = captured[0].json();
+    assert_eq!(without_ref["voice"], "none");
+    assert_eq!(
+        without_ref["irodori"],
+        json!({"seed": 42, "caption": "落ち着いた女性の声"})
+    );
+    let with_ref = captured[1].json();
+    assert_eq!(with_ref["voice"], "botcast-alice-0123456789ab");
+    assert_eq!(with_ref["irodori"], json!({"seed": 42}));
+}
+
 #[test]
 fn endpoint_with_credentials_is_rejected() {
     let vars = BTreeMap::from([

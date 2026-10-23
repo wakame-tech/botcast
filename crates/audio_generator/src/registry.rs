@@ -2,10 +2,10 @@
 
 use crate::{
     config::{EngineKind, TtsConfig},
-    models::{resolve_legacy_sections, ResolvedSection, Section},
-    tts::{openai::OpenAiEngine, voicevox::VoicevoxEngine, TtsEngine},
+    models::{resolve_legacy_sections, ResolvedSection, ResolvedVoice, Section},
+    tts::{openai::OpenAiEngine, voicevox::VoicevoxEngine, SynthesisRequest, TtsEngine},
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 use tokio::sync::Semaphore;
 
@@ -136,6 +136,46 @@ impl TtsRegistry {
                 self.engines.keys().collect::<Vec<_>>()
             )
         })
+    }
+
+    /// 本文 1 つをそのまま合成し、エンジンが返した音声のバイト列を返す（声の試聴に使う）。
+    ///
+    /// 文に分けず、キャッシュ・正規化もしない（VOICEVOX 互換・OpenAI 互換とも wav が返る）。
+    /// 参照音声があればエンジンに同期してから合成する。同時実行数（`MAX_CONCURRENCY`）は
+    /// [`crate::generate_audio`] と共有するので、ジョブの合成と合わせて上限を超えない。
+    pub async fn synthesize_text(
+        &self,
+        namespace: &str,
+        voice: &ResolvedVoice,
+        text: &str,
+    ) -> Result<Vec<u8>> {
+        let entry = self.entry(&voice.engine)?;
+        let prepared = entry.engine.prepare_text(text);
+        if prepared.trim().is_empty() {
+            bail!("no text to synthesize");
+        }
+        if let Some(ref_audio) = &voice.ref_audio {
+            entry
+                .engine
+                .ensure_voice(namespace, &voice.voice_id, ref_audio)
+                .await
+                .with_context(|| {
+                    format!(
+                        "failed to sync reference audio of voice {:?} to TTS engine {:?}",
+                        voice.voice_id, voice.engine
+                    )
+                })?;
+        }
+        let _permit = entry.permits.acquire().await?;
+        entry
+            .engine
+            .synthesize(SynthesisRequest {
+                text: &prepared,
+                voice,
+                namespace,
+            })
+            .await
+            .with_context(|| format!("TTS engine {:?} failed to synthesize", voice.engine))
     }
 
     /// エンジンに届くかを確かめる。届かなければ、どのエンジンかを書いたエラーを返す。

@@ -141,6 +141,42 @@ impl CmsClient {
         Ok(serde_json::to_value(record)?)
     }
 
+    /// `owner` として（`X-On-Behalf-Of`）レコード全体を取得する。無い・読めない（404 / 403）なら `None`
+    pub(crate) async fn get_record_as(
+        &self,
+        collection: &str,
+        record_id: &str,
+        owner: &str,
+    ) -> anyhow::Result<Option<serde_json::Value>> {
+        let result = traced_cms_call_raw(
+            "GET",
+            "/t/{tenantId}/records/{collectionId}/{recordId}",
+            record_api::record_api_read(
+                &self.config,
+                record_api::RecordApiReadParams {
+                    tenant_id: self.tenant.clone(),
+                    collection_id: self.collection_id(collection).await?,
+                    record_id: record_id.to_string(),
+                    x_on_behalf_of: Some(owner.to_string()),
+                    eval: None,
+                    input: None,
+                    vars: None,
+                },
+            ),
+        )
+        .await;
+        match result {
+            Ok(record) => Ok(Some(serde_json::to_value(record)?)),
+            Err(CmsError::ResponseError(res))
+                if res.status == reqwest::StatusCode::NOT_FOUND
+                    || res.status == reqwest::StatusCode::FORBIDDEN =>
+            {
+                Ok(None)
+            }
+            Err(e) => Err(cms_error(e)),
+        }
+    }
+
     /// レコードの `data` を取得する
     pub(crate) async fn get_record_data(
         &self,

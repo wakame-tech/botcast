@@ -1,7 +1,9 @@
 use crate::usecase::cms_client::traced_cms_call_raw;
 use anyhow::Context;
 use axum::http::{header::AUTHORIZATION, HeaderMap};
-use cms_client::apis::{collections_api, configuration::Configuration, Error as CmsError};
+use cms_client::apis::{
+    collections_api, configuration::Configuration, users_api, Error as CmsError,
+};
 use reqwest::StatusCode;
 
 /// `Authorization: Bearer <token>` からトークンを取り出す。
@@ -82,6 +84,47 @@ impl CmsTokenVerifier {
         match res {
             Ok(_) => Ok(TokenStatus::Valid),
             Err(CmsError::ResponseError(e)) => token_status(e.status),
+            Err(e) => Err(anyhow::Error::msg(e.to_string()))
+                .context("CMS request failed while verifying token"),
+        }
+    }
+}
+
+/// トークンの持ち主（JWT の `sub` = `user:xxxx`）を調べる窓口（本番は CMS、テストはフェイク）
+#[async_trait::async_trait]
+pub(crate) trait CallerResolver: Send + Sync {
+    /// トークンが有効なら持ち主のユーザー ID、無効なら `None`
+    async fn current_user(&self, token: &str) -> anyhow::Result<Option<String>>;
+}
+
+#[async_trait::async_trait]
+impl CallerResolver for CmsTokenVerifier {
+    /// そのトークンで CMS の `GET /users/me` を叩き、検証と持ち主の取得を 1 回で行う
+    async fn current_user(&self, token: &str) -> anyhow::Result<Option<String>> {
+        let config = Configuration {
+            base_path: self.base_url.clone(),
+            client: self.http.clone(),
+            bearer_access_token: Some(token.to_string()),
+            ..Configuration::new()
+        };
+        let res = traced_cms_call_raw(
+            "GET",
+            "/t/{tenantId}/users/me",
+            users_api::users_api_me(
+                &config,
+                users_api::UsersApiMeParams {
+                    tenant_id: self.tenant.clone(),
+                    x_on_behalf_of: None,
+                },
+            ),
+        )
+        .await;
+        match res {
+            Ok(user) => Ok(Some(user.id)),
+            Err(CmsError::ResponseError(e)) => match token_status(e.status)? {
+                TokenStatus::Valid => anyhow::bail!("unexpected CMS status {}", e.status),
+                TokenStatus::Invalid => Ok(None),
+            },
             Err(e) => Err(anyhow::Error::msg(e.to_string()))
                 .context("CMS request failed while verifying token"),
         }

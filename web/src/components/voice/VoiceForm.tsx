@@ -172,8 +172,10 @@ export function VoiceForm({ value, onSubmit }: VoiceFormProps) {
 			/>
 			<label className="text-sm" htmlFor="voice-voice-id">
 				voice_id (VOICEVOX はスタイル ID、OpenAI 互換は voice
-				名。参照音声をアップロードする場合だけ空でよい。参照音声が無いなら必須で、irodori
-				で参照音声を使わないなら <code>none</code>)
+				名。参照音声があれば参照音声が優先し、空でも <code>none</code>
+				のままでもよい。参照音声が無いなら必須で、irodori
+				で参照音声を使わないなら <code>none</code>。caption
+				だけの声は行ごとに声が揺れやすいので、下の「試聴を作る」で選んだテイクを参照音声にすると安定する)
 			</label>
 			<Input
 				id="voice-voice-id"
@@ -181,7 +183,8 @@ export function VoiceForm({ value, onSubmit }: VoiceFormProps) {
 				onChange={(e) => setVoiceId(e.target.value)}
 			/>
 			<label className="text-sm" htmlFor="voice-caption">
-				caption (声の説明。OpenAI 互換で style の無いセリフに使う)
+				caption (声の説明。OpenAI 互換で参照音声が無いとき、style
+				の無いセリフに使う。参照音声があると送らない)
 			</label>
 			<Input
 				id="voice-caption"
@@ -189,7 +192,9 @@ export function VoiceForm({ value, onSubmit }: VoiceFormProps) {
 				onChange={(e) => setCaption(e.target.value)}
 			/>
 			<label className="text-sm" htmlFor="voice-seed">
-				seed (同じ台本で同じ声にする。空ならエンジン任せ)
+				seed
+				(同じ台本で同じ声にする。空ならエンジン任せ。試聴のテイクを参照音声にするとそのテイクの
+				seed になる)
 			</label>
 			<Input
 				id="voice-seed"
