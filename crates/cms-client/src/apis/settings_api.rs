@@ -95,7 +95,7 @@ pub async fn settings_api_read(configuration: &configuration::Configuration, par
     }
 }
 
-/// Change the join mode. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403).
+/// Change the join mode and the LLM fallback. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403).
 pub async fn settings_api_update(configuration: &configuration::Configuration, params: SettingsApiUpdateParams) -> Result<models::TenantSettings, Error<SettingsApiUpdateError>> {
 
     let uri_str = format!("{}/t/{tenantId}/settings", configuration.base_path, tenantId=crate::apis::urlencode(params.tenant_id));

@@ -120,6 +120,7 @@ pub mod me_api;
 pub mod reactive_api;
 pub mod record_api;
 pub mod script_api;
+pub mod secrets_api;
 pub mod settings_api;
 pub mod users_api;
 

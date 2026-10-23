@@ -4,6 +4,80 @@
  */
 
 export interface paths {
+    "/me/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Tenants the user of the Firebase ID token (`Authorization: Bearer <ID token>`, not a CMS JWT) belongs to */
+        get: operations["MeApi_tenants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
+        get: operations["ApiKeysApi_list"];
+        put?: never;
+        /** @description Issue a key for a machine user. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403).
+         *     A key for a user with the `service` role needs an API key whose user has the `service` role. */
+        post: operations["ApiKeysApi_issue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/api-keys/{keyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Revoke a key (`api_key:xxxx` or `xxxx`). Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403).
+         *     Revoking a key of a user with the `service` role needs an API key whose user has the `service` role. */
+        delete: operations["ApiKeysApi_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/auth/firebase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Exchange a Firebase ID token for a CMS JWT.
+         *     The user is found by `uid`, then by an invitation for the verified email,
+         *     and is created only when the tenant's join mode is `open` (otherwise 403).
+         *     An unknown tenant is 401, like an invalid token. */
+        post: operations["AuthApi_signIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/t/{tenantId}/batch": {
         parameters: {
             query?: never;
@@ -32,6 +106,7 @@ export interface paths {
         };
         get: operations["CanvasApi_listEdges"];
         put?: never;
+        /** @description Create an edge between two records. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
         post: operations["CanvasApi_createEdge"];
         delete?: never;
         options?: never;
@@ -49,6 +124,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** @description Delete an edge. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
         delete: operations["CanvasApi_deleteEdge"];
         options?: never;
         head?: never;
@@ -80,6 +156,7 @@ export interface paths {
         };
         get: operations["CollectionApi_list"];
         put?: never;
+        /** @description Create a collection. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
         post: operations["CollectionApi_create"];
         delete?: never;
         options?: never;
@@ -95,9 +172,84 @@ export interface paths {
             cookie?: never;
         };
         get: operations["CollectionApi_read"];
+        /** @description Update a collection (name, schema, access). Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
         put: operations["CollectionApi_update"];
         post?: never;
+        /** @description Delete a collection. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
         delete: operations["CollectionApi_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/me/secrets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The user's secrets, without values */
+        get: operations["SecretsApi_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/me/secrets/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Set or replace a secret. Unknown names and malformed values are 400 */
+        put: operations["SecretsApi_put"];
+        post?: never;
+        /** @description Delete a secret (404 when not set) */
+        delete: operations["SecretsApi_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/me/secrets/{name}/value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Decrypt the value. Only an API key whose user has the `service` role, acting with `X-On-Behalf-Of`
+         *     (the value of that user); everyone else, including the user themselves, gets 403. 404 when not set.
+         *     Updates `last_used_at`. Use the value for the job at hand only; do not store or log it. */
+        get: operations["SecretsApi_value"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/reactive/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Subscribe to reactive nodes (server-sent events). Sends the current state of each node,
+         *     then every change as a `NodeEvent` JSON. Subscribed nodes are recomputed as soon as they get stale.
+         *     Fails with 400 (no node, over 200 nodes), 403 (not allowed to read an input record) or 404 (unknown node). */
+        get: operations["ReactiveApi_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -147,7 +299,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Generate a record with AI from a prompt and save it. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
         post: operations["RecordApi_generate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/records/{collectionId}/generate-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Generate record data with AI from a prompt without saving it. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
+        post: operations["RecordApi_generateData"];
         delete?: never;
         options?: never;
         head?: never;
@@ -276,7 +446,78 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Run code in the Dify Sandbox. Only an API key whose user has the `service` role, or a user with the `admin` or `script-runner` role (otherwise 403). */
         post: operations["ScriptApi_execute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SettingsApi_read"];
+        /** @description Change the join mode and the LLM fallback. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
+        put: operations["SettingsApi_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
+        get: operations["UsersApi_list"];
+        put?: never;
+        /** @description Invite a person or create a machine user. Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403). */
+        post: operations["UsersApi_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The authenticated user */
+        get: operations["UsersApi_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/t/{tenantId}/users/{userId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Replace the roles of a user (`user:xxxx` or `xxxx`). Only an API key whose user has the `service` role, or a user with the `admin` role (otherwise 403).
+         *     Adding or removing `service` needs an API key whose user has the `service` role. You cannot remove your own `admin` role (400). */
+        put: operations["UsersApi_setRoles"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -287,6 +528,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description An API key as listed. The key value and its hash are not included */
+        ApiKeySummary: {
+            /** @description `api_key:xxxx` */
+            id: string;
+            name: string;
+            /** @description The beginning of the key value (`bck_` + 8 characters), to tell keys apart */
+            prefix: string;
+            /** @description Owner user (`user:xxxx`) */
+            user: string;
+            created_at: string;
+            last_used_at: string | null;
+        };
+        AuthResponse: {
+            /** @description CMS JWT bound to the tenant, valid for 24 hours. Send it as `Authorization: Bearer` */
+            token: string;
+        };
         BatchOperation: {
             /** @enum {string} */
             op: "create" | "update" | "delete";
@@ -352,6 +609,8 @@ export interface components {
             write: "authenticated" | "owner";
             /** @description Name of a `data` field holding an array of additionally-allowed writer IDs */
             writers_field?: string;
+            /** @description If set, only users having one of these roles (or an API key whose user has the `service` role) can create, update or delete records. ANDed with `write` */
+            write_roles?: string[];
         };
         CopyRecordRequest: {
             /** @description Target collection ID to copy the record to */
@@ -370,6 +629,14 @@ export interface components {
         CreateOrUpdateRecord_: {
             data: Record<string, never>;
         };
+        /** @description With `uid` or `email`, invite that person (a human user). With neither, create a machine user (`name` is required).
+         *     Giving the `service` role needs an API key whose user has the `service` role. */
+        CreateUser: {
+            name?: string;
+            roles?: string[];
+            uid?: string;
+            email?: string;
+        };
         Edge: {
             readonly id: string;
             /** @description Source record ID in "table:id" format */
@@ -385,15 +652,17 @@ export interface components {
             field: string;
             /** @description Records of the collection to evaluate (at most 200) */
             record_ids: string[];
-            /** @description Input record ID for each input name declared in the field's `x-reactive.inputs` */
+            /** @description Record ID for each parameter input (`"<collection ID>"` / `{"collection": ...}`) in the field's `x-reactive.inputs` */
             input?: Record<string, never>;
-            /** @description Values passed to every script as `vars` (e.g. today's date) */
+            /** @description Removed: giving it is a 400. Pass records as inputs, and use an impure script input for the current time */
             vars?: Record<string, never>;
         };
         EvalRecordsResponse: {
             /** @description Results keyed by record ID, shaped like `Record_.evaluated[field]` */
             results: Record<string, never>;
             evaluated_with: components["schemas"]["EvaluatedWith"];
+            /** @description Stored result node keyed by record ID (see `Record_.evaluated_nodes`). Records whose result was not stored are left out */
+            nodes: Record<string, never>;
         };
         /** @description Result of one script call. Exactly one of `value` / `error` is set. */
         EvalResult: {
@@ -401,6 +670,13 @@ export interface components {
             value?: unknown;
             /** @description Why the call failed (exception, invalid return value, `result_schema` violation, ...) */
             error?: string;
+        };
+        /** @description A stored evaluation result. It is reused until something it read changes. */
+        EvaluatedNode: {
+            /** @description Node ID */
+            node: string;
+            /** @description Whether the result is outdated (always false right after evaluation) */
+            stale: boolean;
         };
         EvaluatedWith: {
             /** @description Version of each input record, keyed by input name. Pass it as `expected_version` to make sure the input has not changed since */
@@ -415,11 +691,16 @@ export interface components {
         };
         ExecuteScriptResponse: {
             code: number;
-            message: "success" | string;
+            /** @description `success` when the sandbox ran the code */
+            message: string;
             data: {
                 stdout: string;
                 error: string;
             };
+        };
+        FirebaseSignInRequest: {
+            /** @description Firebase ID token obtained by the client (Google sign-in) */
+            id_token: string;
         };
         /** @description 403: authenticated, but not allowed to perform the operation (e.g. writing someone else's record). Do not sign out. */
         ForbiddenError: {
@@ -429,6 +710,11 @@ export interface components {
         };
         GenerateRecordRequest: {
             prompt: string;
+        };
+        /** @description Record data generated by AI and not saved (the client fills a form with it) */
+        GeneratedRecordData: {
+            /** @description Generated `data` following the collection schema. Not validated: the client edits it and saves with `create` */
+            data: Record<string, never>;
         };
         GetImageResponse: {
             /** @description Base64 encoded image data */
@@ -448,6 +734,29 @@ export interface components {
             /** @description Image URL */
             url: string;
         };
+        IssueApiKey: {
+            name: string;
+            /** @description Owner user (`user:xxxx` or `xxxx`). Must be a machine user */
+            user: string;
+        };
+        IssuedApiKey: {
+            /** @description `api_key:xxxx` */
+            id: string;
+            name: string;
+            /** @description The beginning of the key value (`bck_` + 8 characters), to tell keys apart */
+            prefix: string;
+            /** @description Owner user (`user:xxxx`) */
+            user: string;
+            created_at: string;
+            last_used_at: string | null;
+            /** @description The key value. Only returned when issued */
+            secret: string;
+        };
+        /**
+         * @description How people join the tenant
+         * @enum {string}
+         */
+        JoinMode: "open" | "invite";
         JsonCanvasEdge: {
             id: string;
             fromNode: string;
@@ -468,6 +777,15 @@ export interface components {
             nodes: components["schemas"]["JsonCanvasNode"][];
             edges: components["schemas"]["JsonCanvasEdge"][];
         };
+        Link: {
+            label: string;
+            url: string;
+        };
+        /**
+         * @description Whether CMS AI generation may use the server's OpenAI key when the user has not set `openai_api_key`
+         * @enum {string}
+         */
+        LlmFallback: "allow" | "deny";
         MergeRecordsRequest: {
             /** @description Record IDs to merge (first one becomes the target) */
             source_record_ids: string[];
@@ -478,10 +796,26 @@ export interface components {
             /** @description Whether to delete source records after merge (default: false) */
             delete_sources?: boolean;
         };
+        MyTenants: {
+            /** @description IDs of the tenants the user belongs to, sorted by name */
+            tenants: string[];
+        };
+        /** @description A change of a subscribed reactive node, sent as the `data` of a server-sent event */
+        NodeEvent: {
+            /** @description `reactive_value` node ID */
+            node: string;
+            /** @description True while the node is being recomputed; `value` is absent then */
+            stale: boolean;
+            value?: unknown;
+        };
         NotFoundError: {
             /** @enum {string} */
             code: "NOT_FOUND";
             message: string;
+        };
+        PutSecret: {
+            /** @description The API key. Checked lightly (`sk-ant-` for Anthropic, `sk-` for OpenAI) */
+            value: string;
         };
         RecordWithRelations: {
             id: string;
@@ -515,6 +849,11 @@ export interface components {
             readonly evaluated?: Record<string, never>;
             /** @description Versions of the input records used for `evaluated`. Only present when `eval` is given. */
             readonly evaluated_with?: components["schemas"]["EvaluatedWith"];
+            /** @description Stored result node of each field in `evaluated`, keyed by field name.
+             *     Subscribe to the node IDs with `GET /t/{tenantId}/reactive/events` to be notified when they change.
+             *     A field whose result was not stored (a Sandbox run failure such as a timeout, which is retried on the next read) is left out.
+             *     Only present when `eval` is given. */
+            readonly evaluated_nodes?: Record<string, never>;
         };
         ReferencedByResponse: {
             items: components["schemas"]["ReferencingRecord"][];
@@ -538,6 +877,24 @@ export interface components {
             direction: "outgoing" | "incoming";
             record: components["schemas"]["Record_"];
         };
+        RevealedSecret: {
+            name: string;
+            value: string;
+        };
+        /** @description A secret of the user, as listed. The value is never returned here */
+        SecretSummary: {
+            /** @description `anthropic_api_key` or `openai_api_key` */
+            name: string;
+            /** @description The last 4 characters of the value, to tell keys apart */
+            last4: string;
+            created_at: string;
+            updated_at: string;
+            /** @description When a service last read the value */
+            last_used_at: string | null;
+        };
+        SetRoles: {
+            roles: string[];
+        };
         SplitRecordRequest: {
             /** @description Split specifications: each object contains field names and values to subtract */
             splits: Record<string, never>[];
@@ -547,6 +904,13 @@ export interface components {
             original: components["schemas"]["Record_"];
             /** @description New records created from splits */
             splits: components["schemas"]["Record_"][];
+        };
+        TenantSettings: {
+            tenant: string;
+            /** @description Links shown in the admin dashboard */
+            links: components["schemas"]["Link"][];
+            join: components["schemas"]["JoinMode"];
+            llm_fallback: components["schemas"]["LlmFallback"];
         };
         /** @description 401: the token is missing, invalid or expired. Sign in again. */
         UnauthorizedError: {
@@ -560,6 +924,11 @@ export interface components {
              *     `x-unique` cannot be changed. */
             schema?: Record<string, never>;
             access?: components["schemas"]["CollectionAccess"];
+        };
+        /** @description Only the fields sent are changed */
+        UpdateTenantSettings: {
+            join?: components["schemas"]["JoinMode"];
+            llm_fallback?: components["schemas"]["LlmFallback"];
         };
         UploadImageRequest: {
             /** @description Base64 encoded file data (image, audio or subtitle text) */
@@ -578,6 +947,21 @@ export interface components {
             /** @description Image URL */
             url: string;
         };
+        /**
+         * @description A human user signs in with Firebase; a machine user only uses API keys
+         * @enum {string}
+         */
+        UserKind: "human" | "machine";
+        UserSummary: {
+            /** @description `user:xxxx` (the JWT `sub`, same form as `owner_id`) */
+            id: string;
+            name: string | null;
+            email: string | null;
+            roles: string[];
+            kind: components["schemas"]["UserKind"];
+            /** @description Firebase `uid`. Null for a user invited by email who has not signed in yet, and for a machine user */
+            uid: string | null;
+        };
         ValidationError: {
             /** @enum {string} */
             code: "VALIDATION_ERROR";
@@ -591,8 +975,13 @@ export interface components {
         /** @description Input records as a JSON object `{"<name>": "<record ID>"}`.
          *     `input.<name>=<record ID>` query parameters are accepted as well. */
         "EvalQuery.input": string;
-        /** @description JSON object passed to every script as `vars` */
+        /** @description Removed: giving it is a 400. Pass records as inputs, and use an impure script input for the current time */
         "EvalQuery.vars": string;
+        /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+         *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+         *     Ignored with a JWT. */
+        "TenantScope.onBehalfOf": string;
+        "TenantScope.tenantId": string;
     };
     requestBodies: never;
     headers: never;
@@ -600,12 +989,147 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    BatchApi_execute: {
+    MeApi_tenants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTenants"];
+                };
+            };
+        };
+    };
+    ApiKeysApi_list: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeySummary"][];
+                };
+            };
+        };
+    };
+    ApiKeysApi_issue: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueApiKey"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded and a new resource has been created as a result. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedApiKey"];
+                };
+            };
+        };
+    };
+    ApiKeysApi_revoke: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description There is no content to send for this request, but the headers may be useful.  */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthApi_signIn: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FirebaseSignInRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+        };
+    };
+    BatchApi_execute: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
             };
             cookie?: never;
         };
@@ -631,9 +1155,14 @@ export interface operations {
             query: {
                 record_id: string;
             };
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
             };
             cookie?: never;
         };
@@ -653,9 +1182,14 @@ export interface operations {
     CanvasApi_createEdge: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
             };
             cookie?: never;
         };
@@ -679,9 +1213,14 @@ export interface operations {
     CanvasApi_deleteEdge: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 edgeId: string;
             };
             cookie?: never;
@@ -700,9 +1239,14 @@ export interface operations {
     CanvasApi_query: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
             };
             cookie?: never;
         };
@@ -726,9 +1270,14 @@ export interface operations {
     CollectionApi_list: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
             };
             cookie?: never;
         };
@@ -748,9 +1297,14 @@ export interface operations {
     CollectionApi_create: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
             };
             cookie?: never;
         };
@@ -774,9 +1328,14 @@ export interface operations {
     CollectionApi_read: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -797,9 +1356,14 @@ export interface operations {
     CollectionApi_update: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -824,9 +1388,14 @@ export interface operations {
     CollectionApi_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -839,6 +1408,149 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    SecretsApi_list: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretSummary"][];
+                };
+            };
+        };
+    };
+    SecretsApi_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutSecret"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretSummary"];
+                };
+            };
+        };
+    };
+    SecretsApi_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description There is no content to send for this request, but the headers may be useful.  */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SecretsApi_value: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevealedSecret"];
+                };
+            };
+        };
+    };
+    ReactiveApi_events: {
+        parameters: {
+            query: {
+                /** @description Node IDs to subscribe to (repeat the parameter) */
+                node: string[];
+            };
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
             };
         };
     };
@@ -860,12 +1572,17 @@ export interface operations {
                 /** @description Input records as a JSON object `{"<name>": "<record ID>"}`.
                  *     `input.<name>=<record ID>` query parameters are accepted as well. */
                 input?: components["parameters"]["EvalQuery.input"];
-                /** @description JSON object passed to every script as `vars` */
+                /** @description Removed: giving it is a 400. Pass records as inputs, and use an impure script input for the current time */
                 vars?: components["parameters"]["EvalQuery.vars"];
             };
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -886,9 +1603,14 @@ export interface operations {
     RecordApi_create: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -913,9 +1635,14 @@ export interface operations {
     RecordApi_eval: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -940,9 +1667,14 @@ export interface operations {
     RecordApi_generate: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -964,12 +1696,49 @@ export interface operations {
             };
         };
     };
+    RecordApi_generateData: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+                collectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedRecordData"];
+                };
+            };
+        };
+    };
     RecordApi_mergeRecords: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -994,9 +1763,14 @@ export interface operations {
     RecordApi_listWithRelations: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
             };
             cookie?: never;
@@ -1022,12 +1796,17 @@ export interface operations {
                 /** @description Input records as a JSON object `{"<name>": "<record ID>"}`.
                  *     `input.<name>=<record ID>` query parameters are accepted as well. */
                 input?: components["parameters"]["EvalQuery.input"];
-                /** @description JSON object passed to every script as `vars` */
+                /** @description Removed: giving it is a 400. Pass records as inputs, and use an impure script input for the current time */
                 vars?: components["parameters"]["EvalQuery.vars"];
             };
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
             };
@@ -1050,11 +1829,15 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
                 /** @description Expected `version`. If the record has a different version, nothing is written (412) */
                 "If-Match"?: string;
             };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
             };
@@ -1081,11 +1864,15 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
                 /** @description Expected `version`. If the record has a different version, nothing is deleted (412) */
                 "If-Match"?: string;
             };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
             };
@@ -1105,9 +1892,14 @@ export interface operations {
     RecordApi_copyRecord: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
             };
@@ -1133,9 +1925,14 @@ export interface operations {
     RecordApi_getImage: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
                 fieldName: string;
@@ -1158,9 +1955,14 @@ export interface operations {
     RecordApi_uploadImage: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
                 fieldName: string;
@@ -1187,9 +1989,14 @@ export interface operations {
     RecordApi_deleteImage: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
                 fieldName: string;
@@ -1215,9 +2022,14 @@ export interface operations {
                 /** @description Restrict the results to a single field path */
                 field?: string;
             };
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
             };
@@ -1239,9 +2051,14 @@ export interface operations {
     RecordApi_splitRecord: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
                 collectionId: string;
                 recordId: string;
             };
@@ -1267,9 +2084,14 @@ export interface operations {
     ScriptApi_execute: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
             path: {
-                tenantId: string;
+                tenantId: components["parameters"]["TenantScope.tenantId"];
             };
             cookie?: never;
         };
@@ -1286,6 +2108,181 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExecuteScriptResponse"];
+                };
+            };
+        };
+    };
+    SettingsApi_read: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantSettings"];
+                };
+            };
+        };
+    };
+    SettingsApi_update: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTenantSettings"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantSettings"];
+                };
+            };
+        };
+    };
+    UsersApi_list: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSummary"][];
+                };
+            };
+        };
+    };
+    UsersApi_create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUser"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded and a new resource has been created as a result. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSummary"];
+                };
+            };
+        };
+    };
+    UsersApi_me: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSummary"];
+                };
+            };
+        };
+    };
+    UsersApi_setRoles: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Act as this user (`user:<id>`), e.g. the records created get this `owner_id`.
+                 *     Only with an `X-Api-Key` whose user has the `service` role, and only for a human user of the tenant (otherwise 403).
+                 *     Ignored with a JWT. */
+                "X-On-Behalf-Of"?: components["parameters"]["TenantScope.onBehalfOf"];
+            };
+            path: {
+                tenantId: components["parameters"]["TenantScope.tenantId"];
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRoles"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSummary"];
                 };
             };
         };

@@ -1,7 +1,8 @@
-use super::agent_service::{AgentService, READ_ONLY_CMS_TOOLS};
+use super::agent_service::{AgentService, Usage, READ_ONLY_CMS_TOOLS};
 use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
 use super::cms_client::CmsClient;
+use super::llm_api_key::resolve_api_key;
 use super::llm_models::resolve_model;
 use super::mcp_client::McpClient;
 use super::script_output::{parse_script_output, save_script, script_output_schema};
@@ -17,6 +18,9 @@ use std::future::Future;
 use std::sync::Arc;
 use tracing::instrument;
 use uuid::Uuid;
+
+/// LLM のトークン数の合計を入れるジョブの引数のキー（[`JobInfo::usage`]）
+pub(crate) const USAGE_PARAM: &str = "usage";
 
 /// worker が処理する kafru のキュー名 (`{server}-{queue}`)
 pub(crate) const QUEUE_NAME: &str = "botcast-worker-default";
@@ -76,6 +80,7 @@ impl Args {
 ///   client->>wmcp: tools/call generate_script
 ///   wmcp->>kafru: push job {args}
 ///   kafru->>worker: execute job
+///   worker->>rest: GET /me/secrets/anthropic_api_key/value（X-On-Behalf-Of: 番組の持ち主）
 ///   loop エージェントループ
 ///     worker->>llm: messages + 読み取りのツール + output_config.format
 ///     llm-->>worker: tool_use
@@ -87,6 +92,7 @@ impl Args {
 ///   worker->>rest: PUT /records/{episodes}/{id}（sections・title）
 /// ```
 ///
+/// API キーは番組の持ち主のもの（BYOK。[`resolve_api_key`]）で、無ければジョブを失敗させる。
 /// 保存は worker が行い、LLM には書き込みのツールを渡さない。
 /// `generateAudio` は保存できたときだけ音声生成に進む
 #[cfg_attr(doc, aquamarine::aquamarine)]
@@ -155,17 +161,12 @@ impl TaskService {
             .collect()
     }
 
-    /// traceparent を持たずに積まれた（定期実行・以前の）ジョブに、実行した span の traceparent を書き足す
-    pub(crate) async fn record_traceparent(
+    /// 実行中のジョブの引数を書き換える（traceparent を持たずに積まれたジョブの traceparent・トークン数の合計を書き足す）
+    pub(crate) async fn update_params(
         &self,
         job_id: RecordId,
-        mut params: HashMap<String, serde_json::Value>,
-        traceparent: String,
+        params: HashMap<String, serde_json::Value>,
     ) -> anyhow::Result<(), Error> {
-        params.insert(
-            trace_context::TRACEPARENT_PARAM.to_string(),
-            serde_json::Value::String(traceparent),
-        );
         self.kafru_queue
             .update(
                 job_id,
@@ -177,7 +178,7 @@ impl TaskService {
                 },
             )
             .await
-            .map_err(|e| Error::Other(anyhow::anyhow!("Failed to record trace id: {}", e)))?;
+            .map_err(|e| Error::Other(anyhow::anyhow!("Failed to update job params: {}", e)))?;
         Ok(())
     }
 
@@ -193,8 +194,13 @@ impl TaskService {
         JobInfo::try_from(data)
     }
 
-    #[instrument(skip(self, args), fields(job.kind = args.kind()))]
-    pub(crate) async fn execute_args(&self, args: Args) -> anyhow::Result<(), Error> {
+    /// ジョブを実行する。LLM を呼んだら（失敗しても）そのトークン数の合計を `usage` に入れる
+    #[instrument(skip(self, args, usage), fields(job.kind = args.kind()))]
+    pub(crate) async fn execute_args(
+        &self,
+        args: Args,
+        usage: &mut Option<Usage>,
+    ) -> anyhow::Result<(), Error> {
         match args {
             Args::GenerateAudio { episode_id } => {
                 let work_dir = use_work_dir(&Uuid::new_v4())
@@ -224,7 +230,7 @@ impl TaskService {
                 generate_audio,
             } => {
                 script_then_audio(
-                    self.run_generate_script(&episode_id, &prompt),
+                    self.run_generate_script(&episode_id, &prompt, usage),
                     generate_audio,
                     || async {
                         let work_dir = use_work_dir(&Uuid::new_v4())
@@ -240,19 +246,26 @@ impl TaskService {
         }
     }
 
-    /// LLM に台本を生成させ、検証してエピソードに保存する
-    async fn run_generate_script(&self, episode_id: &str, prompt: &str) -> anyhow::Result<(), Error> {
-        let api_key = std::env::var("ANTHROPIC_API_KEY")
-            .context("ANTHROPIC_API_KEY is not set")
-            .map_err(Error::Other)?;
+    /// LLM に台本を生成させ、検証してエピソードに保存する。LLM のトークン数の合計を `usage` に入れる
+    async fn run_generate_script(
+        &self,
+        episode_id: &str,
+        prompt: &str,
+        usage: &mut Option<Usage>,
+    ) -> anyhow::Result<(), Error> {
         let podcast = self
             .episode_service
             .podcast_of_episode(episode_id)
             .await
             .context("Failed to fetch podcast")
             .map_err(Error::Other)?;
+        let owner = podcast["owner_id"].as_str();
+        // API キーは番組の持ち主が CMS に保存したもの（BYOK）。このジョブの間だけ持つ
+        let api_key = resolve_api_key(self.cms.as_ref(), owner)
+            .await
+            .map_err(Error::Other)?;
         // モデルは番組の持ち主の設定 → llm_models の既定の順で決める
-        let model = resolve_model(self.cms.as_ref(), podcast["owner_id"].as_str())
+        let model = resolve_model(self.cms.as_ref(), owner)
             .await
             .map_err(Error::Other)?;
         let mcp_cmd = std::env::var("MCP_SERVER_CMD").unwrap_or_else(|_| "node".to_string());
@@ -288,6 +301,7 @@ impl TaskService {
 
         let output_schema = script_output_schema();
         let result = agent.run(&system, &full_prompt, Some(&output_schema)).await;
+        *usage = Some(agent.usage());
         // エージェントが失敗しても MCP サーバーの子プロセスは止める
         if let Err(e) = agent.close().await {
             tracing::warn!("Failed to close MCP client: {e:#}");
@@ -390,6 +404,9 @@ pub(crate) struct JobInfo {
     /// ジョブを実行した（API から積んだジョブは積んだときの）トレースの ID。Jaeger の `/trace/{traceId}` で開ける
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trace_id: Option<String>,
+    /// LLM を呼んだジョブのトークン数の合計（ユーザーが自分の費用を把握するため）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
 }
 
 impl TryFrom<QueueData> for JobInfo {
@@ -407,6 +424,11 @@ impl TryFrom<QueueData> for JobInfo {
                 .parameters
                 .as_ref()
                 .and_then(trace_context::trace_id_from_params),
+            usage: q
+                .parameters
+                .as_ref()
+                .and_then(|p| p.get(USAGE_PARAM))
+                .and_then(|u| serde_json::from_value(u.clone()).ok()),
         })
     }
 }

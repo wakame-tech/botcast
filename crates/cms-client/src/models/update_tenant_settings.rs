@@ -11,16 +11,21 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
+/// UpdateTenantSettings : Only the fields sent are changed
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UpdateTenantSettings {
-    #[serde(rename = "join")]
-    pub join: models::JoinMode,
+    #[serde(rename = "join", skip_serializing_if = "Option::is_none")]
+    pub join: Option<models::JoinMode>,
+    #[serde(rename = "llm_fallback", skip_serializing_if = "Option::is_none")]
+    pub llm_fallback: Option<models::LlmFallback>,
 }
 
 impl UpdateTenantSettings {
-    pub fn new(join: models::JoinMode) -> UpdateTenantSettings {
+    /// Only the fields sent are changed
+    pub fn new() -> UpdateTenantSettings {
         UpdateTenantSettings {
-            join,
+            join: None,
+            llm_fallback: None,
         }
     }
 }

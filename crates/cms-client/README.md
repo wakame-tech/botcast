@@ -63,6 +63,10 @@ Class | Method | HTTP request | Description
 *RecordApi* | [**record_api_update**](docs/RecordApi.md#record_api_update) | **PUT** /t/{tenantId}/records/{collectionId}/{recordId} | 
 *RecordApi* | [**record_api_upload_image**](docs/RecordApi.md#record_api_upload_image) | **POST** /t/{tenantId}/records/{collectionId}/{recordId}/images/{fieldName} | 
 *ScriptApi* | [**script_api_execute**](docs/ScriptApi.md#script_api_execute) | **POST** /t/{tenantId}/scripts | 
+*SecretsApi* | [**secrets_api_delete**](docs/SecretsApi.md#secrets_api_delete) | **DELETE** /t/{tenantId}/me/secrets/{name} | 
+*SecretsApi* | [**secrets_api_list**](docs/SecretsApi.md#secrets_api_list) | **GET** /t/{tenantId}/me/secrets | 
+*SecretsApi* | [**secrets_api_put**](docs/SecretsApi.md#secrets_api_put) | **PUT** /t/{tenantId}/me/secrets/{name} | 
+*SecretsApi* | [**secrets_api_value**](docs/SecretsApi.md#secrets_api_value) | **GET** /t/{tenantId}/me/secrets/{name}/value | 
 *SettingsApi* | [**settings_api_read**](docs/SettingsApi.md#settings_api_read) | **GET** /t/{tenantId}/settings | 
 *SettingsApi* | [**settings_api_update**](docs/SettingsApi.md#settings_api_update) | **PUT** /t/{tenantId}/settings | 
 *UsersApi* | [**users_api_create**](docs/UsersApi.md#users_api_create) | **POST** /t/{tenantId}/users | 
@@ -110,15 +114,19 @@ Class | Method | HTTP request | Description
  - [JsonCanvasNode](docs/JsonCanvasNode.md)
  - [JsonCanvasResponse](docs/JsonCanvasResponse.md)
  - [Link](docs/Link.md)
+ - [LlmFallback](docs/LlmFallback.md)
  - [MergeRecordsRequest](docs/MergeRecordsRequest.md)
  - [MyTenants](docs/MyTenants.md)
  - [NodeEvent](docs/NodeEvent.md)
  - [NotFoundError](docs/NotFoundError.md)
+ - [PutSecret](docs/PutSecret.md)
  - [Record](docs/Record.md)
  - [RecordWithRelations](docs/RecordWithRelations.md)
  - [ReferencedByResponse](docs/ReferencedByResponse.md)
  - [ReferencingRecord](docs/ReferencingRecord.md)
  - [RelatedRecord](docs/RelatedRecord.md)
+ - [RevealedSecret](docs/RevealedSecret.md)
+ - [SecretSummary](docs/SecretSummary.md)
  - [SetRoles](docs/SetRoles.md)
  - [SplitRecordRequest](docs/SplitRecordRequest.md)
  - [SplitRecordResponse](docs/SplitRecordResponse.md)

@@ -94,6 +94,13 @@ cd web && npm run check
 - ユーザーの選択は `user_settings.llm_model`（`llm_models` のレコード ID。`access: owner`、1 人 1 件）。web のマイページ（本人のとき）の「設定」で選ぶ。API キーなどの秘密情報は `user_settings` に置かない
 - worker は台本生成で、番組の `owner_id` の設定 → `llm_models` の既定（`default` かつ `enabled`、複数なら `order` が小さいもの）の順でモデルを決める（`usecase/llm_models.rs`）。設定のモデルが無効・一覧に無ければ既定にフォールバックし、warn ログと span `llm.resolve_model` の `llm.model_source = fallback` に出す。既定も無ければジョブが失敗する。モデルを環境変数では指定しない
 
+## LLM の API キー（BYOK）
+
+- Anthropic の API キーはユーザーの持ち込み。番組の持ち主が web のマイページ（本人のとき）の「設定」の「LLM の API キー」で CMS の `/t/{tenantId}/me/secrets/anthropic_api_key` に保存する（暗号化。web が読めるのは末尾 4 文字と更新日時だけ）
+- worker は台本生成のジョブで、番組の `owner_id` を `X-On-Behalf-Of` で代理して `GET /me/secrets/anthropic_api_key/value` で値を取り出し、そのジョブの間だけ使う（`usecase/llm_api_key.rs`）。キーは `ApiKey`（Debug / Display を伏せる）で持ち、ログ・span・エラーに出さない
+- キーが無い（持ち主がユーザーでない番組も）ときはジョブを「マイページで登録してください」のエラーで失敗させる。環境変数のキーは無い（`ANTHROPIC_API_KEY` は廃止）
+- LLM のトークン数は span（`chat {model}` / `agent.run` の `gen_ai.usage.*`）と、ジョブの引数の `usage`（合計。`GET /jobs` の `usage`）に残す。失敗したジョブの分も残す
+
 ## 台本生成
 
 - `GenerateScript` は LLM に CMS の MCP ツールのうち読み取りだけ（`agent_service.rs` の `READ_ONLY_CMS_TOOLS`）を渡し、台本を structured outputs（`output_config.format`）で `{ title?, sections }` の JSON として返させる。保存は worker が行い、LLM に保存を頼まない
