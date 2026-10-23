@@ -26,7 +26,9 @@ struct Message {
 
 #[derive(Debug, Deserialize)]
 struct AnthropicResponse {
-    content: Vec<ContentBlock>,
+    /// 応答のブロックをそのまま持つ。次のターンでは assistant の発言としてこのまま送り返す
+    /// （thinking ブロックは署名ごと変えずに返す必要がある）
+    content: Vec<Value>,
     stop_reason: String,
     #[serde(default)]
     model: Option<String>,
@@ -88,12 +90,31 @@ fn record_llm_response(span: &tracing::Span, resp: &AnthropicResponse) {
     }
 }
 
-
-#[derive(Debug, Serialize, Deserialize)]
+/// 応答のブロックのうちエージェントが使うもの。`thinking` / `redacted_thinking` などそれ以外は `Other`
+#[derive(Debug, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ContentBlock {
-    Text { text: String },
-    ToolUse { id: String, name: String, input: Value },
+    Text {
+        text: String,
+    },
+    ToolUse {
+        id: String,
+        name: String,
+        input: Value,
+    },
+    #[serde(other)]
+    Other,
+}
+
+impl AnthropicResponse {
+    fn blocks(&self) -> anyhow::Result<Vec<ContentBlock>> {
+        self.content
+            .iter()
+            .map(|b| {
+                serde_json::from_value(b.clone()).context("Failed to parse Anthropic content block")
+            })
+            .collect()
+    }
 }
 
 /// エージェントのループの 1 ターンの結果
@@ -202,16 +223,14 @@ impl AgentService {
         tracing::Span::current()
             .record("gen_ai.response.finish_reasons", resp.stop_reason.as_str());
 
-        let assistant_content: Value =
-            serde_json::to_value(&resp.content).context("Failed to serialize assistant content")?;
+        let blocks = resp.blocks()?;
         messages.push(Message {
             role: "assistant".to_string(),
-            content: assistant_content,
+            content: Value::Array(resp.content.clone()),
         });
 
         if resp.stop_reason == "end_turn" || resp.stop_reason == "stop_sequence" {
-            let text = resp
-                .content
+            let text = blocks
                 .iter()
                 .filter_map(|b| {
                     if let ContentBlock::Text { text } = b {
@@ -227,7 +246,7 @@ impl AgentService {
 
         if resp.stop_reason == "tool_use" {
             let mut tool_results = Vec::new();
-            for block in &resp.content {
+            for block in &blocks {
                 if let ContentBlock::ToolUse { id, name, input } = block {
                     tracing::info!("Agent calling tool: {} with {:?}", name, input);
                     let result = self
@@ -287,5 +306,54 @@ impl AgentService {
 
     pub async fn close(self) -> anyhow::Result<()> {
         self.mcp_client.close().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 5.5 系のモデルは thinking が常に有効で、応答に `thinking` ブロックが入る
+    fn response_with_thinking() -> AnthropicResponse {
+        serde_json::from_value(json!({
+            "content": [
+                { "type": "thinking", "thinking": "", "signature": "sig-abc" },
+                { "type": "redacted_thinking", "data": "opaque" },
+                { "type": "text", "text": "読みます" },
+                { "type": "tool_use", "id": "toolu_1", "name": "RecordApi_read", "input": { "recordId": "r1" } }
+            ],
+            "stop_reason": "tool_use",
+            "model": "claude-opus-5-5"
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn parses_thinking_blocks_as_other() {
+        let blocks = response_with_thinking().blocks().unwrap();
+        assert_eq!(
+            blocks,
+            vec![
+                ContentBlock::Other,
+                ContentBlock::Other,
+                ContentBlock::Text {
+                    text: "読みます".to_string()
+                },
+                ContentBlock::ToolUse {
+                    id: "toolu_1".to_string(),
+                    name: "RecordApi_read".to_string(),
+                    input: json!({ "recordId": "r1" }),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn raw_content_keeps_thinking_signature_for_replay() {
+        let resp = response_with_thinking();
+        let replay = Value::Array(resp.content.clone());
+        assert_eq!(replay[0]["type"], "thinking");
+        assert_eq!(replay[0]["signature"], "sig-abc");
+        assert_eq!(replay[1]["data"], "opaque");
     }
 }
