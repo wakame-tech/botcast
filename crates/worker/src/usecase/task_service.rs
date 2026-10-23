@@ -1,9 +1,10 @@
-use super::agent_service::AgentService;
+use super::agent_service::{AgentService, READ_ONLY_CMS_TOOLS};
 use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
 use super::cms_client::CmsClient;
 use super::llm_models::resolve_model;
 use super::mcp_client::McpClient;
+use super::script_output::{parse_script_output, save_script, script_output_schema};
 use super::voices::Voice;
 use crate::error::Error;
 use crate::trace_context;
@@ -12,6 +13,7 @@ use anyhow::Context;
 use kafru::queue::{Queue, QueueData, QueueListConditions, QueueStatus};
 use kafru::task::RecordId;
 use std::collections::HashMap;
+use std::future::Future;
 use std::sync::Arc;
 use tracing::instrument;
 use uuid::Uuid;
@@ -69,18 +71,24 @@ impl Args {
 ///   participant worker as worker
 ///   participant llm as Anthropic API
 ///   participant cms as botcast-cms MCP
+///   participant rest as botcast-cms
 ///
 ///   client->>wmcp: tools/call generate_script
 ///   wmcp->>kafru: push job {args}
 ///   kafru->>worker: execute job
 ///   loop エージェントループ
-///     worker->>llm: messages + tools
+///     worker->>llm: messages + 読み取りのツール + output_config.format
 ///     llm-->>worker: tool_use
-///     worker->>cms: tools/call
+///     worker->>cms: tools/call（読み取りだけ）
 ///     cms-->>worker: result
 ///   end
-///   llm-->>worker: end_turn
+///   llm-->>worker: end_turn（台本 { title?, sections } の JSON）
+///   worker->>worker: episodes のスキーマで検証
+///   worker->>rest: PUT /records/{episodes}/{id}（sections・title）
 /// ```
+///
+/// 保存は worker が行い、LLM には書き込みのツールを渡さない。
+/// `generateAudio` は保存できたときだけ音声生成に進む
 #[cfg_attr(doc, aquamarine::aquamarine)]
 #[derive(Clone)]
 pub(crate) struct TaskService {
@@ -215,25 +223,25 @@ impl TaskService {
                 prompt,
                 generate_audio,
             } => {
-                self.run_generate_script(&episode_id, &prompt).await?;
-                if !generate_audio {
-                    return Ok(());
-                }
-                let work_dir = use_work_dir(&Uuid::new_v4())
-                    .context("Failed to create work dir")
-                    .map_err(Error::Other)?;
-                self.episode_service
-                    .generate_audio(&work_dir, &episode_id)
-                    .await
+                script_then_audio(
+                    self.run_generate_script(&episode_id, &prompt),
+                    generate_audio,
+                    || async {
+                        let work_dir = use_work_dir(&Uuid::new_v4())
+                            .context("Failed to create work dir")
+                            .map_err(Error::Other)?;
+                        self.episode_service
+                            .generate_audio(&work_dir, &episode_id)
+                            .await
+                    },
+                )
+                .await
             }
         }
     }
 
-    async fn run_generate_script(
-        &self,
-        episode_id: &str,
-        prompt: &str,
-    ) -> anyhow::Result<String, Error> {
+    /// LLM に台本を生成させ、検証してエピソードに保存する
+    async fn run_generate_script(&self, episode_id: &str, prompt: &str) -> anyhow::Result<(), Error> {
         let api_key = std::env::var("ANTHROPIC_API_KEY")
             .context("ANTHROPIC_API_KEY is not set")
             .map_err(Error::Other)?;
@@ -258,7 +266,7 @@ impl TaskService {
             .context("Failed to create MCP client")
             .map_err(Error::Other)?;
 
-        let agent = AgentService::new(api_key, model, mcp_client);
+        let agent = AgentService::new(api_key, model, mcp_client, READ_ONLY_CMS_TOOLS);
 
         let cast = self
             .episode_service
@@ -278,16 +286,33 @@ impl TaskService {
             full_prompt.push_str(&cast);
         }
 
-        let result = agent
-            .run(&system, &full_prompt)
+        let output_schema = script_output_schema();
+        let result = agent.run(&system, &full_prompt, Some(&output_schema)).await;
+        // エージェントが失敗しても MCP サーバーの子プロセスは止める
+        if let Err(e) = agent.close().await {
+            tracing::warn!("Failed to close MCP client: {e:#}");
+        }
+        let text = result.context("Agent failed").map_err(Error::Other)?;
+
+        let script = parse_script_output(&text).map_err(Error::Other)?;
+        save_script(self.cms.as_ref(), episode_id, &script)
             .await
-            .context("Agent failed")
-            .map_err(Error::Other)?;
-
-        agent.close().await.map_err(Error::Other)?;
-
-        Ok(result)
+            .map_err(Error::Other)
     }
+}
+
+/// 台本の生成・保存（`script`）が成功したときだけ、`generate_audio` なら音声を生成する（`audio`）
+async fn script_then_audio<S, A, AF>(script: S, generate_audio: bool, audio: A) -> Result<(), Error>
+where
+    S: Future<Output = Result<(), Error>>,
+    A: FnOnce() -> AF,
+    AF: Future<Output = Result<(), Error>>,
+{
+    script.await?;
+    if !generate_audio {
+        return Ok(());
+    }
+    audio().await
 }
 
 /// 配役の JSON に入れる声の名前・style の名前の長さの上限（文字数）
@@ -298,8 +323,10 @@ const CAST_LABEL_MAX_CHARS: usize = 40;
 pub(crate) fn script_system_prompt(has_cast: bool) -> String {
     let mut prompt = String::from(
         "あなたはポッドキャストの台本を生成するアシスタントです。\
-MCPツールを使用してエピソードの台本を生成し、CMSに保存してください。\
-台本はsectionsフィールドに格納され、各セクションは\
+MCPツール（読み取り専用）で番組・エピソード・前回のエピソード・お便りなどを読み、指示に沿った台本を作ってください。\
+台本の保存はシステムが行います。あなたの最終応答を検証してエピソードに保存するので、最終応答には台本だけを書いてください。\n\
+最終応答は {\"title\"(任意), \"sections\"} の JSON です。title はエピソードのタイトルを変えるときだけ書き、\
+sections は台本全体（既存のセクションを置き換えます）で、各セクションは\
 SerifSection {\"type\": \"Serif\", \"speaker\", \"text\", \"style\"(任意)} または\
 AudioSection {\"type\": \"Audio\", \"url\", \"from\"(任意), \"to\"(任意)} の形式です。\n\
 style は口調・感情の指定で、自由文で書けます（例: 「楽しそうに」「ささやくように」）。不要なら省略してください。\n",
@@ -454,6 +481,46 @@ mod tests {
         // 配役の無い番組は既存の speaker（旧形式の数字など）を使い続けられるようにする
         assert!(!prompt.contains("書かないでください"), "{prompt}");
         assert!(prompt.contains("SerifSection"), "{prompt}");
+    }
+
+    #[test]
+    fn script_system_prompt_describes_output_instead_of_saving() {
+        for prompt in [script_system_prompt(true), script_system_prompt(false)] {
+            // 保存は worker が行う。LLM には保存を頼まない
+            assert!(!prompt.contains("保存してください"), "{prompt}");
+            assert!(prompt.contains("最終応答"), "{prompt}");
+            assert!(prompt.contains("sections"), "{prompt}");
+        }
+    }
+
+    fn run_script_then_audio(script: Result<(), Error>, generate_audio: bool) -> (Result<(), Error>, bool) {
+        let audio_called = std::cell::Cell::new(false);
+        let result = futures::executor::block_on(script_then_audio(
+            async { script },
+            generate_audio,
+            || async {
+                audio_called.set(true);
+                Ok(())
+            },
+        ));
+        (result, audio_called.get())
+    }
+
+    #[test]
+    fn audio_is_generated_only_after_script_is_saved() {
+        let (result, audio) = run_script_then_audio(Ok(()), true);
+        assert!(result.is_ok());
+        assert!(audio);
+
+        // 保存できなかった（出力がスキーマ違反など）ら音声に進まず、ジョブを失敗させる
+        let (result, audio) =
+            run_script_then_audio(Err(Error::Other(anyhow::anyhow!("does not match"))), true);
+        assert!(result.is_err());
+        assert!(!audio);
+
+        let (result, audio) = run_script_then_audio(Ok(()), false);
+        assert!(result.is_ok());
+        assert!(!audio);
     }
 
     #[test]

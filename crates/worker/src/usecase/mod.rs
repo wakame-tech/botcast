@@ -7,6 +7,7 @@ pub(crate) mod llm_models;
 pub mod mcp_client;
 pub(crate) mod provider;
 pub(crate) mod schedule_sync;
+pub(crate) mod script_output;
 pub(crate) mod task_service;
 pub(crate) mod voices;
 

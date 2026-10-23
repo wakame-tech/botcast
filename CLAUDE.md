@@ -94,6 +94,12 @@ cd web && npm run check
 - ユーザーの選択は `user_settings.llm_model`（`llm_models` のレコード ID。`access: owner`、1 人 1 件）。web のマイページ（本人のとき）の「設定」で選ぶ。API キーなどの秘密情報は `user_settings` に置かない
 - worker は台本生成で、番組の `owner_id` の設定 → `llm_models` の既定（`default` かつ `enabled`、複数なら `order` が小さいもの）の順でモデルを決める（`usecase/llm_models.rs`）。設定のモデルが無効・一覧に無ければ既定にフォールバックし、warn ログと span `llm.resolve_model` の `llm.model_source = fallback` に出す。既定も無ければジョブが失敗する。モデルを環境変数では指定しない
 
+## 台本生成
+
+- `GenerateScript` は LLM に CMS の MCP ツールのうち読み取りだけ（`agent_service.rs` の `READ_ONLY_CMS_TOOLS`）を渡し、台本を structured outputs（`output_config.format`）で `{ title?, sections }` の JSON として返させる。保存は worker が行い、LLM に保存を頼まない
+- 出力のスキーマは `collections.rs` の episodes の `title` / `sections` から作る（`usecase/script_output.rs`。`oneOf` → `anyOf`、`maxLength` などの制約は外して送り、受け取ったあとに元のスキーマで検証する）。違反・`max_tokens`・`refusal` はジョブ失敗。`generateAudio` は保存できたときだけ音声に進む
+- span `script.save` にはセリフ数・話者の数などの件数だけを入れ、台本の本文は入れない
+
 ## お便りエピソードの定期生成
 
 - お便りは CMS の `mails`（`episode_id` / `radio_name` / `body`。所有者は投稿者）。web のエピソード画面から投稿する
