@@ -13,7 +13,7 @@ const DEFAULT_MODEL = "";
 
 /**
  * 本人のユーザー設定 (CMS の `user_settings`)。今は LLM のモデルだけ。
- * API キー (BYOK) は秘密情報なので user_settings には置かず、ここに CMS の `/me/secrets` の欄を足す
+ * API キー (BYOK) は秘密情報なので user_settings には置かない（CMS の `/me/secrets`。`LlmApiKeyForm`）
  */
 export function UserSettingsForm() {
 	const { data: modelRecords } = $cms.useQuery(

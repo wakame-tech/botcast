@@ -1,7 +1,9 @@
+use super::llm_api_key::ApiKey;
 use anyhow::Context;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use cms_client::apis::{
-    collections_api, configuration::Configuration, record_api, script_api, Error as CmsError,
+    collections_api, configuration::Configuration, record_api, script_api, secrets_api,
+    Error as CmsError,
 };
 use cms_client::models;
 use std::collections::HashMap;
@@ -181,6 +183,39 @@ impl CmsClient {
             .into_iter()
             .map(|r| Ok(serde_json::to_value(r)?))
             .collect()
+    }
+
+    /// `owner` の秘密情報 `name` の値を `X-On-Behalf-Of` で取り出す。設定が無ければ（404）`None`。
+    /// 値はエラー・span に入れない（失敗は状態コードだけ）
+    pub(crate) async fn secret_value_as(
+        &self,
+        owner: &str,
+        name: &str,
+    ) -> anyhow::Result<Option<ApiKey>> {
+        let result = traced_cms_call_raw(
+            "GET",
+            "/t/{tenantId}/me/secrets/{name}/value",
+            secrets_api::secrets_api_value(
+                &self.config,
+                secrets_api::SecretsApiValueParams {
+                    tenant_id: self.tenant.clone(),
+                    name: name.to_string(),
+                    x_on_behalf_of: Some(owner.to_string()),
+                },
+            ),
+        )
+        .await;
+        match result {
+            Ok(secret) => Ok(Some(ApiKey::new(secret.value))),
+            Err(CmsError::ResponseError(res)) if res.status == reqwest::StatusCode::NOT_FOUND => {
+                Ok(None)
+            }
+            Err(CmsError::ResponseError(res)) => {
+                anyhow::bail!("CMS returned {} for secret '{name}'", res.status)
+            }
+            // 応答の本文を含みうる（JSON の解析エラーなど）ので、種類だけにする
+            Err(_) => anyhow::bail!("Failed to fetch secret '{name}' from CMS"),
+        }
     }
 
     /// コレクションを作成し、既にあればスキーマ・access を合わせる。ID を返す

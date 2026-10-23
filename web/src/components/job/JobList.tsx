@@ -15,6 +15,7 @@ export function JobList() {
 					<th>ID</th>
 					<th>名前</th>
 					<th>状態</th>
+					<th>トークン (入力 / 出力)</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -23,6 +24,10 @@ export function JobList() {
 						<td className="font-mono">{job.id}</td>
 						<td>{job.name}</td>
 						<td>{job.status}</td>
+						<td>
+							{job.usage &&
+								`${job.usage.inputTokens.toLocaleString()} / ${job.usage.outputTokens.toLocaleString()}`}
+						</td>
 					</tr>
 				))}
 			</tbody>

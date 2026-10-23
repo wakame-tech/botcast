@@ -1,6 +1,7 @@
 import { NewEpisodeForm } from "@/components/episode/NewEpisodeForm";
 import Podcast from "@/components/podcast/PodcastList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LlmApiKeyForm } from "@/components/user/LlmApiKeyForm";
 import { UserSettingsForm } from "@/components/user/UserSettingsForm";
 import { useSession } from "@/hooks/useSession";
 import { $cms, CMS_TENANT, recordToPodcast } from "@/lib/cms_client";
@@ -49,8 +50,9 @@ function User() {
 					<CardHeader>
 						<CardTitle>設定</CardTitle>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="flex flex-col gap-6">
 						<UserSettingsForm />
+						<LlmApiKeyForm />
 					</CardContent>
 				</Card>
 			)}

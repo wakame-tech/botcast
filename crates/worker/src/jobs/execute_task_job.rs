@@ -1,6 +1,6 @@
 use crate::trace_context;
 use crate::usecase::provider::Provider;
-use crate::usecase::task_service::Args;
+use crate::usecase::task_service::{Args, USAGE_PARAM};
 use async_trait::async_trait;
 use kafru::task::{RecordId, TaskHandler};
 use serde_json::Value;
@@ -70,18 +70,19 @@ impl TaskHandler for ExecuteTaskJob {
     }
 }
 
-async fn run(params: HashMap<String, Value>, queue_id: Option<RecordId>) -> Result<(), String> {
+async fn run(mut params: HashMap<String, Value>, queue_id: Option<RecordId>) -> Result<(), String> {
     let provider = PROVIDER.get().ok_or("Provider not initialized")?;
     let task_service = provider.task_service();
     // traceparent を持たずに積まれたジョブ（定期実行・以前のジョブ）は、ここで始めたトレースを書き足す
     // （ジョブ一覧がトレース ID を読むため。親ではなく、このジョブの span の traceparent）
-    if let (Some(job_id), None) = (queue_id, params.get(trace_context::TRACEPARENT_PARAM)) {
+    if let (Some(job_id), None) = (&queue_id, params.get(trace_context::TRACEPARENT_PARAM)) {
         if let Some(traceparent) = trace_context::traceparent(&tracing::Span::current()) {
-            if let Err(e) = task_service
-                .record_traceparent(job_id, params.clone(), traceparent)
-                .await
-            {
-                tracing::warn!("{e}");
+            params.insert(
+                trace_context::TRACEPARENT_PARAM.to_string(),
+                Value::String(traceparent),
+            );
+            if let Err(e) = task_service.update_params(job_id.clone(), params.clone()).await {
+                tracing::warn!("Failed to record trace id: {e}");
             }
         }
     }
@@ -90,11 +91,25 @@ async fn run(params: HashMap<String, Value>, queue_id: Option<RecordId>) -> Resu
         .ok_or("args not found in params")?
         .clone();
     let args: Args = serde_json::from_value(args_value).map_err(|e| e.to_string())?;
-    task_service
-        .execute_args(args)
+    let mut usage = None;
+    let result = task_service
+        .execute_args(args, &mut usage)
         .await
         // context の連鎖まで含めてジョブのメッセージ・span に残す
-        .map_err(|crate::error::Error::Other(e)| format!("{e:#}"))
+        .map_err(|crate::error::Error::Other(e)| format!("{e:#}"));
+    // LLM のトークン数の合計をジョブの結果（引数の `usage`）に残す。失敗したジョブの分も残す
+    if let (Some(job_id), Some(usage)) = (queue_id, usage) {
+        match serde_json::to_value(usage) {
+            Ok(usage) => {
+                params.insert(USAGE_PARAM.to_string(), usage);
+                if let Err(e) = task_service.update_params(job_id, params).await {
+                    tracing::warn!("Failed to record token usage: {e}");
+                }
+            }
+            Err(e) => tracing::warn!("Failed to serialize token usage: {e}"),
+        }
+    }
+    result
 }
 
 #[cfg(test)]

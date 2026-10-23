@@ -16,10 +16,21 @@ export type JobArgs =
 	  }
 	| { type: "generateEpisode"; podcastId: string };
 
+/** LLM のトークン数の合計（worker の `Usage`） */
+export interface TokenUsage {
+	inputTokens: number;
+	outputTokens: number;
+	cacheCreationInputTokens?: number | null;
+	cacheReadInputTokens?: number | null;
+}
+
 export interface JobInfo {
 	id: string;
 	name: string;
 	status: string;
+	traceId?: string;
+	/** LLM を呼んだジョブのトークン数の合計 */
+	usage?: TokenUsage;
 }
 
 const workerUrl = (path: string) => `${WORKER_URL.replace(/\/$/, "")}${path}`;

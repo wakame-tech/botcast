@@ -2,8 +2,10 @@ use crate::trace_context::record_error;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::sync::Mutex;
 use tracing::{Instrument, field::Empty};
 
+use super::llm_api_key::ApiKey;
 use super::mcp_client::McpClient;
 use rmcp::model::Tool;
 
@@ -52,17 +54,36 @@ struct AnthropicResponse {
     stop_details: Option<Value>,
 }
 
-/// トークン数（span の属性に使う）
-#[derive(Debug, Default, Deserialize)]
-struct Usage {
-    #[serde(default)]
-    input_tokens: u64,
-    #[serde(default)]
-    output_tokens: u64,
-    #[serde(default)]
-    cache_creation_input_tokens: Option<u64>,
-    #[serde(default)]
-    cache_read_input_tokens: Option<u64>,
+/// トークン数（span の属性・ジョブの結果に使う）
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct Usage {
+    #[serde(default, alias = "input_tokens")]
+    pub input_tokens: u64,
+    #[serde(default, alias = "output_tokens")]
+    pub output_tokens: u64,
+    #[serde(default, alias = "cache_creation_input_tokens")]
+    pub cache_creation_input_tokens: Option<u64>,
+    #[serde(default, alias = "cache_read_input_tokens")]
+    pub cache_read_input_tokens: Option<u64>,
+}
+
+impl Usage {
+    /// 呼び出しごとのトークン数を足し合わせる
+    pub(crate) fn add(&mut self, other: &Usage) {
+        fn add_opt(a: Option<u64>, b: Option<u64>) -> Option<u64> {
+            match (a, b) {
+                (None, None) => None,
+                (a, b) => Some(a.unwrap_or(0) + b.unwrap_or(0)),
+            }
+        }
+        self.input_tokens += other.input_tokens;
+        self.output_tokens += other.output_tokens;
+        self.cache_creation_input_tokens =
+            add_opt(self.cache_creation_input_tokens, other.cache_creation_input_tokens);
+        self.cache_read_input_tokens =
+            add_opt(self.cache_read_input_tokens, other.cache_read_input_tokens);
+    }
 }
 
 /// LLM の呼び出し 1 回の span（OpenTelemetry の GenAI の semantic conventions に合わせる）。
@@ -192,20 +213,32 @@ fn request_body(
     body
 }
 
+/// API キーのヘッダーの値。sensitive にして reqwest・hyper の Debug に出さない
+fn api_key_header(key: &ApiKey) -> anyhow::Result<reqwest::header::HeaderValue> {
+    // 不正な文字のときも値はエラーに入れない
+    let mut value = reqwest::header::HeaderValue::from_str(key.expose())
+        .map_err(|_| anyhow::anyhow!("LLM API key contains invalid characters"))?;
+    value.set_sensitive(true);
+    Ok(value)
+}
+
 pub struct AgentService {
-    api_key: String,
+    /// ジョブの持ち主の API キー（[`super::llm_api_key::resolve_api_key`]）
+    api_key: ApiKey,
     model: String,
     mcp_client: McpClient,
     /// LLM に渡す（呼ばせる）ツールの名前
     allowed_tools: &'static [&'static str],
     http_client: reqwest::Client,
+    /// これまでの LLM の呼び出しのトークン数の合計
+    usage: Mutex<Usage>,
 }
 
 impl AgentService {
     /// `model` は API に渡すモデルの ID（`llm_models` から決める。[`super::llm_models::resolve_model`]）。
     /// `allowed_tools` は MCP のツールのうち LLM に渡すもの（例: [`READ_ONLY_CMS_TOOLS`]）
     pub fn new(
-        api_key: String,
+        api_key: ApiKey,
         model: String,
         mcp_client: McpClient,
         allowed_tools: &'static [&'static str],
@@ -216,13 +249,24 @@ impl AgentService {
             mcp_client,
             allowed_tools,
             http_client: reqwest::Client::new(),
+            usage: Mutex::new(Usage::default()),
         }
+    }
+
+    /// これまでの LLM の呼び出しのトークン数の合計（失敗したループの分も含む）
+    pub fn usage(&self) -> Usage {
+        *self.usage.lock().unwrap()
     }
 
     #[tracing::instrument(
         name = "agent.run",
         skip_all,
-        fields(gen_ai.request.model = %self.model, agent.turns = Empty),
+        fields(
+            gen_ai.request.model = %self.model,
+            agent.turns = Empty,
+            gen_ai.usage.input_tokens = Empty,
+            gen_ai.usage.output_tokens = Empty,
+        ),
         err
     )]
     /// エージェントのループを回し、最終応答の本文を返す。
@@ -251,6 +295,10 @@ impl AgentService {
                 .run_turn(system, &tools, &mut messages, output_schema)
                 .instrument(turn_span.clone())
                 .await;
+            let usage = self.usage();
+            let span = tracing::Span::current();
+            span.record("gen_ai.usage.input_tokens", usage.input_tokens);
+            span.record("gen_ai.usage.output_tokens", usage.output_tokens);
             match outcome {
                 Ok(TurnOutcome::Done(text)) => return Ok(text),
                 Ok(TurnOutcome::Continue) => continue,
@@ -356,7 +404,7 @@ impl AgentService {
         let response = self
             .http_client
             .post(ANTHROPIC_API_URL)
-            .header("x-api-key", &self.api_key)
+            .header("x-api-key", api_key_header(&self.api_key)?)
             .header("anthropic-version", ANTHROPIC_VERSION)
             .header("content-type", "application/json")
             .json(body)
@@ -376,6 +424,9 @@ impl AgentService {
             .await
             .context("Failed to parse Anthropic response")?;
         record_llm_response(span, &resp);
+        if let Some(usage) = &resp.usage {
+            self.usage.lock().unwrap().add(usage);
+        }
         Ok(resp)
     }
 
@@ -491,6 +542,41 @@ mod tests {
         }))
         .unwrap();
         assert_eq!(final_text(&resp.blocks().unwrap()), "{\"sections\":[]}");
+    }
+
+    #[test]
+    fn usage_is_summed_over_calls() {
+        let mut total = Usage::default();
+        let a: Usage = serde_json::from_value(json!({
+            "input_tokens": 10, "output_tokens": 3, "cache_read_input_tokens": 5
+        }))
+        .unwrap();
+        let b: Usage = serde_json::from_value(json!({ "input_tokens": 7, "output_tokens": 2 })).unwrap();
+        total.add(&a);
+        total.add(&b);
+        assert_eq!(
+            total,
+            Usage {
+                input_tokens: 17,
+                output_tokens: 5,
+                cache_creation_input_tokens: None,
+                cache_read_input_tokens: Some(5),
+            }
+        );
+        // ジョブの結果には camelCase で入れる
+        assert_eq!(
+            serde_json::to_value(total).unwrap(),
+            json!({ "inputTokens": 17, "outputTokens": 5, "cacheCreationInputTokens": null, "cacheReadInputTokens": 5 })
+        );
+    }
+
+    #[test]
+    fn api_key_header_is_sensitive_and_not_in_errors() {
+        let value = api_key_header(&ApiKey::new("sk-ant-secret".to_string())).unwrap();
+        assert!(value.is_sensitive());
+        assert!(!format!("{value:?}").contains("sk-ant"));
+        let err = api_key_header(&ApiKey::new("sk-ant-secret\n".to_string())).unwrap_err();
+        assert!(!format!("{err:#}").contains("sk-ant"), "{err:#}");
     }
 
     #[test]

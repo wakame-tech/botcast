@@ -20,14 +20,17 @@ pub struct TenantSettings {
     pub links: Vec<models::Link>,
     #[serde(rename = "join")]
     pub join: models::JoinMode,
+    #[serde(rename = "llm_fallback")]
+    pub llm_fallback: models::LlmFallback,
 }
 
 impl TenantSettings {
-    pub fn new(tenant: String, links: Vec<models::Link>, join: models::JoinMode) -> TenantSettings {
+    pub fn new(tenant: String, links: Vec<models::Link>, join: models::JoinMode, llm_fallback: models::LlmFallback) -> TenantSettings {
         TenantSettings {
             tenant,
             links,
             join,
+            llm_fallback,
         }
     }
 }

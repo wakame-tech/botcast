@@ -3,6 +3,7 @@ pub(crate) mod cms_client;
 pub mod collections;
 pub(crate) mod episode_generation;
 pub(crate) mod episode_service;
+pub(crate) mod llm_api_key;
 pub(crate) mod llm_models;
 pub mod mcp_client;
 pub(crate) mod provider;
