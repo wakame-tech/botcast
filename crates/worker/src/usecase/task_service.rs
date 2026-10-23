@@ -1,6 +1,8 @@
 use super::agent_service::AgentService;
 use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
+use super::cms_client::CmsClient;
+use super::llm_models::resolve_model;
 use super::mcp_client::McpClient;
 use super::voices::Voice;
 use crate::error::Error;
@@ -82,6 +84,7 @@ impl Args {
 #[cfg_attr(doc, aquamarine::aquamarine)]
 #[derive(Clone)]
 pub(crate) struct TaskService {
+    cms: Arc<CmsClient>,
     episode_service: EpisodeService,
     episode_generation_service: EpisodeGenerationService,
     kafru_queue: Arc<Queue<'static>>,
@@ -89,11 +92,13 @@ pub(crate) struct TaskService {
 
 impl TaskService {
     pub(crate) fn new(
+        cms: Arc<CmsClient>,
         episode_service: EpisodeService,
         episode_generation_service: EpisodeGenerationService,
         kafru_queue: Arc<Queue<'static>>,
     ) -> Self {
         Self {
+            cms,
             episode_service,
             episode_generation_service,
             kafru_queue,
@@ -232,6 +237,16 @@ impl TaskService {
         let api_key = std::env::var("ANTHROPIC_API_KEY")
             .context("ANTHROPIC_API_KEY is not set")
             .map_err(Error::Other)?;
+        let podcast = self
+            .episode_service
+            .podcast_of_episode(episode_id)
+            .await
+            .context("Failed to fetch podcast")
+            .map_err(Error::Other)?;
+        // モデルは番組の持ち主の設定 → llm_models の既定の順で決める
+        let model = resolve_model(self.cms.as_ref(), podcast["owner_id"].as_str())
+            .await
+            .map_err(Error::Other)?;
         let mcp_cmd = std::env::var("MCP_SERVER_CMD").unwrap_or_else(|_| "node".to_string());
         let mcp_args_str = std::env::var("MCP_SERVER_ARGS")
             .context("MCP_SERVER_ARGS is not set")
@@ -243,11 +258,11 @@ impl TaskService {
             .context("Failed to create MCP client")
             .map_err(Error::Other)?;
 
-        let agent = AgentService::new(api_key, mcp_client);
+        let agent = AgentService::new(api_key, model, mcp_client);
 
         let cast = self
             .episode_service
-            .cast_of_episode(episode_id)
+            .cast_of_podcast(&podcast)
             .await
             .context("Failed to fetch podcast cast")
             .map_err(Error::Other)?;

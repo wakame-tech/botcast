@@ -1,6 +1,7 @@
 import { NewEpisodeForm } from "@/components/episode/NewEpisodeForm";
 import Podcast from "@/components/podcast/PodcastList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserSettingsForm } from "@/components/user/UserSettingsForm";
 import { useSession } from "@/hooks/useSession";
 import { $cms, CMS_TENANT, recordToPodcast } from "@/lib/cms_client";
 import { createLazyFileRoute } from "@tanstack/react-router";
@@ -39,6 +40,17 @@ function User() {
 					</CardHeader>
 					<CardContent>
 						{records && <NewEpisodeForm podcasts={podcasts} />}
+					</CardContent>
+				</Card>
+			)}
+
+			{isMe && (
+				<Card>
+					<CardHeader>
+						<CardTitle>設定</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<UserSettingsForm />
 					</CardContent>
 				</Card>
 			)}

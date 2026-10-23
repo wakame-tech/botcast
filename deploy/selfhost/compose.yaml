@@ -31,7 +31,7 @@ services:
       - CMS_TENANT=${CMS_TENANT:-botcast}
       - API_KEY=${API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # ANTHROPIC_MODEL / VOICEVOX_ENDPOINT / TTS_* は空文字だとそのまま使われるため
+      # VOICEVOX_ENDPOINT / TTS_* は空文字だとそのまま使われるため
       # 必要なときだけ env_file (worker.env) 経由で渡す
       - OTLP_COLLECTOR_ENDPOINT=http://otel-collector:4317
       - KAFRU_DB_HOST=kafru-db
