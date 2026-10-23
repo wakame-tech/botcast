@@ -5,7 +5,7 @@
 # - worker / web は GHCR のイメージ (.github/workflows/images.yml) を使う:
 #     docker compose pull && docker compose up -d --remove-orphans
 #   手元でビルドするときは docker compose up -d --build
-# - watchtower が GHCR の新しいイメージを 5 分ごとに確認し、ラベル付きのコンテナを入れ替える
+# - watchtower が GHCR の新しいイメージを 60 秒ごとに確認し、ラベル付きのコンテナを入れ替える
 #   (botcast-cms の deploy/compose.yaml の api / web も対象)。compose ファイルの変更は手動で反映する
 name: botcast
 
