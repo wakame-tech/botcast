@@ -5,11 +5,24 @@ use serde_json::{Value, json};
 use tracing::{Instrument, field::Empty};
 
 use super::mcp_client::McpClient;
+use rmcp::model::Tool;
 
 const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION: &str = "2023-06-01";
-const MAX_TOKENS: u32 = 8192;
+/// thinking も含めた 1 回の応答の上限。台本全体を 1 回の応答で返すので余裕を持たせる
+const MAX_TOKENS: u32 = 16000;
 const MAX_ITERATIONS: usize = 20;
+
+/// エージェントに渡す CMS の MCP ツール（読み取りだけ）。書き込み系（`RecordApi_update` など）は渡さない。
+/// 保存は worker が LLM の出力を検証してから行う
+pub(crate) const READ_ONLY_CMS_TOOLS: &[&str] = &[
+    "CollectionApi_list",
+    "CollectionApi_read",
+    "RecordApi_list",
+    "RecordApi_listWithRelations",
+    "RecordApi_read",
+    "RecordApi_referencedBy",
+];
 
 #[derive(Debug, Serialize, Deserialize)]
 struct AnthropicTool {
@@ -34,6 +47,9 @@ struct AnthropicResponse {
     model: Option<String>,
     #[serde(default)]
     usage: Option<Usage>,
+    /// `stop_reason` が `refusal` のときの理由
+    #[serde(default)]
+    stop_details: Option<Value>,
 }
 
 /// トークン数（span の属性に使う）
@@ -125,34 +141,82 @@ enum TurnOutcome {
     Continue,
 }
 
+/// MCP のツールのうち `allowed` に入っているものだけを、Anthropic のツール定義にする
+fn tools_for_anthropic(tools: &[Tool], allowed: &[&str]) -> Vec<AnthropicTool> {
+    tools
+        .iter()
+        .filter(|t| allowed.contains(&t.name.as_ref()))
+        .map(|t| AnthropicTool {
+            name: t.name.to_string(),
+            description: t.description.as_deref().unwrap_or("").to_string(),
+            input_schema: Value::Object((*t.input_schema).clone()),
+        })
+        .collect()
+}
+
+/// 最終応答の本文（text ブロックをつなげたもの）
+fn final_text(blocks: &[ContentBlock]) -> String {
+    blocks
+        .iter()
+        .filter_map(|b| {
+            if let ContentBlock::Text { text } = b {
+                Some(text.as_str())
+            } else {
+                None
+            }
+        })
+        .collect::<String>()
+}
+
+/// リクエストの本文。`output_schema` があれば structured outputs（`output_config.format`）で
+/// 最終応答の形を固定する（ツールの呼び出しはそのまま使える）
+fn request_body(
+    model: &str,
+    system: &str,
+    tools: &[AnthropicTool],
+    messages: &[Message],
+    output_schema: Option<&Value>,
+) -> Value {
+    let mut body = json!({
+        "model": model,
+        "max_tokens": MAX_TOKENS,
+        "system": system,
+        "tools": tools,
+        "messages": messages,
+    });
+    if let Some(schema) = output_schema {
+        body["output_config"] = json!({
+            "format": { "type": "json_schema", "schema": schema }
+        });
+    }
+    body
+}
+
 pub struct AgentService {
     api_key: String,
     model: String,
     mcp_client: McpClient,
+    /// LLM に渡す（呼ばせる）ツールの名前
+    allowed_tools: &'static [&'static str],
     http_client: reqwest::Client,
 }
 
 impl AgentService {
-    /// `model` は API に渡すモデルの ID（`llm_models` から決める。[`super::llm_models::resolve_model`]）
-    pub fn new(api_key: String, model: String, mcp_client: McpClient) -> Self {
+    /// `model` は API に渡すモデルの ID（`llm_models` から決める。[`super::llm_models::resolve_model`]）。
+    /// `allowed_tools` は MCP のツールのうち LLM に渡すもの（例: [`READ_ONLY_CMS_TOOLS`]）
+    pub fn new(
+        api_key: String,
+        model: String,
+        mcp_client: McpClient,
+        allowed_tools: &'static [&'static str],
+    ) -> Self {
         Self {
             api_key,
             model,
             mcp_client,
+            allowed_tools,
             http_client: reqwest::Client::new(),
         }
-    }
-
-    fn tools_for_anthropic(&self) -> Vec<AnthropicTool> {
-        self.mcp_client
-            .tools()
-            .iter()
-            .map(|t| AnthropicTool {
-                name: t.name.to_string(),
-                description: t.description.as_deref().unwrap_or("").to_string(),
-                input_schema: Value::Object((*t.input_schema).clone()),
-            })
-            .collect()
     }
 
     #[tracing::instrument(
@@ -161,8 +225,15 @@ impl AgentService {
         fields(gen_ai.request.model = %self.model, agent.turns = Empty),
         err
     )]
-    pub async fn run(&self, system: &str, prompt: &str) -> anyhow::Result<String> {
-        let tools = self.tools_for_anthropic();
+    /// エージェントのループを回し、最終応答の本文を返す。
+    /// `output_schema` があれば最終応答はそのスキーマの JSON になる
+    pub async fn run(
+        &self,
+        system: &str,
+        prompt: &str,
+        output_schema: Option<&Value>,
+    ) -> anyhow::Result<String> {
+        let tools = tools_for_anthropic(self.mcp_client.tools(), self.allowed_tools);
         let mut messages: Vec<Message> = vec![Message {
             role: "user".to_string(),
             content: json!(prompt),
@@ -177,7 +248,7 @@ impl AgentService {
                 agent.tool_calls = Empty,
             );
             let outcome = self
-                .run_turn(system, &tools, &mut messages)
+                .run_turn(system, &tools, &mut messages, output_schema)
                 .instrument(turn_span.clone())
                 .await;
             match outcome {
@@ -199,14 +270,9 @@ impl AgentService {
         system: &str,
         tools: &[AnthropicTool],
         messages: &mut Vec<Message>,
+        output_schema: Option<&Value>,
     ) -> anyhow::Result<TurnOutcome> {
-        let body = json!({
-            "model": self.model,
-            "max_tokens": MAX_TOKENS,
-            "system": system,
-            "tools": tools,
-            "messages": messages,
-        });
+        let body = request_body(&self.model, system, tools, messages, output_schema);
 
         let llm_span = llm_span(&self.model);
         let resp = match self
@@ -229,47 +295,56 @@ impl AgentService {
             content: Value::Array(resp.content.clone()),
         });
 
-        if resp.stop_reason == "end_turn" || resp.stop_reason == "stop_sequence" {
-            let text = blocks
-                .iter()
-                .filter_map(|b| {
-                    if let ContentBlock::Text { text } = b {
-                        Some(text.as_str())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            return Ok(TurnOutcome::Done(text));
+        match resp.stop_reason.as_str() {
+            "end_turn" | "stop_sequence" => return Ok(TurnOutcome::Done(final_text(&blocks))),
+            "tool_use" => {}
+            // 出力が途中で切れている（structured outputs でもスキーマを満たさない）
+            "max_tokens" => anyhow::bail!(
+                "LLM response was truncated at max_tokens ({MAX_TOKENS})"
+            ),
+            "refusal" => anyhow::bail!(
+                "LLM refused to respond (category: {})",
+                resp.stop_details
+                    .as_ref()
+                    .and_then(|d| d["category"].as_str())
+                    .unwrap_or("unknown")
+            ),
+            other => anyhow::bail!("Unexpected stop_reason: {other}"),
         }
 
-        if resp.stop_reason == "tool_use" {
-            let mut tool_results = Vec::new();
-            for block in &blocks {
-                if let ContentBlock::ToolUse { id, name, input } = block {
-                    tracing::info!("Agent calling tool: {} with {:?}", name, input);
-                    let result = self
-                        .mcp_client
-                        .call_tool(name.clone(), input.clone())
-                        .await
-                        .unwrap_or_else(|e| format!("Tool error: {}", e));
+        let mut tool_results = Vec::new();
+        for block in &blocks {
+            if let ContentBlock::ToolUse { id, name, input } = block {
+                // 渡していないツール（書き込み系など）は呼ばない
+                if !self.allowed_tools.contains(&name.as_str()) {
+                    tracing::warn!("Agent requested a tool that is not allowed: {name}");
                     tool_results.push(json!({
                         "type": "tool_result",
                         "tool_use_id": id,
-                        "content": result,
+                        "content": format!("Tool {name} is not available"),
+                        "is_error": true,
                     }));
+                    continue;
                 }
+                tracing::info!("Agent calling tool: {} with {:?}", name, input);
+                let result = self
+                    .mcp_client
+                    .call_tool(name.clone(), input.clone())
+                    .await
+                    .unwrap_or_else(|e| format!("Tool error: {}", e));
+                tool_results.push(json!({
+                    "type": "tool_result",
+                    "tool_use_id": id,
+                    "content": result,
+                }));
             }
-            tracing::Span::current().record("agent.tool_calls", tool_results.len());
-            messages.push(Message {
-                role: "user".to_string(),
-                content: json!(tool_results),
-            });
-            return Ok(TurnOutcome::Continue);
         }
-
-        anyhow::bail!("Unexpected stop_reason: {}", resp.stop_reason)
+        tracing::Span::current().record("agent.tool_calls", tool_results.len());
+        messages.push(Message {
+            role: "user".to_string(),
+            content: json!(tool_results),
+        });
+        Ok(TurnOutcome::Continue)
     }
 
     /// Anthropic の Messages API を 1 回呼ぶ。応答のモデル・停止理由・トークン数を `span` に書く
@@ -346,6 +421,76 @@ mod tests {
                 },
             ]
         );
+    }
+
+    fn tool(name: &str) -> Tool {
+        serde_json::from_value(json!({
+            "name": name,
+            "description": format!("{name} desc"),
+            "inputSchema": { "type": "object", "properties": {} }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn passes_only_read_only_cms_tools() {
+        // botcast-cms の MCP サーバーが出すツール
+        let all = [
+            "BatchApi_execute", "CanvasApi_createEdge", "CanvasApi_deleteEdge", "CanvasApi_listEdges",
+            "CanvasApi_query", "CollectionApi_create", "CollectionApi_delete", "CollectionApi_list",
+            "CollectionApi_read", "CollectionApi_update", "RecordApi_copyRecord", "RecordApi_create",
+            "RecordApi_delete", "RecordApi_deleteImage", "RecordApi_eval", "RecordApi_generate",
+            "RecordApi_generateData", "RecordApi_getImage", "RecordApi_list",
+            "RecordApi_listWithRelations", "RecordApi_mergeRecords", "RecordApi_read",
+            "RecordApi_referencedBy", "RecordApi_splitRecord", "RecordApi_update",
+            "RecordApi_uploadImage", "ScriptApi_execute",
+        ];
+        let tools: Vec<Tool> = all.iter().map(|n| tool(n)).collect();
+        let passed: Vec<String> = tools_for_anthropic(&tools, READ_ONLY_CMS_TOOLS)
+            .into_iter()
+            .map(|t| t.name)
+            .collect();
+        assert_eq!(
+            passed,
+            vec![
+                "CollectionApi_list", "CollectionApi_read", "RecordApi_list",
+                "RecordApi_listWithRelations", "RecordApi_read", "RecordApi_referencedBy",
+            ]
+        );
+        for write in ["RecordApi_update", "RecordApi_create", "RecordApi_delete", "BatchApi_execute"] {
+            assert!(!passed.iter().any(|n| n == write), "{write}");
+        }
+    }
+
+    #[test]
+    fn request_body_sets_output_format_only_when_given() {
+        let tools = tools_for_anthropic(&[tool("RecordApi_read")], READ_ONLY_CMS_TOOLS);
+        let messages = vec![Message { role: "user".to_string(), content: json!("p") }];
+        let schema = json!({ "type": "object", "additionalProperties": false });
+        let body = request_body("claude-haiku-5-5", "sys", &tools, &messages, Some(&schema));
+        assert_eq!(
+            body["output_config"],
+            json!({ "format": { "type": "json_schema", "schema": schema } })
+        );
+        assert_eq!(body["tools"][0]["name"], "RecordApi_read");
+        // forced tool_choice は 5.5 系で 400 になるので使わない
+        assert!(body.get("tool_choice").is_none());
+        let body = request_body("m", "sys", &tools, &messages, None);
+        assert!(body.get("output_config").is_none());
+    }
+
+    #[test]
+    fn final_text_joins_text_blocks_without_separator() {
+        let resp: AnthropicResponse = serde_json::from_value(json!({
+            "content": [
+                { "type": "thinking", "thinking": "", "signature": "s" },
+                { "type": "text", "text": "{\"sections\":" },
+                { "type": "text", "text": "[]}" }
+            ],
+            "stop_reason": "end_turn"
+        }))
+        .unwrap();
+        assert_eq!(final_text(&resp.blocks().unwrap()), "{\"sections\":[]}");
     }
 
     #[test]
