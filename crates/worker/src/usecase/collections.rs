@@ -187,26 +187,6 @@ pub(crate) fn fetch_allowed_hosts_schema() -> Value {
     })
 }
 
-/// `fetch_allowed_hosts` の初期データ（コレクションが空のときだけ入れる）
-pub(crate) fn initial_fetch_allowed_hosts() -> Vec<Value> {
-    vec![json!({ "host": "zenn.dev", "enabled": true, "description": "Zenn（記事の一覧・本文の API）" })]
-}
-
-/// `fetch_allowed_hosts` が空なら初期データを入れる（管理者が編集・削除したあとは触らない）
-async fn seed_fetch_allowed_hosts(cms: &CmsClient) -> anyhow::Result<()> {
-    let existing = cms
-        .list_records(FETCH_ALLOWED_HOSTS, &ListQuery { limit: Some(1), ..Default::default() })
-        .await?;
-    if !existing.is_empty() {
-        return Ok(());
-    }
-    tracing::info!("seeding '{FETCH_ALLOWED_HOSTS}'");
-    for host in initial_fetch_allowed_hosts() {
-        cms.create_record_as(FETCH_ALLOWED_HOSTS, host, None).await?;
-    }
-    Ok(())
-}
-
 pub(crate) fn podcasts_schema(scripts_id: &str) -> Value {
     json!({
         "type": "object",
@@ -354,7 +334,6 @@ pub(crate) async fn seed(cms: &CmsClient) -> anyhow::Result<()> {
         llm_models_access(),
     )
     .await?;
-    seed_fetch_allowed_hosts(cms).await?;
     Ok(())
 }
 
@@ -556,10 +535,7 @@ mod tests {
     fn fetch_allowed_hosts_are_admin_managed_domains() {
         let s = fetch_allowed_hosts_schema();
         assert_eq!(s["x-unique"], json!([["host"]]));
-        for h in initial_fetch_allowed_hosts() {
-            assert!(valid(&s, h.clone()), "{h}");
-        }
-        assert_eq!(initial_fetch_allowed_hosts()[0]["host"], "zenn.dev");
+        assert!(valid(&s, json!({ "host": "zenn.dev", "enabled": true, "description": "Zenn" })));
         for host in ["https://zenn.dev", "zenn.dev/api", "Zenn.dev", "localhost", "zenn.dev:443", ""] {
             assert!(!valid(&s, json!({ "host": host, "enabled": true })), "{host}");
         }

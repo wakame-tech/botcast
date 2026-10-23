@@ -111,7 +111,7 @@ cd web && npm run check
 ## Web の取得（fetch_url・schedule.sources）
 
 - CMS のスクリプトは dify-sandbox（seccomp でネットワーク禁止）で動くので Web を読めない。サンドボックスは開けず（LAN への SSRF になる）、worker が `usecase/safe_fetch.rs` の `SafeFetcher` で取得する
-- 取得してよいホストは CMS の `fetch_allowed_hosts`（`host`（x-unique。小文字のドメイン名）・`enabled`・`description`）。ホスト名と完全一致（サブドメインは別に登録）。読めるのはログインしたユーザー全員、書けるのは役割 `admin` とサービスだけ（`llm_models` と同じ）。worker の seed はコレクションが空のときだけ `zenn.dev` を入れる。環境変数では設定しない
+- 取得してよいホストは CMS の `fetch_allowed_hosts`（`host`（x-unique。小文字のドメイン名）・`enabled`・`description`）。ホスト名と完全一致（サブドメインは別に登録）。読めるのはログインしたユーザー全員、書けるのは役割 `admin` とサービスだけ（`llm_models` と同じ）。初期データは入れない（管理者が CMS で登録する。空なら何も取得できない）。環境変数では設定しない
 - HTTPS（443 番）だけ。URL の認証情報・IP アドレスのホストは不可。DNS の結果を **すべて** 確かめ（ループバック・プライベート・リンクローカル（169.254.169.254 を含む）・ユニークローカル・CGNAT・予約などは拒否）、確かめたアドレスに接続を固定する（reqwest の `resolve`。プロキシの環境変数も使わない）ので DNS rebinding で内部に繋がらない
 - リダイレクトは自動で追わず、1 回ごとに URL・許可リスト・DNS を確かめ直す（3 回まで）。接続 5 秒・全体 20 秒のタイムアウト、本文 2MiB まで（超えたら失敗）
 - JSON はそのまま（ただしキーが `_html` で終わる文字列は本文のテキストにする。Zenn の `body_html` など）、HTML は見出し・段落のテキスト（`readable_text`）にし、20,000 文字で切る
