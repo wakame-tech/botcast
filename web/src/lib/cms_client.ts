@@ -96,6 +96,45 @@ export interface Mail {
 	owner_id: string | null;
 }
 
+/** LLM のモデル (CMS の `llm_models`。管理者が編集する) */
+export interface LlmModel {
+	id: string;
+	model_id: string;
+	name: string;
+	provider: string;
+	default: boolean;
+	enabled: boolean;
+	order: number;
+}
+
+/** ユーザーの設定 (CMS の `user_settings`。本人だけが読み書きする。API キーは置かない) */
+export interface UserSettings {
+	id: string;
+	/** 台本生成などで使う LLM のモデル (`llm_models` のレコード ID)。無ければ既定のモデル */
+	llm_model?: string;
+}
+
+export function recordToLlmModel(record: CmsRecord): LlmModel {
+	const d = record.data as Record<string, unknown>;
+	return {
+		id: record.id,
+		model_id: d.model_id as string,
+		name: (d.name as string) ?? (d.model_id as string),
+		provider: d.provider as string,
+		default: (d.default as boolean) ?? false,
+		enabled: (d.enabled as boolean) ?? false,
+		order: (d.order as number) ?? 0,
+	};
+}
+
+export function recordToUserSettings(record: CmsRecord): UserSettings {
+	const d = record.data as Record<string, unknown>;
+	return {
+		id: record.id,
+		llm_model: d.llm_model as string | undefined,
+	};
+}
+
 export function recordToMail(record: CmsRecord): Mail {
 	const d = record.data as Record<string, unknown>;
 	return {

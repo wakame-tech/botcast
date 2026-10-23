@@ -4,7 +4,8 @@
 //! `x-ref` の値は参照先コレクションの ID（環境ごとに異なる）なので、参照先から順に ensure する。
 //! 追加するフィールドは任意にする（既存のレコードが新しいスキーマをそのまま満たすように）。
 
-use super::cms_client::CmsClient;
+use super::cms_client::{CmsClient, ListQuery};
+use super::llm_models::{LLM_MODELS, USER_SETTINGS};
 use serde_json::{json, Value};
 
 /// 全コレクション共通: 認証済みなら誰でも読め、書けるのは所有者（とサービス）
@@ -14,6 +15,16 @@ fn access() -> Value {
 
 /// 声: 参照音声は人の声のサンプルなので、読めるのも所有者（とサービス）だけ
 fn voices_access() -> Value {
+    json!({ "read": "owner", "write": "owner" })
+}
+
+/// LLM のモデルの一覧: ログインしたユーザーなら誰でも読め、書けるのは管理者（とサービス）だけ
+fn llm_models_access() -> Value {
+    json!({ "read": "public", "write": "authenticated", "write_roles": ["admin"] })
+}
+
+/// ユーザーの設定: 本人（とサービス）だけが読み書きする
+fn user_settings_access() -> Value {
     json!({ "read": "owner", "write": "owner" })
 }
 
@@ -89,6 +100,65 @@ pub(crate) fn voices_schema() -> Value {
         "additionalProperties": false,
         "x-unique": [["slug"]]
     })
+}
+
+/// LLM のモデルの一覧。worker はジョブの持ち主の設定（`user_settings.llm_model`）か、`default` のモデルを使う
+pub(crate) fn llm_models_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            // API に渡すモデルの ID（例: `claude-opus-5-5`）
+            "model_id": { "type": "string", "minLength": 1 },
+            // 表示名
+            "name": { "type": "string" },
+            "provider": { "enum": ["anthropic"] },
+            // 既定のモデル（1 件だけにする。複数あれば `order` が小さいものを使う）
+            "default": { "type": "boolean" },
+            // false なら選べず、設定に残っていても既定のモデルを使う
+            "enabled": { "type": "boolean" },
+            // 並び順（小さい順）
+            "order": { "type": "integer" }
+        },
+        "required": ["model_id", "name", "provider", "default", "enabled"],
+        "additionalProperties": false,
+        "x-unique": [["model_id"]]
+    })
+}
+
+/// ユーザーの設定（1 人 1 件）。API キーなどの秘密情報は置かない（CMS の `/me/secrets`）
+pub(crate) fn user_settings_schema(llm_models_id: &str) -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            // 台本生成などで使う LLM のモデル（`llm_models` のレコード ID）
+            "llm_model": { "type": "string", "x-ref": llm_models_id }
+        },
+        "additionalProperties": false
+    })
+}
+
+/// `llm_models` の初期データ（コレクションが空のときだけ入れる）
+pub(crate) fn initial_llm_models() -> Vec<Value> {
+    vec![
+        json!({ "model_id": "claude-opus-5-5", "name": "Claude Opus 5.5", "provider": "anthropic", "default": true, "enabled": true, "order": 0 }),
+        json!({ "model_id": "claude-sonnet-5-5", "name": "Claude Sonnet 5.5", "provider": "anthropic", "default": false, "enabled": true, "order": 1 }),
+        json!({ "model_id": "claude-haiku-5-5", "name": "Claude Haiku 5.5", "provider": "anthropic", "default": false, "enabled": true, "order": 2 }),
+    ]
+}
+
+/// `llm_models` が空なら初期データを入れる（管理者が編集・削除したあとは触らない）
+async fn seed_llm_models(cms: &CmsClient) -> anyhow::Result<()> {
+    let existing = cms
+        .list_records(LLM_MODELS, &ListQuery { limit: Some(1), ..Default::default() })
+        .await?;
+    if !existing.is_empty() {
+        return Ok(());
+    }
+    tracing::info!("seeding '{LLM_MODELS}'");
+    for model in initial_llm_models() {
+        cms.create_record_as(LLM_MODELS, model, None).await?;
+    }
+    Ok(())
 }
 
 pub(crate) fn podcasts_schema(scripts_id: &str) -> Value {
@@ -200,6 +270,16 @@ pub(crate) async fn seed(cms: &CmsClient) -> anyhow::Result<()> {
         .await?;
     cms.ensure_collection("mails", mails_schema(&episodes), access())
         .await?;
+    let llm_models = cms
+        .ensure_collection(LLM_MODELS, llm_models_schema(), llm_models_access())
+        .await?;
+    seed_llm_models(cms).await?;
+    cms.ensure_collection(
+        USER_SETTINGS,
+        user_settings_schema(&llm_models),
+        user_settings_access(),
+    )
+    .await?;
     Ok(())
 }
 
@@ -300,6 +380,41 @@ mod tests {
         let access = voices_access();
         assert_eq!(access, json!({ "read": "owner", "write": "owner" }));
         serde_json::from_value::<cms_client::models::CollectionAccess>(access).unwrap();
+    }
+
+    #[test]
+    fn llm_models_are_written_only_by_admins() {
+        let access = llm_models_access();
+        let typed: cms_client::models::CollectionAccess =
+            serde_json::from_value(access.clone()).unwrap();
+        // ensure_collection は CMS が返す access と比べるので、型を通しても同じ JSON になること
+        assert_eq!(serde_json::to_value(typed).unwrap(), access);
+        assert_eq!(access["write_roles"], json!(["admin"]));
+        let settings = user_settings_access();
+        assert_eq!(settings, json!({ "read": "owner", "write": "owner" }));
+        serde_json::from_value::<cms_client::models::CollectionAccess>(settings).unwrap();
+    }
+
+    #[test]
+    fn initial_llm_models_have_exactly_one_default() {
+        let s = llm_models_schema();
+        assert_eq!(s["x-unique"], json!([["model_id"]]));
+        let models = initial_llm_models();
+        for m in &models {
+            assert!(valid(&s, m.clone()), "{m}");
+        }
+        assert_eq!(models.iter().filter(|m| m["default"] == true).count(), 1);
+        assert!(!valid(&s, json!({ "model_id": "x", "name": "n", "provider": "openai", "default": false, "enabled": true })));
+        assert!(!valid(&s, json!({ "model_id": "", "name": "n", "provider": "anthropic", "default": false, "enabled": true })));
+    }
+
+    #[test]
+    fn user_settings_reference_llm_models() {
+        let s = user_settings_schema("lm1");
+        assert_eq!(s["properties"]["llm_model"]["x-ref"], "lm1");
+        assert!(valid(&s, json!({})));
+        assert!(valid(&s, json!({ "llm_model": "m1" })));
+        assert!(!valid(&s, json!({ "llm_model": "m1", "api_key": "k" })));
     }
 
     #[test]

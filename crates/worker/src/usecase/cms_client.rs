@@ -154,17 +154,27 @@ impl CmsClient {
         collection: &str,
         query: &ListQuery,
     ) -> anyhow::Result<Vec<serde_json::Value>> {
+        self.list_records_as(collection, query, None).await
+    }
+
+    /// レコード一覧を取得する。`owner` を指定すると `X-On-Behalf-Of` でそのユーザーとして読む
+    /// （`read: owner` のコレクションはそのユーザーのレコードだけになる）
+    pub(crate) async fn list_records_as(
+        &self,
+        collection: &str,
+        query: &ListQuery,
+        owner: Option<&str>,
+    ) -> anyhow::Result<Vec<serde_json::Value>> {
+        let mut params = list_params(
+            self.tenant.clone(),
+            self.collection_id(collection).await?,
+            query,
+        );
+        params.x_on_behalf_of = owner.map(str::to_string);
         let records = traced_cms_call(
             "GET",
             "/t/{tenantId}/records/{collectionId}",
-            record_api::record_api_list(
-                &self.config,
-                list_params(
-                    self.tenant.clone(),
-                    self.collection_id(collection).await?,
-                    query,
-                ),
-            ),
+            record_api::record_api_list(&self.config, params),
         )
         .await?;
         records

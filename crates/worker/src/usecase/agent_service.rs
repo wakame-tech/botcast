@@ -112,9 +112,8 @@ pub struct AgentService {
 }
 
 impl AgentService {
-    pub fn new(api_key: String, mcp_client: McpClient) -> Self {
-        let model =
-            std::env::var("ANTHROPIC_MODEL").unwrap_or_else(|_| "claude-opus-4-7".to_string());
+    /// `model` は API に渡すモデルの ID（`llm_models` から決める。[`super::llm_models::resolve_model`]）
+    pub fn new(api_key: String, model: String, mcp_client: McpClient) -> Self {
         Self {
             api_key,
             model,

@@ -67,19 +67,26 @@ impl EpisodeService {
         }
     }
 
-    /// エピソードの番組の配役（別名 → 声。番組の持ち主の声が見つからなければ `None`）
-    pub(crate) async fn cast_of_episode(
+    /// エピソードの番組のレコード全体
+    pub(crate) async fn podcast_of_episode(
         &self,
         episode_id: &str,
-    ) -> anyhow::Result<Vec<(String, Option<Voice>)>> {
+    ) -> anyhow::Result<serde_json::Value> {
         let data = self.cms.get_record_data(EPISODES, episode_id).await?;
         let podcast_id = data["podcast_id"]
             .as_str()
             .context("episode has no podcast_id")?;
-        let podcast = self.cms.get_record("podcasts", podcast_id).await?;
+        self.cms.get_record("podcasts", podcast_id).await
+    }
+
+    /// 番組の配役（別名 → 声。番組の持ち主の声が見つからなければ `None`）
+    pub(crate) async fn cast_of_podcast(
+        &self,
+        podcast: &serde_json::Value,
+    ) -> anyhow::Result<Vec<(String, Option<Voice>)>> {
         let owner = podcast["owner_id"].as_str();
         let mut voices = vec![];
-        for (alias, slug) in podcast_cast(&podcast)? {
+        for (alias, slug) in podcast_cast(podcast)? {
             let voice = find_owned_voice(self.cms.as_ref(), &slug, owner).await?;
             voices.push((alias, voice.ok().flatten()));
         }

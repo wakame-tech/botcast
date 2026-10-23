@@ -88,6 +88,12 @@ cd web && npm run check
 
 生成した mp3 / srt は botcast-cms の `/records/{c}/{r}/images/{audio,srt}` に保存し、episode の `audio_url` / `srt_url` にその相対パスを入れる。web は認証付きで取得して Blob URL にして再生する（`useCmsFileUrl`）。
 
+## LLM のモデル
+
+- モデルの一覧は CMS の `llm_models`（`model_id`（x-unique。API に渡す ID）・`name`・`provider`（今は `anthropic`）・`default`・`enabled`・`order`）。読めるのはログインしたユーザー全員、書けるのは役割 `admin` とサービスだけ（`write_roles`）。worker の seed はコレクションが空のときだけ初期データ（`claude-opus-5-5`（既定）・`claude-sonnet-5-5`・`claude-haiku-5-5`）を入れる
+- ユーザーの選択は `user_settings.llm_model`（`llm_models` のレコード ID。`access: owner`、1 人 1 件）。web のマイページ（本人のとき）の「設定」で選ぶ。API キーなどの秘密情報は `user_settings` に置かない
+- worker は台本生成で、番組の `owner_id` の設定 → `llm_models` の既定（`default` かつ `enabled`、複数なら `order` が小さいもの）の順でモデルを決める（`usecase/llm_models.rs`）。設定のモデルが無効・一覧に無ければ既定にフォールバックし、warn ログと span `llm.resolve_model` の `llm.model_source = fallback` に出す。既定も無ければジョブが失敗する。モデルを環境変数では指定しない
+
 ## お便りエピソードの定期生成
 
 - お便りは CMS の `mails`（`episode_id` / `radio_name` / `body`。所有者は投稿者）。web のエピソード画面から投稿する
