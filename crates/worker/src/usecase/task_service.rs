@@ -4,6 +4,7 @@ use super::episode_service::EpisodeService;
 use super::mcp_client::McpClient;
 use super::voices::Voice;
 use crate::error::Error;
+use crate::trace_context;
 use crate::worker::use_work_dir;
 use anyhow::Context;
 use kafru::queue::{Queue, QueueData, QueueListConditions, QueueStatus};
@@ -34,6 +35,17 @@ pub(crate) enum Args {
     GenerateEpisode {
         podcast_id: String,
     },
+}
+
+impl Args {
+    /// ジョブの種類（span の属性に使う。台本の指示などの本文は入れない）
+    pub(crate) fn kind(&self) -> &'static str {
+        match self {
+            Args::GenerateAudio { .. } => "generateAudio",
+            Args::GenerateScript { .. } => "generateScript",
+            Args::GenerateEpisode { .. } => "generateEpisode",
+        }
+    }
 }
 
 /// タスクのエンキューと実行を担当するサービス。
@@ -88,12 +100,15 @@ impl TaskService {
         }
     }
 
+    /// ジョブを積む。今の span の trace context を引数に入れ、実行側の span の親にする（[`trace_context`]）
+    #[instrument(skip(self, args), fields(job.kind = args.kind()))]
     pub(crate) async fn create_task(&self, args: Args) -> anyhow::Result<(), Error> {
         let mut params = HashMap::new();
         params.insert(
             "args".to_string(),
             serde_json::to_value(&args).map_err(|e| Error::Other(anyhow::anyhow!(e)))?,
         );
+        trace_context::insert_into_params(&mut params, &tracing::Span::current());
         let queue_data = QueueData {
             queue: Some(QUEUE_NAME.to_string()),
             name: Some("execute_task".to_string()),
@@ -127,6 +142,32 @@ impl TaskService {
             .collect()
     }
 
+    /// trace context を持たずに積まれた（定期実行・以前の）ジョブに、実行したトレースの ID を書き足す
+    pub(crate) async fn record_trace_id(
+        &self,
+        job_id: RecordId,
+        mut params: HashMap<String, serde_json::Value>,
+        trace_id: String,
+    ) -> anyhow::Result<(), Error> {
+        params.insert(
+            trace_context::TRACE_ID_PARAM.to_string(),
+            serde_json::Value::String(trace_id),
+        );
+        self.kafru_queue
+            .update(
+                job_id,
+                QueueData {
+                    parameters: Some(params),
+                    // update は None の項目を元の値のままにする。queue の既定値は "default" なので明示する
+                    queue: Some(QUEUE_NAME.to_string()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .map_err(|e| Error::Other(anyhow::anyhow!("Failed to record trace id: {}", e)))?;
+        Ok(())
+    }
+
     pub(crate) async fn get_job_status(&self, job_id: &str) -> anyhow::Result<JobInfo, Error> {
         let id: RecordId = job_id
             .parse()
@@ -139,7 +180,7 @@ impl TaskService {
         JobInfo::try_from(data)
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, args), fields(job.kind = args.kind()))]
     pub(crate) async fn execute_args(&self, args: Args) -> anyhow::Result<(), Error> {
         match args {
             Args::GenerateAudio { episode_id } => {
@@ -299,10 +340,14 @@ pub(crate) fn cast_prompt(cast: &[(String, Option<Voice>)]) -> Option<String> {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct JobInfo {
     pub id: String,
     pub name: String,
     pub status: String,
+    /// ジョブを実行した（API から積んだジョブは積んだときの）トレースの ID。Jaeger の `/trace/{traceId}` で開ける
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trace_id: Option<String>,
 }
 
 impl TryFrom<QueueData> for JobInfo {
@@ -316,6 +361,10 @@ impl TryFrom<QueueData> for JobInfo {
                 .ok_or_else(|| Error::Other(anyhow::anyhow!("missing job id")))?,
             name: q.name.unwrap_or_default(),
             status: q.status.map(|s| s.to_string()).unwrap_or_default(),
+            trace_id: q
+                .parameters
+                .as_ref()
+                .and_then(trace_context::trace_id_from_params),
         })
     }
 }
@@ -401,6 +450,33 @@ mod tests {
         };
         let result = JobInfo::try_from(data);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn job_info_has_trace_id_from_params() {
+        let data = QueueData {
+            id: Some("queue:abc".parse().unwrap()),
+            name: Some("execute_task".to_string()),
+            parameters: Some(HashMap::from([(
+                trace_context::TRACE_ID_PARAM.to_string(),
+                serde_json::json!("0af7651916cd43dd8448eb211c80319c"),
+            )])),
+            ..Default::default()
+        };
+        let info = JobInfo::try_from(data).unwrap();
+        assert_eq!(
+            serde_json::to_value(&info).unwrap()["traceId"],
+            "0af7651916cd43dd8448eb211c80319c"
+        );
+
+        // trace_id を持たない以前のジョブは traceId を出さない
+        let old = QueueData {
+            id: Some("queue:abc".parse().unwrap()),
+            parameters: Some(HashMap::new()),
+            ..Default::default()
+        };
+        let json = serde_json::to_value(JobInfo::try_from(old).unwrap()).unwrap();
+        assert!(json.get("traceId").is_none(), "{json}");
     }
 
     #[test]

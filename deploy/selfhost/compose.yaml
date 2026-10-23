@@ -69,13 +69,18 @@ services:
     depends_on:
       - jaeger
 
+  # トレースは badger で jaeger_data に保存する（保存期間は jaeger-config.yaml の ttl）
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    image: jaegertracing/jaeger:2.21.0
     restart: unless-stopped
+    # イメージの既定のユーザーは名前付きボリュームに書き込めない
+    user: root
+    command: ["--config=/etc/jaeger/config.yaml"]
+    volumes:
+      - ./jaeger-config.yaml:/etc/jaeger/config.yaml:ro
+      - jaeger_data:/badger
     ports:
       - "16686:16686"
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
 
   web:
     # CMS_URL / CMS_TENANT はビルド時に埋め込まれる。GHCR のイメージはリポジトリ変数 CMS_URL の値
@@ -112,3 +117,4 @@ services:
 
 volumes:
   kafru_data:
+  jaeger_data:

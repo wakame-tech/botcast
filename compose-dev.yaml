@@ -20,9 +20,36 @@ services:
     environment:
       API_KEY: dify-sandbox
 
+  # トレース: worker の OTLP_COLLECTOR_ENDPOINT=http://localhost:4317 → collector → jaeger（http://localhost:16686）
+  # 設定はセルフホストと同じものを使う
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: botcast-otel-collector-dev
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./deploy/selfhost/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"
+    depends_on:
+      - jaeger
+
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0
+    container_name: botcast-jaeger-dev
+    user: root
+    command: ["--config=/etc/jaeger/config.yaml"]
+    volumes:
+      - ./deploy/selfhost/jaeger-config.yaml:/etc/jaeger/config.yaml:ro
+      - jaeger_data:/badger
+    ports:
+      - "16686:16686"
+
 # voicevox_engine:
 #   image: voicevox/voicevox_engine:nvidia-ubuntu20.04-latest
 #   container_name: botcast-voicevox-dev
 #   ports:
 #     - "50021:50021"
 #   tty: true
+
+volumes:
+  jaeger_data:

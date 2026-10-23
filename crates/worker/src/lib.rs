@@ -25,5 +25,6 @@ pub mod api;
 pub mod error;
 pub mod jobs;
 pub(crate) mod mcp_server;
+pub(crate) mod trace_context;
 pub mod usecase;
 pub mod worker;
