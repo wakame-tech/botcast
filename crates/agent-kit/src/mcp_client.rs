@@ -60,10 +60,19 @@ fn trace_meta(span: &tracing::Span) -> Option<Meta> {
 impl McpClient {
     /// `mcp_cmd mcp_args...` を子プロセスで起動してつなぐ。`fixed_args` は毎回の呼び出しに入れる引数
     pub async fn new(mcp_cmd: &str, mcp_args: &[&str], fixed_args: JsonObject) -> anyhow::Result<Self> {
-        let transport = TokioChildProcess::new(Command::new(mcp_cmd).configure(|cmd| {
-            cmd.args(mcp_args);
-        }))
-        .context("Failed to spawn MCP server process")?;
+        Self::spawn(
+            Command::new(mcp_cmd).configure(|cmd| {
+                cmd.args(mcp_args);
+            }),
+            fixed_args,
+        )
+        .await
+    }
+
+    /// 組み立てた `command`（環境変数なども呼び出し側が決める）を子プロセスで起動してつなぐ
+    pub async fn spawn(command: Command, fixed_args: JsonObject) -> anyhow::Result<Self> {
+        let transport =
+            TokioChildProcess::new(command).context("Failed to spawn MCP server process")?;
 
         let service = ().serve(transport).await.context("Failed to connect to MCP server")?;
         let tools = service.list_all_tools().await.context("Failed to list MCP tools")?;

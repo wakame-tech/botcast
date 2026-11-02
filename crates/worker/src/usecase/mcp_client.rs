@@ -3,18 +3,53 @@
 pub use agent_kit::mcp_client::*;
 
 use serde_json::{Map, Value};
+use tokio::process::Command;
+
+/// MCP サーバー（Node.js の OpenTelemetry）がトレースを送る先の環境変数
+const OTEL_EXPORTER_OTLP_ENDPOINT: &str = "OTEL_EXPORTER_OTLP_ENDPOINT";
+
+/// 子プロセスの `OTEL_EXPORTER_OTLP_ENDPOINT`。worker の環境に明示されていればそのまま引き継ぐ（`None`）。
+/// 無ければ worker と同じ collector（`OTLP_COLLECTOR_ENDPOINT`。どちらも OTLP の gRPC）にする
+fn mcp_otlp_endpoint(explicit: Option<String>, worker_endpoint: Option<String>) -> Option<String> {
+    match explicit {
+        Some(_) => None,
+        None => worker_endpoint.filter(|e| !e.is_empty()),
+    }
+}
 
 /// botcast-cms の MCP サーバーにつなぐ。CMS のツールは全て `tenantId` を要求するが、
-/// テナント（`CMS_TENANT`、既定 `botcast`）は worker が固定し、LLM には選ばせない（他テナントへの越境を防ぐ）
+/// テナント（`CMS_TENANT`、既定 `botcast`）は worker が固定し、LLM には選ばせない（他テナントへの越境を防ぐ）。
+/// MCP サーバーのトレースは worker と同じ collector に送らせ、`execute_tool` の span の子にする
 pub async fn cms_mcp_client(mcp_cmd: &str, mcp_args: &[&str]) -> anyhow::Result<McpClient> {
     let tenant = std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string());
     let fixed_args = Map::from_iter([("tenantId".to_string(), Value::String(tenant))]);
-    McpClient::new(mcp_cmd, mcp_args, fixed_args).await
+    let mut command = Command::new(mcp_cmd);
+    command.args(mcp_args);
+    if let Some(endpoint) = mcp_otlp_endpoint(
+        std::env::var(OTEL_EXPORTER_OTLP_ENDPOINT).ok(),
+        std::env::var("OTLP_COLLECTOR_ENDPOINT").ok(),
+    ) {
+        command.env(OTEL_EXPORTER_OTLP_ENDPOINT, endpoint);
+    }
+    McpClient::spawn(command, fixed_args).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mcp_otlp_endpoint_defaults_to_worker_collector() {
+        let worker = Some("http://otel-collector:4317".to_string());
+        assert_eq!(
+            mcp_otlp_endpoint(None, worker.clone()),
+            Some("http://otel-collector:4317".to_string())
+        );
+        // 明示されていれば子プロセスがそのまま引き継ぐので上書きしない
+        assert_eq!(mcp_otlp_endpoint(Some("http://x:4317".to_string()), worker), None);
+        assert_eq!(mcp_otlp_endpoint(None, None), None);
+        assert_eq!(mcp_otlp_endpoint(None, Some(String::new())), None);
+    }
 
     fn mcp_server_path() -> String {
         std::env::var("MCP_SERVER_ARGS").expect("MCP_SERVER_ARGS is not set")

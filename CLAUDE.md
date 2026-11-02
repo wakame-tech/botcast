@@ -57,7 +57,7 @@ cd web && npm run check
 - TTS_ENGINE_<NAME>_TOKEN / _MODEL: OpenAI 互換の bearer トークンと `model`（任意。model の既定は `irodori-tts`）。トークンはログに出さない
 - TTS_ENGINE_<NAME>_MAX_CONCURRENCY / _TIMEOUT_SEC: 同時に投げる数（既定 1）とタイムアウト（既定 120 秒）
 - TTS_CACHE_DIR: 合成結果のキャッシュの置き場（任意。既定はジョブのワークディレクトリ）。その下の `<CMS_TENANT>/` にテナントごとに置く
-- OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector（ローカルは `just up` で起動する collector の `http://localhost:4317`）
+- OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector（ローカルは `just up` で起動する collector の `http://localhost:4317`）。botcast-cms の MCP サーバー（子プロセス）には `OTEL_EXPORTER_OTLP_ENDPOINT` として同じ値を渡す（worker の環境に `OTEL_EXPORTER_OTLP_ENDPOINT` があればそちらを引き継ぐ）
 
 ## トレース
 
