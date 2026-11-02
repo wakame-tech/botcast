@@ -63,8 +63,9 @@ cd web && npm run check
 
 - worker は OTLP で collector → Jaeger（v2・badger で保存。UI はローカルが http://localhost:16686 ）にトレースを送る。設定は `deploy/selfhost/otel-collector-config.yaml` / `jaeger-config.yaml` をローカルと共用
 - ジョブを積むときに W3C の `traceparent` を kafru のジョブの引数（`traceparent`）に入れ、実行側の `execute_task` の span の親にする（`agent-kit` の `trace_context.rs`）。`POST /jobs` と MCP（`/mcp`）のツールから実行までが 1 本のトレースになる。`traceparent` を持たないジョブ（定期実行・以前のジョブ）は実行時に新しいトレースを始め、その `traceparent` を書き足す。`GET /jobs` の `traceId` で Jaeger の `/trace/{traceId}` を開ける
-- span: エージェントのループ（`agent.run` / `agent.turn`）、LLM の呼び出し（`chat {model}`。モデル・トークン数・停止理由）、MCP のツール（`execute_tool {name}`。ツール名・成否）、CMS（`{METHOD} {パスのテンプレート}`）。プロンプト・応答・ツールの引数の本文は span に入れない
+- span: エージェントのループ（`agent.run` / `agent.turn`）、LLM の呼び出し（`chat {model}`。モデル・トークン数・停止理由）、MCP のツール（`execute_tool {name}`。ツール名・成否。リクエストの `params._meta.traceparent` にこの span の `traceparent` を入れる）、CMS（`{METHOD} {パスのテンプレート}`）。プロンプト・応答・ツールの引数の本文は span に入れない
 - 失敗したジョブは `execute_task` の span の status を Error にし、エラーメッセージを付ける
+- MCP のクライアントは `agent-kit` の `McpClient`。botcast-cms につなぐのは worker の `cms_mcp_client`（`tenantId` を固定の引数にし、LLM に見せるスキーマから外して毎回上書きで入れる）
 
 ## CMS のクライアント
 
