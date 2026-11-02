@@ -6,7 +6,6 @@
 
 use super::cms_client::CmsClient;
 use async_trait::async_trait;
-use std::fmt;
 
 /// CMS の秘密情報の名前（web のマイページの「LLM の API キー」と同じ）
 pub(crate) const ANTHROPIC_API_KEY_SECRET: &str = "anthropic_api_key";
@@ -14,32 +13,7 @@ pub(crate) const ANTHROPIC_API_KEY_SECRET: &str = "anthropic_api_key";
 /// 持ち主がキーを設定していないときのジョブのエラー
 pub(crate) const MISSING_API_KEY_MESSAGE: &str = "LLM の API キーが設定されていません。番組の持ち主のマイページの「設定」で「LLM の API キー」を登録してください";
 
-/// LLM の API キー。`Debug` / `Display` は値を出さない
-#[derive(Clone, PartialEq, Eq)]
-pub(crate) struct ApiKey(String);
-
-impl ApiKey {
-    pub(crate) fn new(value: String) -> Self {
-        Self(value)
-    }
-
-    /// リクエストのヘッダーに入れるときだけ使う
-    pub(crate) fn expose(&self) -> &str {
-        &self.0
-    }
-}
-
-impl fmt::Debug for ApiKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("ApiKey(<redacted>)")
-    }
-}
-
-impl fmt::Display for ApiKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("<redacted>")
-    }
-}
+pub(crate) use agent_kit::api_key::ApiKey;
 
 #[async_trait]
 pub(crate) trait SecretStore: Send + Sync {

@@ -3,7 +3,7 @@ use super::cms_client::CmsClient;
 use super::episode_generation::EpisodeGenerationService;
 use super::episode_service::EpisodeService;
 use super::fetch_url_tool::{FetchUrlTool, FETCH_URL_SYSTEM_PROMPT};
-use super::safe_fetch::{SafeFetcher, UrlFetcher};
+use super::safe_fetch::{SafeFetcher, UrlFetcher, USER_AGENT};
 use super::script_agent::{LlmScriptAgent, ScriptAgent};
 use super::script_output::{parse_script_output, save_script};
 use super::voices::{cast_of_podcast, Voice};
@@ -281,7 +281,7 @@ impl TaskService {
         }
 
         // Web は許可したホストだけを worker が取得する（CMS のスクリプトのサンドボックスはネットワークを使えない）
-        let fetcher: Arc<dyn UrlFetcher> = Arc::new(SafeFetcher::new(self.cms.clone()));
+        let fetcher: Arc<dyn UrlFetcher> = Arc::new(SafeFetcher::new(self.cms.clone(), USER_AGENT));
         let tools: Vec<Arc<dyn LocalTool>> = vec![Arc::new(FetchUrlTool::new(fetcher))];
         let run = LlmScriptAgent::new(self.cms.clone())
             .generate(podcast["owner_id"].as_str(), &system, &full_prompt, tools)
