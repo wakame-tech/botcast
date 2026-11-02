@@ -12,7 +12,8 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 
 /// グローバルの subscriber を設定する。
-/// `service_name` は span の `service.name` と、ログを `trace` まで出す crate の名前（`env!("CARGO_CRATE_NAME")`）
+/// `service_name` は span の `service.name` と、ログを `trace` まで出す crate の名前（`env!("CARGO_CRATE_NAME")`）。
+/// `RUST_LOG` があればそれで絞る（ログと span の両方）。無ければ `info,{service_name}=trace`
 pub fn init_tracing(service_name: &str, otlp_collector_endpoint: String) -> anyhow::Result<()> {
     let subscriber = tracing_subscriber::registry();
     let exporter = opentelemetry_otlp::SpanExporter::builder()
@@ -30,10 +31,17 @@ pub fn init_tracing(service_name: &str, otlp_collector_endpoint: String) -> anyh
     let otel_layer = OpenTelemetryLayer::new(tracer_provider.tracer(service_name.to_string()));
     let subscriber = subscriber
         .with(otel_layer)
-        .with(EnvFilter::from_str(&format!("info,{}=trace", service_name))?);
+        .with(env_filter(service_name)?);
 
     let fmt_layer = tracing_subscriber::fmt::layer().pretty();
     let subscriber = subscriber.with(fmt_layer);
     tracing::subscriber::set_global_default(subscriber)?;
     Ok(())
+}
+
+fn env_filter(service_name: &str) -> anyhow::Result<EnvFilter> {
+    match std::env::var(EnvFilter::DEFAULT_ENV) {
+        Ok(directives) if !directives.trim().is_empty() => Ok(EnvFilter::try_new(directives)?),
+        _ => Ok(EnvFilter::from_str(&format!("info,{}=trace", service_name))?),
+    }
 }
