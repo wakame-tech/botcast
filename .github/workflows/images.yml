@@ -2,18 +2,12 @@ name: Publish container images
 
 # セルフホスト用の worker / web イメージを GHCR に push する。
 # デプロイ先は `docker compose pull && docker compose up -d` するだけでよい (deploy/selfhost/compose.yaml)。
+# PR ではビルドしない (必須の check ではないので、失敗してもマージを止めない)。
+# main でビルドに失敗するとイメージが更新されず、watchtower は古いコンテナのまま動き続ける。
+# Dockerfile を変えたブランチは workflow_dispatch で確かめられる (sha のタグだけで push し、latest は付かない)
 on:
   push:
     branches: [main]
-  # PR では Dockerfile / compose / この workflow を変えたときだけビルドを確認する
-  # (アプリのコードの確認は docs.yml (Rust) と web.yml で行う)
-  pull_request:
-    paths:
-      - deploy/selfhost/**
-      # 設定の例はイメージに入らないので、変えてもビルドしない
-      - "!deploy/selfhost/**/*.example"
-      - "!deploy/selfhost/**/.env.example"
-      - .github/workflows/images.yml
   workflow_dispatch:
 
 permissions:
@@ -37,7 +31,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # PR でもログインする: worker は private な botcast-cms-mcp を pull する
+      # worker は private な botcast-cms-mcp を pull する
       # (パッケージ設定の Manage Actions access でこのリポジトリに読み取りを許可している)
       - uses: docker/login-action@v3
         with:
@@ -52,14 +46,13 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
-            type=ref,event=pr
 
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/selfhost/Dockerfile.${{ matrix.image }}
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # web は CMS の URL とテナントをビルド時に埋め込む (リポジトリ変数 CMS_URL / CMS_TENANT)
