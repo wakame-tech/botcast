@@ -9,7 +9,7 @@ use crate::api_key::ApiKey;
 use crate::mcp_client::McpClient;
 use rmcp::model::Tool;
 
-const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
+pub const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION: &str = "2023-06-01";
 /// thinking も含めた 1 回の応答の上限。台本全体を 1 回の応答で返すので余裕を持たせる
 const MAX_TOKENS: u32 = 16000;
@@ -270,12 +270,15 @@ pub struct AgentService {
     /// ジョブの持ち主の API キー（アプリが決める）
     api_key: ApiKey,
     model: String,
-    mcp_client: McpClient,
+    /// MCP のツールを使わないエージェント（client tool だけ）は `None`
+    mcp_client: Option<McpClient>,
     /// LLM に渡す（呼ばせる）ツールの名前
     allowed_tools: &'static [&'static str],
     /// worker が実装するツール（`fetch_url` など）
     local_tools: Vec<Arc<dyn LocalTool>>,
     http_client: reqwest::Client,
+    /// Messages API の URL（既定 [`ANTHROPIC_API_URL`]）
+    api_url: String,
     /// これまでの LLM の呼び出しのトークン数の合計
     usage: Mutex<Usage>,
 }
@@ -292,12 +295,33 @@ impl AgentService {
         Self {
             api_key,
             model,
-            mcp_client,
+            mcp_client: Some(mcp_client),
             allowed_tools,
             local_tools: vec![],
             http_client: reqwest::Client::new(),
+            api_url: ANTHROPIC_API_URL.to_string(),
             usage: Mutex::new(Usage::default()),
         }
+    }
+
+    /// MCP のツールを使わず、[`Self::with_local_tools`] で渡す client tool だけで動くエージェント
+    pub fn local_only(api_key: ApiKey, model: String) -> Self {
+        Self {
+            api_key,
+            model,
+            mcp_client: None,
+            allowed_tools: &[],
+            local_tools: vec![],
+            http_client: reqwest::Client::new(),
+            api_url: ANTHROPIC_API_URL.to_string(),
+            usage: Mutex::new(Usage::default()),
+        }
+    }
+
+    /// Messages API の URL を差し替える（テストのフェイクのサーバーなど）
+    pub fn with_api_url(mut self, url: impl Into<String>) -> Self {
+        self.api_url = url.into();
+        self
     }
 
     /// worker が実装するツールを足す（MCP のツールと同じ名前は使わない）
@@ -330,7 +354,10 @@ impl AgentService {
         prompt: &str,
         output_schema: Option<&Value>,
     ) -> anyhow::Result<String> {
-        let mut tools = tools_for_anthropic(self.mcp_client.tools(), self.allowed_tools);
+        let mut tools = match &self.mcp_client {
+            Some(mcp) => tools_for_anthropic(mcp.tools(), self.allowed_tools),
+            None => vec![],
+        };
         tools.extend(local_tools_for_anthropic(&self.local_tools));
         let mut messages: Vec<Message> = vec![Message {
             role: "user".to_string(),
@@ -422,7 +449,11 @@ impl AgentService {
                     continue;
                 }
                 // 渡していないツール（書き込み系など）は呼ばない
-                if !self.allowed_tools.contains(&name.as_str()) {
+                let mcp = match &self.mcp_client {
+                    Some(mcp) if self.allowed_tools.contains(&name.as_str()) => Some(mcp),
+                    _ => None,
+                };
+                let Some(mcp) = mcp else {
                     tracing::warn!("Agent requested a tool that is not allowed: {name}");
                     tool_results.push(json!({
                         "type": "tool_result",
@@ -431,10 +462,9 @@ impl AgentService {
                         "is_error": true,
                     }));
                     continue;
-                }
+                };
                 tracing::info!("Agent calling tool: {} with {:?}", name, input);
-                let result = self
-                    .mcp_client
+                let result = mcp
                     .call_tool(name.clone(), input.clone())
                     .await
                     .unwrap_or_else(|e| format!("Tool error: {}", e));
@@ -461,7 +491,7 @@ impl AgentService {
     ) -> anyhow::Result<AnthropicResponse> {
         let response = self
             .http_client
-            .post(ANTHROPIC_API_URL)
+            .post(&self.api_url)
             .header("x-api-key", api_key_header(&self.api_key)?)
             .header("anthropic-version", ANTHROPIC_VERSION)
             .header("content-type", "application/json")
@@ -489,7 +519,10 @@ impl AgentService {
     }
 
     pub async fn close(self) -> anyhow::Result<()> {
-        self.mcp_client.close().await
+        match self.mcp_client {
+            Some(mcp) => mcp.close().await,
+            None => Ok(()),
+        }
     }
 }
 
@@ -692,5 +725,62 @@ mod tests {
         assert_eq!(replay[0]["type"], "thinking");
         assert_eq!(replay[0]["signature"], "sig-abc");
         assert_eq!(replay[1]["data"], "opaque");
+    }
+
+    /// フェイクの Messages API。1 回目は `echo` の tool_use、2 回目は受け取った tool_result をそのまま返す
+    async fn fake_messages_api() -> (String, Arc<Mutex<Vec<Value>>>) {
+        use axum::{routing::post, Json, Router};
+        let seen: Arc<Mutex<Vec<Value>>> = Arc::default();
+        let s = seen.clone();
+        let app = Router::new().route(
+            "/v1/messages",
+            post(move |Json(body): Json<Value>| {
+                let s = s.clone();
+                async move {
+                    let n = {
+                        let mut seen = s.lock().unwrap();
+                        seen.push(body.clone());
+                        seen.len()
+                    };
+                    let resp = if n == 1 {
+                        json!({
+                            "content": [{ "type": "tool_use", "id": "t1", "name": "echo", "input": { "s": "hi" } }],
+                            "stop_reason": "tool_use",
+                            "model": "m",
+                        })
+                    } else {
+                        let last = body["messages"].as_array().unwrap().last().unwrap().clone();
+                        let text = last["content"][0]["content"].as_str().unwrap_or("").to_string();
+                        json!({ "content": [{ "type": "text", "text": text }], "stop_reason": "end_turn", "model": "m" })
+                    };
+                    Json(resp)
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/v1/messages", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        (url, seen)
+    }
+
+    #[tokio::test]
+    async fn local_only_agent_runs_client_tools_without_mcp() {
+        let (url, seen) = fake_messages_api().await;
+        let agent = AgentService::local_only(ApiKey::new("k".to_string()), "m".to_string())
+            .with_api_url(url)
+            .with_local_tools(vec![Arc::new(EchoTool)]);
+        let out = agent.run("sys", "prompt", None).await.unwrap();
+        assert_eq!(out, "hi");
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 2);
+        let names: Vec<&str> = seen[0]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, vec!["echo"], "MCP のツールは無い");
+        drop(seen);
+        agent.close().await.unwrap();
     }
 }
