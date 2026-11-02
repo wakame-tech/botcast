@@ -44,7 +44,8 @@ pub fn start_worker(provider: Arc<Provider>, kafru_db: Arc<Db>) {
 pub fn start_schedule_sync(provider: Arc<Provider>, kafru_db: Arc<Db>) {
     tokio::spawn(async move {
         let sync =
-            crate::usecase::schedule_sync::ScheduleSync::new(provider.cms.clone(), kafru_db).await;
+            crate::usecase::schedule_sync::podcast_schedule_sync(provider.cms.clone(), kafru_db)
+                .await;
         sync.run().await;
     });
 }

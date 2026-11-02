@@ -1,138 +1,55 @@
-use crate::trace_context::record_error;
-use anyhow::Context;
-use rmcp::{
-    ServiceExt,
-    model::{CallToolRequestParams, Tool},
-    service::RunningService,
-    transport::{ConfigureCommandExt, TokioChildProcess},
-};
-use serde_json::Value;
+//! botcast-cms の MCP サーバーのクライアント（[`agent_kit::mcp_client`]）
+
+pub use agent_kit::mcp_client::*;
+
+use serde_json::{Map, Value};
 use tokio::process::Command;
-use tracing::{Instrument, field::Empty};
 
-pub struct McpClient {
-    service: RunningService<rmcp::RoleClient, ()>,
-    /// LLM に見せるツール定義。`tenantId` は取り除いてある
-    tools: Vec<Tool>,
-    tenant: String,
+/// MCP サーバー（Node.js の OpenTelemetry）がトレースを送る先の環境変数
+const OTEL_EXPORTER_OTLP_ENDPOINT: &str = "OTEL_EXPORTER_OTLP_ENDPOINT";
+
+/// 子プロセスの `OTEL_EXPORTER_OTLP_ENDPOINT`。worker の環境に明示されていればそのまま引き継ぐ（`None`）。
+/// 無ければ worker と同じ collector（`OTLP_COLLECTOR_ENDPOINT`。どちらも OTLP の gRPC）にする
+fn mcp_otlp_endpoint(explicit: Option<String>, worker_endpoint: Option<String>) -> Option<String> {
+    match explicit {
+        Some(_) => None,
+        None => worker_endpoint.filter(|e| !e.is_empty()),
+    }
 }
 
-/// CMS のツールは全て `tenantId` を要求するが、テナントは worker が固定するので
-/// LLM に見せる入力スキーマからは外す。LLM にテナントを選ばせない。
-fn strip_tenant_param(mut tool: Tool) -> Tool {
-    let schema = std::sync::Arc::make_mut(&mut tool.input_schema);
-    if let Some(Value::Object(props)) = schema.get_mut("properties") {
-        props.remove("tenantId");
+/// botcast-cms の MCP サーバーにつなぐ。CMS のツールは全て `tenantId` を要求するが、
+/// テナント（`CMS_TENANT`、既定 `botcast`）は worker が固定し、LLM には選ばせない（他テナントへの越境を防ぐ）。
+/// MCP サーバーのトレースは worker と同じ collector に送らせ、`execute_tool` の span の子にする
+pub async fn cms_mcp_client(mcp_cmd: &str, mcp_args: &[&str]) -> anyhow::Result<McpClient> {
+    let tenant = std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string());
+    let fixed_args = Map::from_iter([("tenantId".to_string(), Value::String(tenant))]);
+    let mut command = Command::new(mcp_cmd);
+    command.args(mcp_args);
+    if let Some(endpoint) = mcp_otlp_endpoint(
+        std::env::var(OTEL_EXPORTER_OTLP_ENDPOINT).ok(),
+        std::env::var("OTLP_COLLECTOR_ENDPOINT").ok(),
+    ) {
+        command.env(OTEL_EXPORTER_OTLP_ENDPOINT, endpoint);
     }
-    if let Some(Value::Array(required)) = schema.get_mut("required") {
-        required.retain(|v| v.as_str() != Some("tenantId"));
-    }
-    tool
-}
-
-impl McpClient {
-    pub async fn new(mcp_cmd: &str, mcp_args: &[&str]) -> anyhow::Result<Self> {
-        let transport = TokioChildProcess::new(Command::new(mcp_cmd).configure(|cmd| {
-            cmd.args(mcp_args);
-        }))
-        .context("Failed to spawn MCP server process")?;
-
-        let service = ().serve(transport).await.context("Failed to connect to MCP server")?;
-        let tools = service.list_all_tools().await.context("Failed to list MCP tools")?;
-        let tenant = std::env::var("CMS_TENANT").unwrap_or_else(|_| "botcast".to_string());
-        let tools = tools.into_iter().map(strip_tenant_param).collect();
-
-        Ok(Self {
-            service,
-            tools,
-            tenant,
-        })
-    }
-
-    pub fn tools(&self) -> &[Tool] {
-        &self.tools
-    }
-
-    /// ツールを呼び、結果のテキストを返す。
-    /// span にはツール名と成否（`mcp.tool.is_error` = ツールがエラーを返したか）だけを入れ、引数・結果の本文は入れない
-    pub async fn call_tool(
-        &self,
-        name: impl Into<std::borrow::Cow<'static, str>>,
-        arguments: Value,
-    ) -> anyhow::Result<String> {
-        let name = name.into();
-        let span = tracing::info_span!(
-            "execute_tool",
-            otel.name = format!("execute_tool {name}"),
-            otel.kind = "client",
-            gen_ai.operation.name = "execute_tool",
-            gen_ai.tool.name = %name,
-            mcp.tool.is_error = Empty,
-            otel.status_code = Empty,
-            otel.status_message = Empty,
-        );
-        let result = self
-            .call_tool_inner(name, arguments)
-            .instrument(span.clone())
-            .await;
-        match &result {
-            Ok((_, is_error)) => {
-                span.record("mcp.tool.is_error", is_error);
-                if *is_error {
-                    record_error(&span, "tool returned an error");
-                }
-            }
-            Err(e) => record_error(&span, &format!("{e:#}")),
-        }
-        result.map(|(text, _)| text)
-    }
-
-    /// ツールを呼び、結果のテキストと、ツールがエラーを返したかを返す
-    async fn call_tool_inner(
-        &self,
-        name: std::borrow::Cow<'static, str>,
-        arguments: Value,
-    ) -> anyhow::Result<(String, bool)> {
-        let mut arguments = arguments
-            .as_object()
-            .cloned()
-            .unwrap_or_default();
-
-        // テナントは worker が決める。LLM の出力で上書きさせない
-        // (他テナントを指定されるとデータが越境する)
-        arguments.insert("tenantId".to_string(), Value::String(self.tenant.clone()));
-
-        let result = self
-            .service
-            .call_tool(CallToolRequestParams::new(name).with_arguments(arguments))
-            .await
-            .context("Failed to call MCP tool")?;
-
-        let text = result
-            .content
-            .iter()
-            .filter_map(|c| {
-                if let rmcp::model::RawContent::Text(t) = &c.raw {
-                    Some(t.text.as_str())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        Ok((text, result.is_error.unwrap_or(false)))
-    }
-
-    pub async fn close(self) -> anyhow::Result<()> {
-        self.service.cancel().await.context("Failed to close MCP client")?;
-        Ok(())
-    }
+    McpClient::spawn(command, fixed_args).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mcp_otlp_endpoint_defaults_to_worker_collector() {
+        let worker = Some("http://otel-collector:4317".to_string());
+        assert_eq!(
+            mcp_otlp_endpoint(None, worker.clone()),
+            Some("http://otel-collector:4317".to_string())
+        );
+        // 明示されていれば子プロセスがそのまま引き継ぐので上書きしない
+        assert_eq!(mcp_otlp_endpoint(Some("http://x:4317".to_string()), worker), None);
+        assert_eq!(mcp_otlp_endpoint(None, None), None);
+        assert_eq!(mcp_otlp_endpoint(None, Some(String::new())), None);
+    }
 
     fn mcp_server_path() -> String {
         std::env::var("MCP_SERVER_ARGS").expect("MCP_SERVER_ARGS is not set")
@@ -141,7 +58,7 @@ mod tests {
     async fn make_client() -> McpClient {
         let path = mcp_server_path();
         let args: Vec<&str> = path.split_whitespace().collect();
-        McpClient::new("node", &args).await.expect("failed to create client")
+        cms_mcp_client("node", &args).await.expect("failed to create client")
     }
 
     async fn resolve_collection_id(client: &McpClient, name: &str) -> String {
@@ -167,42 +84,12 @@ mod tests {
         json["id"].as_str().expect("id field missing").to_string()
     }
 
-    #[test]
-    fn strip_tenant_param_removes_tenant_from_schema() {
-        let schema = serde_json::json!({
-            "type": "object",
-            "properties": {
-                "tenantId": { "type": "string" },
-                "collectionId": { "type": "string" }
-            },
-            "required": ["tenantId", "collectionId"]
-        });
-        let schema = match schema {
-            serde_json::Value::Object(o) => o,
-            _ => unreachable!(),
-        };
-        let tool = Tool::new("RecordApi_list", "list records", std::sync::Arc::new(schema));
-
-        let tool = strip_tenant_param(tool);
-
-        let props = tool.input_schema["properties"].as_object().unwrap();
-        assert!(!props.contains_key("tenantId"), "tenantId を LLM に見せない");
-        assert!(props.contains_key("collectionId"));
-        let required: Vec<&str> = tool.input_schema["required"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|v| v.as_str().unwrap())
-            .collect();
-        assert_eq!(required, vec!["collectionId"]);
-    }
-
     #[tokio::test]
     #[ignore = "requires botcast-cms MCP server to be built"]
     async fn mcp_client_lists_tools() {
         let path = mcp_server_path();
         let args: Vec<&str> = path.split_whitespace().collect();
-        let client = McpClient::new("node", &args).await.expect("failed to create client");
+        let client = cms_mcp_client("node", &args).await.expect("failed to create client");
         let tools = client.tools();
         assert!(!tools.is_empty(), "expected at least one tool");
         let tool_names: Vec<&str> = tools.iter().map(|t| t.name.as_ref()).collect();
@@ -283,7 +170,7 @@ mod tests {
     async fn mcp_client_calls_record_list() {
         let path = mcp_server_path();
         let args: Vec<&str> = path.split_whitespace().collect();
-        let client = McpClient::new("node", &args).await.expect("failed to create client");
+        let client = cms_mcp_client("node", &args).await.expect("failed to create client");
         let tool_names: Vec<&str> = client.tools().iter().map(|t| t.name.as_ref()).collect();
         eprintln!("available tools: {:?}", tool_names);
         let result = client
@@ -296,3 +183,4 @@ mod tests {
         client.close().await.unwrap();
     }
 }
+

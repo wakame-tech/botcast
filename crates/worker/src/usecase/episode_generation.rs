@@ -1,7 +1,7 @@
 use super::agent_service::{LocalTool, Usage};
 use super::cms_client::{CmsClient, ListQuery, ScriptOutput};
 use super::fetch_url_tool::{content_json, FetchUrlTool, FETCH_URL_SYSTEM_PROMPT};
-use super::safe_fetch::{SafeFetcher, UrlFetcher};
+use super::safe_fetch::{SafeFetcher, UrlFetcher, USER_AGENT};
 use super::script_agent::{LlmScriptAgent, ScriptAgent};
 use super::script_output::parse_script_output as parse_llm_output;
 use super::task_service::{cast_prompt, script_system_prompt};
@@ -417,7 +417,7 @@ impl EpisodeGenerationService {
         EpisodeGenerator {
             cms: self.cms.as_ref(),
             agent: &agent,
-            fetcher: Arc::new(SafeFetcher::new(self.cms.clone())),
+            fetcher: Arc::new(SafeFetcher::new(self.cms.clone(), USER_AGENT)),
         }
         .generate(podcast_id, usage)
         .await

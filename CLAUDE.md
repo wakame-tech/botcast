@@ -5,6 +5,7 @@
 ## 構成
 
 - **crates/worker**: Rust バックエンド（worker / audio_generator / repos）
+- **crates/agent-kit**: worker の汎用部分（定期実行の同期・エージェントのループ・MCP クライアント・Web の取得・トレース）。socia の worker からも git 依存で使うので、botcast 固有のもの（CMS のコレクション・`Args`・`audio_generator`）を入れない
 - **web**: React + TypeScript フロントエンド（TanStack Router）
 - **botcast-cms**: CMS サーバー（Rust/Axum + SurrealDB）。認証は botcast-cms JWT を使用
 
@@ -56,14 +57,15 @@ cd web && npm run check
 - TTS_ENGINE_<NAME>_TOKEN / _MODEL: OpenAI 互換の bearer トークンと `model`（任意。model の既定は `irodori-tts`）。トークンはログに出さない
 - TTS_ENGINE_<NAME>_MAX_CONCURRENCY / _TIMEOUT_SEC: 同時に投げる数（既定 1）とタイムアウト（既定 120 秒）
 - TTS_CACHE_DIR: 合成結果のキャッシュの置き場（任意。既定はジョブのワークディレクトリ）。その下の `<CMS_TENANT>/` にテナントごとに置く
-- OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector（ローカルは `just up` で起動する collector の `http://localhost:4317`）
+- OTLP_COLLECTOR_ENDPOINT: OpenTelemetry collector（ローカルは `just up` で起動する collector の `http://localhost:4317`）。botcast-cms の MCP サーバー（子プロセス）には `OTEL_EXPORTER_OTLP_ENDPOINT` として同じ値を渡す（worker の環境に `OTEL_EXPORTER_OTLP_ENDPOINT` があればそちらを引き継ぐ）
 
 ## トレース
 
 - worker は OTLP で collector → Jaeger（v2・badger で保存。UI はローカルが http://localhost:16686 ）にトレースを送る。設定は `deploy/selfhost/otel-collector-config.yaml` / `jaeger-config.yaml` をローカルと共用
-- ジョブを積むときに W3C の `traceparent` を kafru のジョブの引数（`traceparent`）に入れ、実行側の `execute_task` の span の親にする（`src/trace_context.rs`）。`POST /jobs` と MCP（`/mcp`）のツールから実行までが 1 本のトレースになる。`traceparent` を持たないジョブ（定期実行・以前のジョブ）は実行時に新しいトレースを始め、その `traceparent` を書き足す。`GET /jobs` の `traceId` で Jaeger の `/trace/{traceId}` を開ける
-- span: エージェントのループ（`agent.run` / `agent.turn`）、LLM の呼び出し（`chat {model}`。モデル・トークン数・停止理由）、MCP のツール（`execute_tool {name}`。ツール名・成否）、CMS（`{METHOD} {パスのテンプレート}`）。プロンプト・応答・ツールの引数の本文は span に入れない
+- ジョブを積むときに W3C の `traceparent` を kafru のジョブの引数（`traceparent`）に入れ、実行側の `execute_task` の span の親にする（`agent-kit` の `trace_context.rs`）。`POST /jobs` と MCP（`/mcp`）のツールから実行までが 1 本のトレースになる。`traceparent` を持たないジョブ（定期実行・以前のジョブ）は実行時に新しいトレースを始め、その `traceparent` を書き足す。`GET /jobs` の `traceId` で Jaeger の `/trace/{traceId}` を開ける
+- span: エージェントのループ（`agent.run` / `agent.turn`）、LLM の呼び出し（`chat {model}`。モデル・トークン数・停止理由）、MCP のツール（`execute_tool {name}`。ツール名・成否。リクエストの `params._meta.traceparent` にこの span の `traceparent` を入れる）、CMS（`{METHOD} {パスのテンプレート}`）。プロンプト・応答・ツールの引数の本文は span に入れない
 - 失敗したジョブは `execute_task` の span の status を Error にし、エラーメッセージを付ける
+- MCP のクライアントは `agent-kit` の `McpClient`。botcast-cms につなぐのは worker の `cms_mcp_client`（`tenantId` を固定の引数にし、LLM に見せるスキーマから外して毎回上書きで入れる）
 
 ## CMS のクライアント
 
@@ -113,13 +115,13 @@ cd web && npm run check
 
 ## Web の取得（fetch_url・schedule.sources）
 
-- CMS のスクリプトは dify-sandbox（seccomp でネットワーク禁止）で動くので Web を読めない。サンドボックスは開けず（LAN への SSRF になる）、worker が `usecase/safe_fetch.rs` の `SafeFetcher` で取得する
+- CMS のスクリプトは dify-sandbox（seccomp でネットワーク禁止）で動くので Web を読めない。サンドボックスは開けず（LAN への SSRF になる）、worker が `agent-kit` の `SafeFetcher`（許可リストの CMS 実装は `usecase/safe_fetch.rs`）で取得する
 - 取得してよいホストは CMS の `fetch_allowed_hosts`（`host`（x-unique。小文字のドメイン名）・`enabled`・`description`）。ホスト名と完全一致（サブドメインは別に登録）。読めるのはログインしたユーザー全員、書けるのは役割 `admin` とサービスだけ（`llm_models` と同じ）。初期データは入れない（管理者が CMS で登録する。空なら何も取得できない）。環境変数では設定しない
 - HTTPS（443 番）だけ。URL の認証情報・IP アドレスのホストは不可。DNS の結果を **すべて** 確かめ（ループバック・プライベート・リンクローカル（169.254.169.254 を含む）・ユニークローカル・CGNAT・予約などは拒否）、確かめたアドレスに接続を固定する（reqwest の `resolve`。プロキシの環境変数も使わない）ので DNS rebinding で内部に繋がらない
 - リダイレクトは自動で追わず、1 回ごとに URL・許可リスト・DNS を確かめ直す（3 回まで）。接続 5 秒・全体 20 秒のタイムアウト、本文 2MiB まで（超えたら失敗）
 - JSON はそのまま（ただしキーが `_html` で終わる文字列は本文のテキストにする。Zenn の `body_html` など）、HTML は見出し・段落のテキスト（`readable_text`）にし、20,000 文字で切る
 - span `web.fetch` にはホスト（`server.address`）・状態コード・バイト数・リダイレクト数だけを入れ、URL のパス・本文は入れない
-- 実物の zenn.dev への確認: `cargo test -p worker -- --ignored fetch_against_zenn`
+- 実物の zenn.dev への確認: `cargo test -p agent-kit -- --ignored fetch_against_zenn`
 
 ## エピソードの定期生成（スクリプト・LLM）
 

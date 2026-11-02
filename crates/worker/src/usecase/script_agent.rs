@@ -8,7 +8,7 @@ use super::agent_service::{AgentService, LocalTool, Usage, READ_ONLY_CMS_TOOLS};
 use super::cms_client::CmsClient;
 use super::llm_api_key::resolve_api_key;
 use super::llm_models::resolve_model;
-use super::mcp_client::McpClient;
+use super::mcp_client::cms_mcp_client;
 use super::script_output::script_output_schema;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -57,7 +57,7 @@ impl LlmScriptAgent {
         let mcp_args_str =
             std::env::var("MCP_SERVER_ARGS").context("MCP_SERVER_ARGS is not set")?;
         let mcp_args: Vec<&str> = mcp_args_str.split_whitespace().collect();
-        let mcp_client = McpClient::new(&mcp_cmd, &mcp_args)
+        let mcp_client = cms_mcp_client(&mcp_cmd, &mcp_args)
             .await
             .context("Failed to create MCP client")?;
         Ok(AgentService::new(api_key, model, mcp_client, READ_ONLY_CMS_TOOLS)
